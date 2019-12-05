@@ -1,0 +1,27 @@
+Package: fatBVARS
+Type: Package
+Title: Bayesian VAR with Stochastic volatility and fat tails
+Version: 0.1.0
+Authors@R: person("Nguyen", "Hoang", role = c("aut", "cre"), email = "hoang.nguyen@oru.se")
+Maintainer: Hoang Nguyen <hoang.nguyen@oru.se>
+Description: Bayesian VAR with Stochastic volatility and fat tails
+License: License: GPL (>= 2)
+Encoding: UTF-8
+LazyData: true
+Imports:
+    Rcpp (>= 0.12.8), RcppArmadillo
+Depends:
+    R (>= 3.5.0),
+    Rcpp,
+    Rcpp11, 
+    matrixcalc,
+    TruncatedNormal,
+    pracma,
+    coda,
+    BayesianTools,
+    invgamma
+LinkingTo: Rcpp, RcppArmadillo
+RoxygenNote: 6.1.1
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr

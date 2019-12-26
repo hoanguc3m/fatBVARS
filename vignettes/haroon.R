@@ -5,10 +5,17 @@ library(fatBVARS)
 data(fred)
 max_length <- 729
 lagnum <- 12
-IndustrialInd <- diff(log(FRED$INDPRO), lag = lagnum)*100
-Inflation <- diff(log(FRED$PCEPI), lag = lagnum)*100
+# IndustrialInd <- diff(log(FRED$INDPRO), lag = lagnum)*100
+# Inflation <- diff(log(FRED$PCEPI), lag = lagnum)*100
+# Interest <- FRED$TB3MS
+# SP500lgr <- diff(log(FRED$`S&P 500`), lag = lagnum)*100
+
+IndustrialInd <- diff(FRED$INDPRO, lag = lagnum)/ head(FRED$INDPRO, max_length-lagnum) *100
+Inflation <- diff(FRED$PCEPI, lag = lagnum)/ head(FRED$PCEPI, max_length-lagnum)*100
 Interest <- FRED$TB3MS
-SP500lgr <- diff(log(FRED$`S&P 500`), lag = lagnum)*100
+SP500lgr <- diff(FRED$`S&P 500`, lag = 1)/ head(FRED$`S&P 500`, max_length-1)*100
+
+
 time_id <- 634
 date <- zoo::as.Date(FRED$sasdate)
 

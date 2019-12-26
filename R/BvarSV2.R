@@ -22,14 +22,25 @@
 #' plot(Chain1)
 #' }
 BVAR.Stochvol <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
-
+  Start = Sys.time()
   if (dist == "Gaussian") Chain <- BVAR.Gaussian.Stochvol(y, K, p, y0, prior, inits)
   if (dist == "Student") Chain <- BVAR.Student.Stochvol(y, K, p, y0, prior, inits)
   if (dist == "Skew.Student") Chain <- BVAR.Skew.Student.Stochvol(y, K, p, y0, prior, inits)
   if (dist == "Hyper.Student") Chain <- BVAR.Hyper.Student.Stochvol(y, K, p, y0, prior, inits)
   if (dist == "multiStudent") Chain <- BVAR.multiStudent.Stochvol(y, K, p, y0, prior, inits)
   if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.Stochvol(y, K, p, y0, prior, inits)
-  return(Chain)
+  elapsedTime = Sys.time() - Start
+  cat("The time of inference is " , elapsedTime, " seconds")
+  out <- list(mcmc = Chain,
+              y = y,
+              y0 = y0,
+              K = K,
+              p = p,
+              dist = dist,
+              prior = prior,
+              inits = inits)
+  class(out) <- c("fatBVARSV")
+  return(out)
 }
 #' @export
 BVAR.Gaussian.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
@@ -130,8 +141,11 @@ BVAR.Gaussian.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NUL
       mcmc <- cbind(mcmc, c(b_sample, a_sample, as.vector(paravol), as.vector(h)))
     if (j %% 100 == 0) { cat(" Iteration ", j, " \n")}
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         paste("mu_vol",c(1:K), sep = ""),
                         paste("phi_vol",c(1:K), sep = ""),
                         paste("sigma_vol",c(1:K), sep = ""),
@@ -290,8 +304,11 @@ BVAR.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
       acount_w <- rep(0,t_max)
     }
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         paste("nu"),
                         paste("mu_vol",c(1:K), sep = ""),
                         paste("phi_vol",c(1:K), sep = ""),
@@ -480,8 +497,11 @@ BVAR.Skew.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
       acount_w <- rep(0,t_max)
     }
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu"),
                         paste("mu_vol",c(1:K), sep = ""),
@@ -681,8 +701,11 @@ BVAR.Hyper.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits 
       acount_w <- rep(0,t_max)
     }
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu"),
                         paste("mu_vol",c(1:K), sep = ""),
@@ -875,8 +898,11 @@ BVAR.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
       acount_w <- rep(0,t_max)
     }
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         paste("nu",c(1:K), sep = ""),
                         paste("mu_vol",c(1:K), sep = ""),
                         paste("phi_vol",c(1:K), sep = ""),
@@ -1082,8 +1108,11 @@ BVAR.Hyper.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, i
       acount_w <- rep(0,t_max)
     }
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu",c(1:K), sep = ""),
                         paste("mu_vol",c(1:K), sep = ""),

@@ -22,14 +22,25 @@
 #' plot(Chain1)
 #' }
 BVAR.SV <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
-
+  Start = Sys.time()
   if (dist == "Gaussian") Chain <- BVAR.Gaussian.SV(y, K, p, y0, prior, inits)
   if (dist == "Student") Chain <- BVAR.Student.SV(y, K, p, y0, prior, inits)
   if (dist == "Skew.Student") Chain <- BVAR.Skew.Student.SV(y, K, p, y0, prior, inits)
   if (dist == "Hyper.Student") Chain <- BVAR.Hyper.Student.SV(y, K, p, y0, prior, inits)
   if (dist == "multiStudent") Chain <- BVAR.multiStudent.SV(y, K, p, y0, prior, inits)
   if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.SV(y, K, p, y0, prior, inits)
-  return(Chain)
+  elapsedTime = Sys.time() - Start
+  cat("The time of inference is " , elapsedTime, " seconds")
+  out <- list(mcmc = Chain,
+              y = y,
+              y0 = y0,
+              K = K,
+              p = p,
+              dist = dist,
+              prior = prior,
+              inits = inits)
+  class(out) <- c("fatBVARSV")
+  return(out)
 }
 #' @export
 BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
@@ -127,8 +138,11 @@ BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
       mcmc <- cbind(mcmc, c(b_sample, a_sample, as.vector(sigma_h), as.vector(h)))
     if (j %% 100 == 0) { cat(" Iteration ", j, " \n")}
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         sprintf("sigmaH_%d_%d",rep.col(c(1:K),K), rep.row(c(1:K),K)),
                         sprintf("h_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K))
   )
@@ -282,8 +296,11 @@ BVAR.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
       acount_w <- rep(0,t_max)
     }
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         paste("nu"),
                         sprintf("sigma_h_%d_%d",rep.col(c(1:K),K), rep.row(c(1:K),K)),
                         sprintf("h_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K)),
@@ -467,8 +484,11 @@ BVAR.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
       acount_w <- rep(0,t_max)
     }
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu"),
                         sprintf("sigma_h_%d_%d",rep.col(c(1:K),K), rep.row(c(1:K),K)),
@@ -659,12 +679,15 @@ BVAR.Hyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc <- cbind(mcmc, c(b_sample, a_sample, gamma, nu, as.vector(sigma_h), as.vector(h), as.vector(w_sample)))
     if (j %% 100 == 0) {
-      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", nu ,  " \n")
+      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", nu, " ", gamma ,  " \n")
       acount_w <- rep(0,t_max)
     }
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu"),
                         sprintf("sigma_h_%d_%d",rep.col(c(1:K),K), rep.row(c(1:K),K)),
@@ -852,8 +875,11 @@ BVAR.multiStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
       acount_w <- rep(0,t_max)
     }
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         paste("nu",c(1:K), sep = ""),
                         sprintf("sigma_h_%d_%d",rep.col(c(1:K),K), rep.row(c(1:K),K)),
                         sprintf("h_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K)),
@@ -1054,8 +1080,11 @@ BVAR.Hyper.multiStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits =
       acount_w <- rep(0,t_max)
     }
   }
-  row.names(mcmc) <- c( paste("b",c(1:(m*K)), sep = ""),
-                        paste("a",c(1:(K * (K - 1) /2)), sep = ""),
+  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu",c(1:K), sep = ""),
                         sprintf("sigma_h_%d_%d",rep.col(c(1:K),K), rep.row(c(1:K),K)),

@@ -102,3 +102,12 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K),
   aux$sigma_h <- sigma_h
   return(aux)
 }
+
+##########################################################################
+# Plot functions  #
+##########################################################################
+
+#' @export
+plot.fatBVARSV <- function(fatBVARSVobj){
+  plot(fatBVARSVobj$mcmc)
+}

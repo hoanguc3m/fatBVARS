@@ -30,7 +30,7 @@ BVAR.Stochvol <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
   if (dist == "multiStudent") Chain <- BVAR.multiStudent.Stochvol(y, K, p, y0, prior, inits)
   if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.Stochvol(y, K, p, y0, prior, inits)
   elapsedTime = Sys.time() - Start
-  cat("The time of inference is " , elapsedTime, " seconds")
+  print(elapsedTime)
   out <- list(mcmc = Chain,
               y = y,
               y0 = y0,
@@ -38,7 +38,8 @@ BVAR.Stochvol <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
               p = p,
               dist = dist,
               prior = prior,
-              inits = inits)
+              inits = inits,
+              esttime = elapsedTime)
   class(out) <- c("fatBVARSV")
   return(out)
 }
@@ -143,7 +144,7 @@ BVAR.Gaussian.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NUL
   }
   nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
-  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+  row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
                         sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
                         nameA,
                         paste("mu_vol",c(1:K), sep = ""),
@@ -306,7 +307,7 @@ BVAR.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
   }
   nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
-  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+  row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
                         sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
                         nameA,
                         paste("nu"),
@@ -499,7 +500,7 @@ BVAR.Skew.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
   }
   nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
-  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+  row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
                         sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
                         nameA,
                         paste("gamma",c(1:K), sep = ""),
@@ -703,7 +704,7 @@ BVAR.Hyper.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits 
   }
   nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
-  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+  row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
                         sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
                         nameA,
                         paste("gamma",c(1:K), sep = ""),
@@ -900,7 +901,7 @@ BVAR.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
   }
   nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
-  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+  row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
                         sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
                         nameA,
                         paste("nu",c(1:K), sep = ""),
@@ -1110,7 +1111,7 @@ BVAR.Hyper.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, i
   }
   nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
-  row.names(mcmc) <- c( paste("c",c(1:K), sep = ""),
+  row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
                         sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
                         nameA,
                         paste("gamma",c(1:K), sep = ""),

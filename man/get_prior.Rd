@@ -25,7 +25,7 @@ A list of prior specifications. \eqn{b \sim N(b0, V_b_prior)}, \eqn{a \sim N(0, 
 \eqn{nu \sim G(a,b)}, \eqn{gamma \sim N(0, I)}.
 }
 \description{
-This function returns a priot specification of BVAR-SV-fatTail model.
+This function returns a prior specification of BVAR-SV-fatTail model.
 }
 \examples{
 \dontrun{

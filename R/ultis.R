@@ -78,25 +78,22 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K),
   m_mean <- tmp$m
   u2 <- tmp$u2
   Zs <- matrix(1,t_max,1) %x% diag(K)
-  # # log Gaussian prior
-  # sigma_prmean <- prior$sigma_OLS in log scale
-  # sigma_prvar <- k_sig*diag(M)
 
-  sigma_prmean <- rep(0,K) # log(sigma_OLS) assumed to be 0
-  sigma_prvar <- diag(K)
 
-  k_W = 0.03 # mean of sigma_h
-  W_prvar <- (K) # Wprior
-  W_prmean <- ((k_W)^2)*(K)*diag(K)
-
+  sigma_prmean <- rep(0,K) # mean h_0
+  sigma_prvar <- diag(K)   # variance h_0
 
   aux <- sigmahelper4(t(ytilde^2), q, m_mean, u2, h, Zs, sigma_h, sigma_prmean, sigma_prvar)
   h <- aux$Sigtdraw
   sqrtvol <- aux$sigt
 
-  sse_2 <- h[,2:t_max] - h[,1:(t_max-1)]
-  sse_2 <- sse_2 %*% t(sse_2)
-  sigma_h <- solve(rWishart( 1, t_max + W_prvar, solve(sse_2 + W_prmean))[,,1])
+  sse_2 <- apply( (h[,2:t_max] - h[,1:(t_max-1)])^2, MARGIN = 1, FUN = sum)
+  sigma_post_a <- 1 + rep(t_max,K)
+  sigma_post_b <- 0.0001 + sse_2
+
+  for (i in c(1:K)){
+    sigma_h[i,i] <- rinvgamma(1, shape = sigma_post_a[i] * 0.5, rate = sigma_post_b[i] * 0.5)
+  }
   #sigma_h <- LaplacesDemon::rinvwishart(nu = t_max + W_prvar, S = sse_2 + W_prmean)
 
   aux$sigma_h <- sigma_h
@@ -108,6 +105,89 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K),
 ##########################################################################
 
 #' @export
-plot.fatBVARSV <- function(fatBVARSVobj){
-  plot(fatBVARSVobj$mcmc)
+plot.fatBVARSV <- function(fatBVARSVobj, element = NULL){
+  if (is.null(element)) {
+    plot(fatBVARSVobj$mcmc)
+  } else {
+    plot(get_post.fatBVARSV(fatBVARSVobj, element))
+  }
 }
+
+##########################################################################
+# Get posterior functions  #
+##########################################################################
+#'@export
+get_post <- function(obj, element = NULL, ...) {
+  UseMethod("get_post", obj)
+}
+#' @rdname get_post
+#' @export
+get_post.fatBVARSV <- function(obj, element = NULL){
+  if (is.null(element)) {
+    return(obj$mcmc)
+  } else {
+    mcmc_name <- substr(colnames(obj$mcmc), start = 1, stop = nchar(element))
+    mcmc_id = (mcmc_name == element)
+    return(obj$mcmc[,mcmc_id])
+  }
+}
+
+#' @export
+get_post.numeric <- function(obj, element = NULL){
+  if (is.null(element)) {
+    return(obj)
+  } else {
+    mcmc_name <- substr(names(obj), start = 1, stop = nchar(element))
+    mcmc_id = (mcmc_name == element)
+    return(obj[mcmc_id])
+  }
+}
+
+#' @export
+get_post.mcmc <- function(obj, element = NULL){
+  if (is.null(element)) {
+    return(obj)
+  } else {
+    mcmc_name <- substr(colnames(obj), start = 1, stop = nchar(element))
+    mcmc_id = (mcmc_name == element)
+    return(obj[,mcmc_id])
+  }
+}
+
+#' @export
+get_lu_param <- function(param){
+  if (class(param) == "mcmc") {
+    mcmc_name <- colnames(param)
+  }
+
+  if (class(param) == "numeric") {
+    mcmc_name <- names(param)
+  }
+  num_param <- length(mcmc_name)
+  lb <- rep(-Inf, num_param)
+  ub <- rep(Inf, num_param)
+  names(lb) <- names(ub) <- mcmc_name
+
+  # B : no restrict
+  # A : no restrict
+
+  # sigma : positive restrict
+  mcmc_id <- (substr(mcmc_name, start = 1, stop = nchar("sigma")) == "sigma")
+  lb[mcmc_id] <- 0
+
+  # w : positive restrict
+  mcmc_id <- (substr(mcmc_name, start = 1, stop = nchar("nu")) == "nu")
+  lb[mcmc_id] <- 2
+  ub[mcmc_id] <- 100
+
+  # w : positive restrict
+  mcmc_id <- (substr(mcmc_name, start = 1, stop = nchar("w")) == "w")
+  lb[mcmc_id] <- 0
+
+  # gamma : no restrict
+
+  return(list(lb = lb,
+              ub = ub))
+
+}
+

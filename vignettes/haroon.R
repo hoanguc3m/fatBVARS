@@ -1,4 +1,5 @@
 library(fatBVARS)
+library(bridgesampling)
 # library(readr)
 # FRED <- read_csv("~/Downloads/FRED.csv",
 #                  col_types = cols(sasdate = col_date(format = "%m/%d/%Y")))
@@ -37,13 +38,53 @@ prior <- get_prior(y, p = 13, dist="Gaussian", SV = F)
 inits <- get_init(prior,  samples = 11000, burnin = 1000, thin = 10)
 Chain1 <- BVAR.novol(y, K = 4, p = 13, dist = "Gaussian", y0 = y0, prior = prior, inits = inits)
 # plot(Chain1)
+K = 4; p = 13; M = K + p * K^2;numa = 0.5* K * (K-1)
 
+lb <- rep(-Inf, ncol(Chain1$mcmc))
+lb[(M+numa+1):(M+numa+K)] <- 0
+ub <- rep(Inf, ncol(Chain1$mcmc))
+names(lb) <- names(ub) <- colnames(Chain1$mcmc)
+
+log_posterior(Chain1$mcmc[1,], Chain1)
+bridge_result1 <- bridge_sampler(samples = Chain1$mcmc, log_posterior = log_posterior,
+                                data = Chain1, lb = lb, ub = ub,
+                                method = "normal", repetitions = 5,
+                                maxiter = 900, silent = F)
+
+# Important sampling
+Brobdingnag::sum( exp( as.brob(bridge_result$q21 - bridge_result$q22))) / 500
+# Harmonic mean
+1/ (Brobdingnag::sum( exp( as.brob(bridge_result$q12 - bridge_result$q11))) / 500)
+error_measures(bridge_result1)
 ###########################################################################
 prior <- get_prior(y, p = 13, dist="Student", SV = F)
 inits <- get_init(prior,  samples = 11000, burnin = 1000, thin = 10)
 Chain2 <- BVAR.novol(y, K = 4, p = 13, dist = "Student", y0 = y0, prior = prior, inits = inits)
 # plot(Chain2)
 
+K = 4; p = 13; M = K + p * K^2;numa = 0.5* K * (K-1); t_max = nrow(Chain2$y)
+
+lb <- rep(-Inf, ncol(Chain2$mcmc))
+lb[(M+numa+1):(M+numa+K)] <- 0
+lb[(M+numa+K+1):(M+numa+K+1)] <- 2
+lb[(M+numa+K+2):(M+numa+K+t_max+1)] <- 0
+
+ub <- rep(Inf, ncol(Chain2$mcmc))
+ub[(M+numa+K+1):(M+numa+K+1)] <- 100
+
+names(lb) <- names(ub) <- colnames(Chain2$mcmc)
+
+log_posterior(Chain2$mcmc[1,], Chain2)
+
+bridge_result2 <- bridge_sampler(samples = Chain2$mcmc, log_posterior = log_posterior,
+                                 data = Chain2, lb = lb, ub = ub,
+                                 method = "normal",
+                                 maxiter = 1000, silent = F)
+# Important sampling
+Brobdingnag::sum( exp( as.brob(bridge_result2$q21 - bridge_result2$q22))) / 500
+# Harmonic mean
+1/ (Brobdingnag::sum( exp( as.brob(bridge_result2$q12 - bridge_result2$q11))) / 500)
+error_measures(bridge_result2)
 ###########################################################################
 prior <- get_prior(y, p = 13, dist="Hyper.Student", SV = F)
 inits <- get_init(prior,  samples = 11000, burnin = 1000, thin = 10)

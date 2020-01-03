@@ -5,10 +5,24 @@ library(bridgesampling)
 # K = 5, p = 2, t_max = 1000,
 # b0 = 0.6, a0 = 0.5, h = 0, nu = 6, gamma = 0.5,
 # seednum = 0, burn_in = 0
-datagen <- sim.VAR.novol(dist="Gaussian")
+
+###########################################################################
+datagen <- sim.VAR.SV(dist="Hyper.multiStudent")
 y <- datagen$y
+prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = T)
+inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
+Chain10 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.multiStudent", y0 = NULL, prior = prior, inits = inits)
+# plot(Chain10)
+lub <- get_lu_param(Chain10$mcmc)
+lb <- lub$lb
+ub <- lub$ub
+
+log_posterior(Chain10$mcmc[1,], Chain10)
+
+###########################################################################
+
 prior <- get_prior(y, p = 2, dist="Gaussian", SV = F)
-inits <- get_init(prior)
+inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain1 <- BVAR.novol(y, K = 5, p = 2, dist = "Gaussian", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain1)
 # plot(Chain1, element = "b")
@@ -19,15 +33,14 @@ ub <- lub$ub
 
 log_posterior(Chain1$mcmc[1,], Chain1)
 bridge_result1 <- bridge_sampler(samples = Chain1$mcmc, log_posterior = log_posterior,
-                                data = Chain1, lb = lb, ub = ub,
-                                method = "normal",
-                                maxiter = 1000, silent = F)
+                                 data = Chain1, lb = lb, ub = ub,
+                                 method = "normal",
+                                 maxiter = 1000, silent = F)
 
 ###########################################################################
-datagen <- sim.VAR.novol(dist="Student")
-y <- datagen$y
+
 prior <- get_prior(y, p = 2, dist="Student", SV = F)
-inits <- get_init(prior,  samples = 6000, burnin = 1000, thin = 1)
+inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain2 <- BVAR.novol(y, K = 5, p = 2, dist = "Student", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain2)
 lub <- get_lu_param(Chain2$mcmc)
@@ -37,15 +50,14 @@ ub <- lub$ub
 log_posterior(Chain2$mcmc[1,], Chain2)
 
 bridge_result2 <- bridge_sampler(samples = Chain2$mcmc, log_posterior = log_posterior,
-                                data = Chain2, lb = lb, ub = ub,
-                                method = "normal",
-                                maxiter = 1000, silent = F)
+                                 data = Chain2, lb = lb, ub = ub,
+                                 method = "normal",
+                                 maxiter = 1000, silent = F)
 
 ###########################################################################
-datagen <- sim.VAR.novol(dist="Hyper.Student")
-y <- datagen$y
+
 prior <- get_prior(y, p = 2, dist="Hyper.Student", SV = F)
-inits <- get_init(prior)
+inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain3 <- BVAR.novol(y, K = 5, p = 2, dist = "Hyper.Student", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain3)
 lub <- get_lu_param(Chain3$mcmc)
@@ -59,10 +71,9 @@ bridge_result3 <- bridge_sampler(samples = Chain3$mcmc, log_posterior = log_post
                                  method = "normal",
                                  maxiter = 1000, silent = F)
 ###########################################################################
-datagen <- sim.VAR.novol(dist="multiStudent")
-y <- datagen$y
+
 prior <- get_prior(y, p = 2, dist="multiStudent", SV = F)
-inits <- get_init(prior)
+inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain4 <- BVAR.novol(y, K = 5, p = 2, dist = "multiStudent", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain4)
 lub <- get_lu_param(Chain4$mcmc)
@@ -77,10 +88,9 @@ bridge_result4 <- bridge_sampler(samples = Chain4$mcmc, log_posterior = log_post
                                  maxiter = 1000, silent = F)
 
 ###########################################################################
-datagen <- sim.VAR.novol(dist="Hyper.multiStudent")
-y <- datagen$y
+
 prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = F)
-inits <- get_init(prior)
+inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain5 <- BVAR.novol(y, K = 5, p = 2, dist = "Hyper.multiStudent", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain5)
 lub <- get_lu_param(Chain5$mcmc)
@@ -100,10 +110,9 @@ Brobdingnag::sum( exp( as.brob(bridge_result5$q21 - bridge_result5$q22))) / 500
 error_measures(bridge_result5)
 
 ###########################################################################
-datagen <- sim.VAR.SV(dist="Gaussian")
-y <- datagen$y
+
 prior <- get_prior(y, p = 2, dist="Gaussian", SV = T)
-inits <- get_init(prior,  samples = 2000, burnin = 1000, thin = 1)
+inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain6 <- BVAR.SV(y, K = 5, p = 2, dist = "Gaussian", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain6)
 lub <- get_lu_param(Chain6$mcmc)
@@ -111,12 +120,15 @@ lb <- lub$lb
 ub <- lub$ub
 
 log_posterior(Chain6$mcmc[1,], Chain6)
+bridge_result6 <- bridge_sampler(samples = Chain6$mcmc, log_posterior = log_posterior,
+                                 data = Chain6, lb = lb, ub = ub,
+                                 method = "normal",
+                                 maxiter = 1000, silent = F)
 
 ###########################################################################
-datagen <- sim.VAR.SV(dist="Student")
-y <- datagen$y
+
 prior <- get_prior(y, p = 2, dist="Student", SV = T)
-inits <- get_init(prior)
+inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain7 <- BVAR.SV(y, K = 5, p = 2, dist = "Student", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain7)
 lub <- get_lu_param(Chain7$mcmc)
@@ -126,10 +138,9 @@ ub <- lub$ub
 log_posterior(Chain7$mcmc[1,], Chain7)
 
 ###########################################################################
-datagen <- sim.VAR.SV(dist="Hyper.Student")
-y <- datagen$y
+
 prior <- get_prior(y, p = 2, dist="Hyper.Student", SV = T)
-inits <- get_init(prior)
+inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain8 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.Student", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain8)
 lub <- get_lu_param(Chain8$mcmc)
@@ -139,10 +150,9 @@ ub <- lub$ub
 log_posterior(Chain8$mcmc[1,], Chain8)
 
 ###########################################################################
-datagen <- sim.VAR.SV(dist="multiStudent")
-y <- datagen$y
+
 prior <- get_prior(y, p = 2, dist="multiStudent", SV = T)
-inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
+inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain9 <- BVAR.SV(y, K = 5, p = 2, dist = "multiStudent", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain9)
 lub <- get_lu_param(Chain9$mcmc)
@@ -150,15 +160,4 @@ lb <- lub$lb
 ub <- lub$ub
 
 log_posterior(Chain9$mcmc[1,], Chain9)
-###########################################################################
-datagen <- sim.VAR.SV(dist="Hyper.multiStudent")
-y <- datagen$y
-prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = T)
-inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
-Chain10 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.multiStudent", y0 = NULL, prior = prior, inits = inits)
-# plot(Chain10)
-lub <- get_lu_param(Chain10$mcmc)
-lb <- lub$lb
-ub <- lub$ub
 
-log_posterior(Chain10$mcmc[1,], Chain10)

@@ -130,7 +130,7 @@ get_prior_OLS <- function(y, p, tau = nrow(y) - p, scale_factor = 4 ){
 
 #' Prior distribution of BVAR model
 #'
-#' This function returns a priot specification of BVAR-SV-fatTail model.
+#' This function returns a prior specification of BVAR-SV-fatTail model.
 #' @param y The input data as matrix T x K where T is the number of observations and K is the number of variables
 #' @param p The number of lags in BVAR model.
 #' @param priorStyle The prior style in BVAR model should be c("Minnesota", "OLS")

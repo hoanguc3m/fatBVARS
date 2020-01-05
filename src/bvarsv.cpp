@@ -5,6 +5,7 @@
 #include <cmath>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <iostream>
 
 // Rcpp::depends(RcppArmadillo)
 
@@ -188,9 +189,9 @@ List sigmahelper4(arma::mat y2, arma::colvec qs, arma::colvec ms, arma::colvec u
   double t = y2.n_rows;  // time
   arma::mat aux = 0.001 * arma::ones(t,M);
   arma::mat yss = log( aux + y2); // yss = log( y2)
-
   arma::colvec cprw = arma::zeros(7,1);  // Cumulative prob
   arma::mat statedraw = arma::zeros(t,M); // Index of mixtures which component
+
   for (int jj = 1; jj < (M+1); jj++) {
     for (int i = 1; i < (t+1); i++) {
       arma::colvec prw = arma::zeros(7,1); // Prob value
@@ -228,7 +229,6 @@ List sigmahelper4(arma::mat y2, arma::colvec qs, arma::colvec ms, arma::colvec u
       yss1(i-1,j-1) = yss(i-1,j-1) - ms(imix-1) + 1.2704;
     }
   }
-
   arma::mat Sigtdraw_new = carterkohn(yss1.t(),Zs,vart,Wdraw,M,M,t,sigma_prmean,sigma_prvar)["bdraws"];
 
   arma::mat sigt = exp(0.5*Sigtdraw_new);

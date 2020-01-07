@@ -136,14 +136,14 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, Nfsample = NULL){
 }
 
 #' @export
-forecast_density <- function(Chain, y0 = NULL, y_future){
+forecast_density <- function(Chain, y_current = NULL, y_obs_future){
   K <- Chain$K
   p <- Chain$p
 
-  if (! ncol(y_future) == K) { stop("ncol(y_future) != K") }
+  if (! ncol(y_obs_future) == K) { stop("ncol(y_obs_future) != K") }
 
-  t_pred = nrow(y_future)
-  predictive_samples <- get_forecast(Chain = Chain, y0 = y0, t_pred = t_pred) # Nfsample
+  t_pred = nrow(y_obs_future)
+  predictive_samples <- get_forecast(Chain = Chain, y0 = y_current, t_pred = t_pred) # Nfsample
 
   log_pred<- matrix(NA, nrow = t_pred, ncol = K)
   emp_CDF<- matrix(NA, nrow = t_pred, ncol = K)
@@ -155,7 +155,7 @@ forecast_density <- function(Chain, y0 = NULL, y_future){
       predict_den <- KernSmooth::bkde(x = predictive_samples$y_pred[j,i,]) # fast and accurate
       y_min <- min(predict_den$x)
       y_max <- max(predict_den$x)
-      y_obs <- as.numeric(y_future[j,i])
+      y_obs <- as.numeric(y_obs_future[j,i])
       appximate_density <- approxfun(predict_den)
       if(y_obs < y_min) {y_obs = y_min}
       if(y_obs > y_max) {y_obs = y_max}
@@ -163,29 +163,28 @@ forecast_density <- function(Chain, y0 = NULL, y_future){
       emp_CDF[j,i] <- ecdf(x = predictive_samples$y_pred[j,i,])(y_obs)
     }
   }
-  for (i in c(1: (K-1))){
-    for (k in c((i+1):K)){
-      for (j in c(1:t_pred)){
-        # predict_den <- pmpp::kde2D(data = cbind(predictive_samples$y_pred[j,i,],
-        #                                             predictive_samples$y_pred[j,k,])
-        #                                   )
-        # KernSmooth::bkde2D(x = cbind(predictive_samples$y_pred[j,i,],
-        #                              predictive_samples$y_pred[j,k,]), bandwidth = ?)
-        predict_den <- MASS::kde2d(x = predictive_samples$y_pred[j,i,],
-                                  y = predictive_samples$y_pred[j,k,], n = 100)
-
-        log_biv_pred[(i-1)*K+k-i,j] <- log(fields::interp.surface(predict_den, cbind(y_future[j,i], y_future[j,k])))
-      }
-
-    }
-  }
+  # for (i in c(1: (K-1))){
+  #   for (k in c((i+1):K)){
+  #     for (j in c(1:t_pred)){
+  #       # predict_den <- pmpp::kde2D(data = cbind(predictive_samples$y_pred[j,i,],
+  #       #                                             predictive_samples$y_pred[j,k,])
+  #       #                                   )
+  #       # KernSmooth::bkde2D(x = cbind(predictive_samples$y_pred[j,i,],
+  #       #                              predictive_samples$y_pred[j,k,]), bandwidth = ?)
+  #       predict_den <- MASS::kde2d(x = predictive_samples$y_pred[j,i,],
+  #                                 y = predictive_samples$y_pred[j,k,], n = 100)
+  #
+  #       log_biv_pred[(i-1)*K+k-i,j] <- log(fields::interp.surface(predict_den, cbind(y_obs_future[j,i], y_obs_future[j,k])))
+  #     }
+  #
+  #   }
+  # }
 
   return(list(log_pred = log_pred,
-              MSFE = (apply(predictive_samples$y_pred, MARGIN = c(1,2), FUN =mean) - y_future)^2,
-              MAFE = abs(apply(predictive_samples$y_pred, MARGIN = c(1,2), FUN =mean) - y_future),
-              emp_CDF = emp_CDF,
-              log_biv_pred = log_biv_pred
-              ))
+              MSFE = (apply(predictive_samples$y_pred, MARGIN = c(1,2), FUN = mean) - y_obs_future)^2,
+              MAFE = abs(apply(predictive_samples$y_pred, MARGIN = c(1,2), FUN = mean) - y_obs_future),
+              # log_biv_pred = log_biv_pred,
+              emp_CDF = emp_CDF))
 }
 
 #' @export
@@ -209,6 +208,7 @@ recursive_forecast <- function(Chain, y0 = NULL, y_future, t_pred = 12, reestima
   sum_MAFE <- matrix(0, nrow = t_pred, ncol = K)
   PIT <- array(0, dim = c(t_pred, K, max_rolling))
   for (time_id in c(1:max_rolling)){
+    if (time_id %% 100 == 0 ) cat("At rolling ", time_id)
     y_current <- y_combine[c(time_id:(time_id+p-1)), ]
     y_obs_future <- y_combine[c((time_id+p):(time_id+p+t_pred-1)), ]
     forecast_err <- forecast_density(Chain, y_current, y_obs_future)

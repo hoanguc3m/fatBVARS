@@ -13,32 +13,30 @@ prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = T)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain10 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.multiStudent", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain10)
-lub <- get_lu_param(Chain10$mcmc)
-lb <- lub$lb
-ub <- lub$ub
 
 log_posterior(Chain10$mcmc[1,], Chain10)
 waic_chain10 <- WAIC(Chain10)
-recur_chain10 <- recursive_forecast(Chain = Chain10, y0 = y[1:500,], y_future = y[501:1000,], t_pred = 12, reestimated = F)
+recur_chain10 <- recursive_forecast(Chain = Chain10, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 ###########################################################################
 
 prior <- get_prior(y, p = 2, dist="Gaussian", SV = F)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain1 <- BVAR.novol(y, K = 5, p = 2, dist = "Gaussian", y0 = NULL, prior = prior, inits = inits)
 waic_chain1 <- WAIC(Chain1)
+recur_chain1 <- recursive_forecast(Chain = Chain1, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 
 # plot(Chain1)
 # plot(Chain1, element = "b")
-lub <- get_lu_param(Chain1$mcmc)
-lb <- lub$lb
-ub <- lub$ub
-
-
-log_posterior(Chain1$mcmc[1,], Chain1)
-bridge_result1 <- bridge_sampler(samples = Chain1$mcmc, log_posterior = log_posterior,
-                                 data = Chain1, lb = lb, ub = ub,
-                                 method = "normal",
-                                 maxiter = 1000, silent = F)
+# lub <- get_lu_param(Chain1$mcmc)
+# lb <- lub$lb
+# ub <- lub$ub
+#
+#
+# log_posterior(Chain1$mcmc[1,], Chain1)
+# bridge_result1 <- bridge_sampler(samples = Chain1$mcmc, log_posterior = log_posterior,
+#                                  data = Chain1, lb = lb, ub = ub,
+#                                  method = "normal",
+#                                  maxiter = 1000, silent = F)
 
 ###########################################################################
 
@@ -46,6 +44,7 @@ prior <- get_prior(y, p = 2, dist="Student", SV = F)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain2 <- BVAR.novol(y, K = 5, p = 2, dist = "Student", y0 = NULL, prior = prior, inits = inits)
 waic_chain2 <- WAIC(Chain2)
+recur_chain2 <- recursive_forecast(Chain = Chain2, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 
 # plot(Chain2)
 lub <- get_lu_param(Chain2$mcmc)
@@ -65,6 +64,7 @@ prior <- get_prior(y, p = 2, dist="Hyper.Student", SV = F)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain3 <- BVAR.novol(y, K = 5, p = 2, dist = "Hyper.Student", y0 = NULL, prior = prior, inits = inits)
 waic_chain3 <- WAIC(Chain3)
+recur_chain3 <- recursive_forecast(Chain = Chain3, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 
 # plot(Chain3)
 lub <- get_lu_param(Chain3$mcmc)
@@ -83,6 +83,7 @@ prior <- get_prior(y, p = 2, dist="multiStudent", SV = F)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain4 <- BVAR.novol(y, K = 5, p = 2, dist = "multiStudent", y0 = NULL, prior = prior, inits = inits)
 waic_chain4 <- WAIC(Chain4)
+recur_chain4 <- recursive_forecast(Chain = Chain4, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 
 # plot(Chain4)
 lub <- get_lu_param(Chain4$mcmc)
@@ -102,6 +103,7 @@ prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = F)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain5 <- BVAR.novol(y, K = 5, p = 2, dist = "Hyper.multiStudent", y0 = NULL, prior = prior, inits = inits)
 waic_chain5 <- WAIC(Chain5)
+recur_chain5 <- recursive_forecast(Chain = Chain5, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 
 # plot(Chain5)
 lub <- get_lu_param(Chain5$mcmc)
@@ -126,6 +128,7 @@ prior <- get_prior(y, p = 2, dist="Gaussian", SV = T)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain6 <- BVAR.SV(y, K = 5, p = 2, dist = "Gaussian", y0 = NULL, prior = prior, inits = inits)
 waic_chain6 <- WAIC(Chain6)
+recur_chain6 <- recursive_forecast(Chain = Chain6, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 
 # plot(Chain6)
 lub <- get_lu_param(Chain6$mcmc)
@@ -144,6 +147,7 @@ prior <- get_prior(y, p = 2, dist="Student", SV = T)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain7 <- BVAR.SV(y, K = 5, p = 2, dist = "Student", y0 = NULL, prior = prior, inits = inits)
 waic_chain7 <- WAIC(Chain7)
+recur_chain7 <- recursive_forecast(Chain = Chain7, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 
 # plot(Chain7)
 lub <- get_lu_param(Chain7$mcmc)
@@ -158,6 +162,7 @@ prior <- get_prior(y, p = 2, dist="Hyper.Student", SV = T)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain8 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.Student", y0 = NULL, prior = prior, inits = inits)
 waic_chain8 <- WAIC(Chain8)
+recur_chain8 <- recursive_forecast(Chain = Chain8, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 
 # plot(Chain8)
 lub <- get_lu_param(Chain8$mcmc)
@@ -172,6 +177,7 @@ prior <- get_prior(y, p = 2, dist="multiStudent", SV = T)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain9 <- BVAR.SV(y, K = 5, p = 2, dist = "multiStudent", y0 = NULL, prior = prior, inits = inits)
 waic_chain9 <- WAIC(Chain9)
+recur_chain9 <- recursive_forecast(Chain = Chain9, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 
 # plot(Chain9)
 lub <- get_lu_param(Chain9$mcmc)

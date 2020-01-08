@@ -72,9 +72,9 @@ sim.VAR.Gaussian.SV <- function(K = 5, p = 2, t_max = 1000,
   # No tail
   # Volatility logvol
   if (is.null(sigma_h)){
-    Vh <- diag(seq(3e-2, 3e-2, length.out = K))
+    Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
-    Vh <-  diag(sigma_h)
+    Vh <-  sigma_h
   }
 
   ystar <- y0
@@ -84,13 +84,15 @@ sim.VAR.Gaussian.SV <- function(K = 5, p = 2, t_max = 1000,
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
   logvol = NULL
+  inv_A0 <- solve(A0)
+
   for (i in c(1:t_max)){
-    h <- h +  Vh %*% rnorm(K)
-    Sigma <- solve(A0) %*% diag(as.vector(exp(0.5*h)))
+    h <- h +  Vh * rnorm(K)
+    Sigma <-  inv_A0 %*% diag(exp(0.5*h))
     Sigma2 <- Sigma %*% t(Sigma)
     y_var[i,] <- diag(Sigma2)
-    xt <- rbind(1, vec( t(ystar)[,(p+i-1):i]))
-    y_mean[i,] <- t(B0 %*% xt)
+    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    y_mean[i,] <- B0 %*% xt
     ysim <-  B0 %*% xt  + Sigma %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
     logvol <- rbind(logvol, t(h))
@@ -144,9 +146,9 @@ sim.VAR.Student.SV <- function(K = 5, p = 2, t_max = 1000,
 
   # Volatility logvol
   if (is.null(sigma_h)){
-    Vh <- diag(seq(3e-2, 3e-2, length.out = K))
+    Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
-    Vh <-  diag(sigma_h)
+    Vh <-  sigma_h
   }
 
   ystar <- y0
@@ -158,12 +160,12 @@ sim.VAR.Student.SV <- function(K = 5, p = 2, t_max = 1000,
   logvol = NULL
 
   for (i in c(1:t_max)){
-    h <- h +  Vh %*% rnorm(K)
-    Sigma <- solve(A0) %*% diag(as.vector(exp(0.5*h)))
+    h <- h +  Vh * rnorm(K)
+    Sigma <-  inv_A0 %*% diag(exp(0.5*h))
     Sigma2 <- Sigma %*% t(Sigma)
     y_var[i,] <- diag(Sigma2)
-    xt <- rbind(1, vec( t(ystar)[,(p+i-1):i]))
-    y_mean[i,] <- t(B0 %*% xt)
+    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    y_mean[i,] <- B0 %*% xt
     ysim <-  B0 %*% xt + w_sqrt_t[i] * (Sigma %*% eps[i,])
     ystar <- rbind(ystar, t(ysim))
     logvol <- rbind(logvol, t(h))
@@ -281,9 +283,9 @@ sim.VAR.Hyper.Student.SV <- function(K = 5, p = 2, t_max = 1000,
 
   # Volatility logvol
   if (is.null(sigma_h)){
-    Vh <- diag(seq(3e-2, 3e-2, length.out = K))
+    Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
-    Vh <-  diag(sigma_h)
+    Vh <-  sigma_h
   }
 
   ystar <- y0
@@ -293,14 +295,15 @@ sim.VAR.Hyper.Student.SV <- function(K = 5, p = 2, t_max = 1000,
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
   logvol = NULL
+  inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
-    h <- h +  Vh %*% rnorm(K)
-    Sigma <- solve(A0) %*% diag(as.vector(exp(0.5*h)))
+    h <- h +  Vh * rnorm(K)
+    Sigma <-  inv_A0 %*% diag(exp(0.5*h))
     Sigma2 <- Sigma %*% t(Sigma)
     y_var[i,] <- diag(Sigma2)
-    xt <- rbind(1, vec( t(ystar)[,(p+i-1):i]))
-    y_mean[i,] <- t(B0 %*% xt) + gamma * w_t[i]
+    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    y_mean[i,] <- B0 %*% xt + gamma * w_t[i]
     ysim <-  B0 %*% xt  + gamma * w_t[i] + w_sqrt_t[i] * (Sigma %*% eps[i,])
     ystar <- rbind(ystar, t(ysim))
     logvol <- rbind(logvol, t(h))
@@ -356,9 +359,9 @@ sim.VAR.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 
   # Volatility logvol
   if (is.null(sigma_h)){
-    Vh <- diag(seq(3e-2, 3e-2, length.out = K))
+    Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
-    Vh <-  diag(sigma_h)
+    Vh <-  sigma_h
   }
 
   ystar <- y0
@@ -368,15 +371,16 @@ sim.VAR.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
   logvol = NULL
+  inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
-    h <- h +  Vh %*% rnorm(K)
-    Sigma <- solve(A0) %*% diag(as.vector(exp(0.5*h)))
+    h <- h +  Vh * rnorm(K)
+    Sigma <-  inv_A0 %*% diag(exp(0.5*h))
     Sigma2 <- Sigma %*% t(Sigma)
     y_var[i,] <- diag(Sigma2)
-    xt <- rbind(1, vec( t(ystar)[,(p+i-1):i]))
-    y_mean[i,] <- t(B0 %*% xt)
-    ysim <-  B0 %*% xt + diag(w_sqrt_t[i,]) %*% (Sigma %*% eps[i,])
+    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    y_mean[i,] <- B0 %*% xt
+    ysim <-  B0 %*% xt + w_sqrt_t[i,] * (Sigma %*% eps[i,])
     ystar <- rbind(ystar, t(ysim))
     logvol <- rbind(logvol, t(h))
   }
@@ -435,9 +439,9 @@ sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 
   # Volatility logvol
   if (is.null(sigma_h)){
-    Vh <- diag(seq(3e-2, 3e-2, length.out = K))
+    Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
-    Vh <-  diag(sigma_h)
+    Vh <-  sigma_h
   }
 
   ystar <- y0
@@ -447,15 +451,16 @@ sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
   logvol = NULL
+  inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
-    h <- h +  Vh %*% rnorm(K)
-    Sigma <- solve(A0) %*% diag(as.vector(exp(0.5*h)))
+    h <- h +  Vh * rnorm(K)
+    Sigma <-  inv_A0 %*% diag(exp(0.5*h))
     Sigma2 <- Sigma %*% t(Sigma)
     y_var[i,] <- diag(Sigma2)
-    xt <- rbind(1, vec( t(ystar)[,(p+i-1):i]))
-    y_mean[i,] <- t(B0 %*% xt) + gamma * w_t[i,]
-    ysim <-  B0 %*% xt  + gamma * w_t[i,] + diag(w_sqrt_t[i,]) %*% (Sigma %*% eps[i,])
+    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    y_mean[i,] <- B0 %*% xt + gamma * w_t[i,]
+    ysim <-  B0 %*% xt + gamma * w_t[i,] + w_sqrt_t[i,] * (Sigma %*% eps[i,])
     ystar <- rbind(ystar, t(ysim))
     logvol <- rbind(logvol, t(h))
   }
@@ -470,3 +475,4 @@ sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
        Vh = Vh,
        dist = "Hyper.multiStudent", SV = TRUE)
 }
+

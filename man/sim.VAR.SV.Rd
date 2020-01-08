@@ -5,7 +5,8 @@
 \title{Simulate data from Gaussian BVAR model with SV}
 \usage{
 sim.VAR.SV(dist, K = 5, p = 2, t_max = 1000, b0 = 0.6, a0 = 0.5,
-  h = 0, nu = 6, gamma = 0.5, seednum = 0, burn_in = 0)
+  h = 0, sigma_h = NULL, y0 = matrix(0, ncol = K, nrow = p),
+  nu = 6, gamma = 0.5, seednum = 0, burn_in = 0)
 }
 \arguments{
 \item{dist}{The variable specifies the BVAR error distribution. It should be one of

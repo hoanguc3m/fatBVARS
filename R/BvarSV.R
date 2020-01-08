@@ -1077,7 +1077,7 @@ BVAR.Hyper.multiStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits =
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc <- cbind(mcmc, c(b_sample, a_sample, gamma, nu, diag(sigma_h), as.vector(h), as.vector(w)))
     if (j %% 100 == 0) {
-      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", nu ,  " \n")
+      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", nu , " gamma ", gamma , " \n")
       acount_w <- rep(0,t_max)
     }
   }

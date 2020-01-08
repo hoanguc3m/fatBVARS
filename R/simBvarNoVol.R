@@ -23,13 +23,14 @@
 #' }
 sim.VAR.novol <- function(dist, K = 5, p = 2, t_max = 1000,
                                    b0 = 0.6, a0 = 0.5, h = 0, nu = 6, gamma = 0.5,
+                                   y0 = matrix(0, ncol = K, nrow = p),
                                    seednum = 0, burn_in = 0){
-  if (dist == "Gaussian") datagen <- sim.VAR.Gaussian.novol(K, p, t_max, b0, a0, h, seednum, burn_in)
-  if (dist == "Student") datagen <- sim.VAR.Student.novol(K, p, t_max, b0, a0, h, nu, seednum, burn_in)
+  if (dist == "Gaussian") datagen <- sim.VAR.Gaussian.novol(K, p, t_max, b0, a0, h, y0, seednum, burn_in)
+  if (dist == "Student") datagen <- sim.VAR.Student.novol(K, p, t_max, b0, a0, h, y0, nu, seednum, burn_in)
   # if (dist == "Skew.Student") datagen <- sim.VAR.Skew.Student.novol(K, p, t_max, b0, a0, h, nu, gamma, seednum, burn_in)
-  if (dist == "Hyper.Student") datagen <- sim.VAR.Hyper.Student.novol(K, p, t_max, b0, a0, h, nu, gamma, seednum, burn_in)
-  if (dist == "multiStudent") datagen <- sim.VAR.multiStudent.novol(K, p, t_max, b0, a0, h, nu, seednum, burn_in)
-  if (dist == "Hyper.multiStudent") datagen <- sim.VAR.Hyper.multiStudent.novol(K, p, t_max, b0, a0, h, nu, gamma, seednum, burn_in)
+  if (dist == "Hyper.Student") datagen <- sim.VAR.Hyper.Student.novol(K, p, t_max, b0, a0, h, y0, nu, gamma, seednum, burn_in)
+  if (dist == "multiStudent") datagen <- sim.VAR.multiStudent.novol(K, p, t_max, b0, a0, h, y0, nu, seednum, burn_in)
+  if (dist == "Hyper.multiStudent") datagen <- sim.VAR.Hyper.multiStudent.novol(K, p, t_max, b0, a0, h, y0, nu, gamma, seednum, burn_in)
 
   return(datagen)
 }

@@ -77,7 +77,7 @@ sim.VAR.Gaussian.SV <- function(K = 5, p = 2, t_max = 1000,
     Vh <-  sigma_h
   }
 
-  ystar <- y0
+  ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
   y_var <- matrix(NA, nrow = t_max, ncol = K)
   volatility <- matrix(NA, nrow = t_max, ncol = K)
@@ -151,13 +151,14 @@ sim.VAR.Student.SV <- function(K = 5, p = 2, t_max = 1000,
     Vh <-  sigma_h
   }
 
-  ystar <- y0
+  ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
   y_var <- matrix(NA, nrow = t_max, ncol = K)
   volatility <- matrix(NA, nrow = t_max, ncol = K)
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
   logvol = NULL
+  inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
@@ -288,7 +289,7 @@ sim.VAR.Hyper.Student.SV <- function(K = 5, p = 2, t_max = 1000,
     Vh <-  sigma_h
   }
 
-  ystar <- y0
+  ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
   y_var <- matrix(NA, nrow = t_max, ncol = K)
   volatility <- matrix(NA, nrow = t_max, ncol = K)
@@ -364,7 +365,7 @@ sim.VAR.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
     Vh <-  sigma_h
   }
 
-  ystar <- y0
+  ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
   y_var <- matrix(NA, nrow = t_max, ncol = K)
   volatility <- matrix(NA, nrow = t_max, ncol = K)
@@ -444,7 +445,7 @@ sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
     Vh <-  sigma_h
   }
 
-  ystar <- y0
+  ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
   y_var <- matrix(NA, nrow = t_max, ncol = K)
   volatility <- matrix(NA, nrow = t_max, ncol = K)

@@ -34,8 +34,6 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, t_current = NULL, Nfsamp
     frange <- sample(nrow(mcmc), Nfsample)
   }
 
-
-
   y_pred <- array(NA, dim = c(t_pred, K, Nfsample))
   ymean_pred <- array(NA, dim = c(t_pred, K, Nfsample))
   yvar_pred <- array(NA, dim = c(t_pred, K, Nfsample))
@@ -190,19 +188,23 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
       appximate_density <- smooth.spline(x = predict_den$x, y = predict_den$y)
       pred_dens <- predict(appximate_density, y_obs)$y
       if ( pred_dens <= 0) {
-        if ( abs(y_obs - y_min) < abs(y_obs - y_max) ) {
-          pred_dens <- predict(appximate_density, y_min)$y
-        } else {
-          pred_dens <- predict(appximate_density, y_max)$y
+        # if ( abs(y_obs - y_min) < abs(y_obs - y_max) ) {
+        #   pred_dens <- predict(appximate_density, y_min)$y
+        # } else {
+        #   pred_dens <- predict(appximate_density, y_max)$y
+        # }
+        pred_dens <- min(predict_den$y)
+        if(pred_dens <= 0 ) {
+          cat("t_current : ", t_current, " ", i, " ", j, " ", y_obs, " ", y_min, " ", y_max)
+          print(predict_den)
+          stop(" NA log ")
         }
+
       }
       # if(y_obs < y_min) {y_obs = y_min}
       # if(y_obs > y_max) {y_obs = y_max}
       log_pred[j,i] <- log(pred_dens)
-      # if(is.na(log_pred[j,i])) {
-      #   cat("t_current : ", t_current, " ", i, " ", j, " ", y_obs, " ", y_min, " ", y_max)
-      #   stop(" NA log ")
-      # }
+
       emp_CDF[j,i] <- ecdf(x = predictive_samples$y_pred[j,i,])(y_obs)
     }
   }
@@ -270,6 +272,7 @@ recursive_forecast <- function(Chain, y0 = NULL, y_future, t_pred = 12, reestima
     if (time_id %% 10 == 0 ) cat("At rolling ", time_id, " \t")
     y_current <- y_combine[c(time_id:(time_id+p-1)), ]
     y_obs_future <- y_combine[c((time_id+p):(time_id+p+t_pred-1)), ]
+
     forecast_err <- forecast_density(Chain = Chain, y_current = y_current,
                                      y_obs_future = y_obs_future,
                                      t_current = which(Chain$y == y_current[p,1]) )

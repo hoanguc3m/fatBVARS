@@ -401,7 +401,7 @@ sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
                                           y0 = matrix(0, ncol = K, nrow = p),
                                           nu = 6, gamma = 0.5, seednum = 0, burn_in = 0){
   t_max = t_max + burn_in
-  set.seed(seednum)
+  # set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
   if (length(b0) == 1) {
@@ -465,6 +465,8 @@ sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
     ystar <- rbind(ystar, t(ysim))
     logvol <- rbind(logvol, t(h))
   }
+
+  # cat(" Hyper.multi.SV ", eps[1,1]," ", seednum, "\t")
 
   t_max = t_max - burn_in
   list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],

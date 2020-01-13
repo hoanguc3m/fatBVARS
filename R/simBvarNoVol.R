@@ -81,8 +81,8 @@ sim.VAR.Gaussian.novol <- function(K = 5, p = 2, t_max = 1000,
   Sigma <- solve(A0) %*% diag(as.vector(exp(0.5*h)))
   Sigma2 <- Sigma %*% t(Sigma)
 
-  y_var <- rep.row(diag(Sigma2), t_max)
-  volatility <- rep.row(h, t_max)
+  y_var <- reprow(diag(Sigma2), t_max)
+  volatility <- reprow(h, t_max)
 
   for (i in c(1:t_max)){
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
@@ -146,8 +146,8 @@ sim.VAR.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   Sigma <- solve(A0) %*% diag(exp(0.5*h))
   Sigma2 <- Sigma %*% t(Sigma)
 
-  y_var <- w_t * rep.row(diag(Sigma2), t_max)
-  volatility <- rep.row(h, t_max)
+  y_var <- w_t * reprow(diag(Sigma2), t_max)
+  volatility <- reprow(h, t_max)
 
   for (i in c(1:t_max)){
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
@@ -270,8 +270,8 @@ sim.VAR.Hyper.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   Sigma <- solve(A0) %*% diag(exp(0.5*h))
   Sigma2 <- Sigma %*% t(Sigma)
 
-  y_var <- w_t * rep.row(diag(Sigma2), t_max)
-  volatility <- rep.row(h, t_max)
+  y_var <- w_t * reprow(diag(Sigma2), t_max)
+  volatility <- reprow(h, t_max)
 
   for (i in c(1:t_max)){
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
@@ -338,8 +338,8 @@ sim.VAR.multiStudent.novol <- function(K = 5, p = 2, t_max = 1000,
   Sigma <- solve(A0) %*% diag(exp(0.5*h))
   Sigma2 <- Sigma %*% t(Sigma)
 
-  y_var <- w_t * rep.row(diag(Sigma2), t_max)
-  volatility <- rep.row(h, t_max)
+  y_var <- w_t * reprow(diag(Sigma2), t_max)
+  volatility <- reprow(h, t_max)
 
   for (i in c(1:t_max)){
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
@@ -409,8 +409,8 @@ sim.VAR.Hyper.multiStudent.novol <- function(K = 5, p = 2, t_max = 1000,
   Sigma <- solve(A0) %*% diag(exp(0.5*h))
   Sigma2 <- Sigma %*% t(Sigma)
 
-  y_var <- w_t * rep.row(diag(Sigma2), t_max)
-  volatility <- rep.row(h, t_max)
+  y_var <- w_t * reprow(diag(Sigma2), t_max)
+  volatility <- reprow(h, t_max)
 
   for (i in c(1:t_max)){
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))

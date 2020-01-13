@@ -129,10 +129,10 @@ BVAR.Gaussian.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
       mcmc <- cbind(mcmc, c(b_sample, a_sample, sigma))
     if (j %% 100 == 0) { cat(" Iteration ", j, " \n")}
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("sigma",c(1:K), sep = ""))
   return(as.mcmc(t(mcmc)))
@@ -184,14 +184,14 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   acount_w <- rep(0, t_max)
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
-  w <- rep.row(w_sample, K)
+  w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
 
   # Output
   mcmc <- NULL
   for (j in c(1:samples)){
     # Sample B
-    xt_G <- xt / rep.row(sqrt(w_sample), m)
+    xt_G <- xt / reprow(sqrt(w_sample), m)
     yt_G <- yt / w_sqrt
     V_b_post_inv <- V_b_prior_inv + kronecker(xt_G %*% t(xt_G),Sigma2_inv)
     b_post <- kronecker(xt_G, Sigma2_inv) %*% vec(yt_G)
@@ -240,7 +240,7 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     for (i in c(1:t_max)){
       w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% Sigma2_inv %*% u[,i])
     }
-    w <- rep.row(w_sample, K)
+    w <- reprow(w_sample, K)
     w_sqrt <- sqrt(w)
 
 
@@ -277,10 +277,10 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
       acount_w <- rep(0,t_max)
     }
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("nu"),
@@ -342,7 +342,7 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 #'
 #'   # Init w as Gaussian
 #'   w_sample <- rep(1, t_max)
-#'   w <- rep.row(w_sample, K)
+#'   w <- reprow(w_sample, K)
 #'   w_sqrt <- sqrt(w)
 #'   # Init z as Truncated Gaussian
 #'   z <- matrix(abs(rnorm(K * t_max)), ncol = t_max, nrow = K)
@@ -373,7 +373,7 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 #'     B <- Vec_to_Mat(b_sample, K,p)
 #'     # cat(round(gamma, digits = 3), " ", round(b_sample[1:K], digits = 3)," ", nu, " \n")
 #'     # # Sample B
-#'     # xt_G <- xt / rep.row(sqrt(w_sample), m)
+#'     # xt_G <- xt / reprow(sqrt(w_sample), m)
 #'     # yt_G <- (yt -  D %*% z) / w_sqrt
 #'     # V_b_post_inv <- V_b_prior_inv + kronecker(xt_G %*% t(xt_G),Sigma2_inv)
 #'     # b_post <- kronecker(xt_G, Sigma2_inv) %*% vec(yt_G)
@@ -441,7 +441,7 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 #'     for (i in c(1:t_max)){
 #'       w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% Sigma2_inv %*% u[,i])
 #'     }
-#'     w <- rep.row(w_sample, K)
+#'     w <- reprow(w_sample, K)
 #'     w_sqrt <- sqrt(w)
 #'
 #'     # Sample nu
@@ -476,10 +476,10 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 #'       acount_w <- rep(0,t_max)
 #'     }
 #'   }
-#'   nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+#'   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
 #'   nameA <- nameA[upper.tri(nameA, diag = F)]
 #'   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-#'                         sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+#'                         sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
 #'                         nameA,
 #'                         paste("sigma",c(1:K), sep = ""),
 #'                         paste("gamma",c(1:K), sep = ""),
@@ -539,14 +539,14 @@ BVAR.Hyper.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = N
 
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
-  w <- rep.row(w_sample, K)
+  w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
 
   # Output
   mcmc <- NULL
   for (j in c(1:samples)){
     # Sample B
-    xt_G <- xt / rep.row(sqrt(w_sample), m)
+    xt_G <- xt / reprow(sqrt(w_sample), m)
     yt_G <- (yt - D %*% w)  / w_sqrt
     V_b_post_inv <- V_b_prior_inv + kronecker(xt_G %*% t(xt_G),Sigma2_inv)
     b_post <- kronecker(xt_G, Sigma2_inv) %*% vec(yt_G)
@@ -660,10 +660,10 @@ BVAR.Hyper.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = N
       acount_w <- rep(0,t_max)
     }
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("gamma",c(1:K), sep = ""),
@@ -719,7 +719,7 @@ BVAR.multiStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
   acount_w <- rep(0, t_max)
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
-  w <- rep.row(w_sample, K)
+  w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
   w_sqrt_inv <- 1/w_sqrt
   # Output
@@ -842,14 +842,14 @@ BVAR.multiStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
       acount_w <- rep(0,t_max)
     }
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("nu",c(1:K), sep = ""),
-                        sprintf("w_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K))
+                        sprintf("w_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K))
   )
 
   return(as.mcmc(t(mcmc)))
@@ -911,7 +911,7 @@ BVAR.Skew.multiStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits
 
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
-  w <- rep.row(w_sample, K)
+  w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
   w_sqrt_inv <- 1/w_sqrt
   # Init z as Truncated Gaussian
@@ -943,7 +943,7 @@ BVAR.Skew.multiStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits
     B <- Vec_to_Mat(b_sample, K,p)
     # cat(round(gamma, digits = 3), " ", round(b_sample[1:K], digits = 3)," ", nu, " \n")
     # # Sample B
-    # xt_G <- xt / rep.row(sqrt(w_sample), m)
+    # xt_G <- xt / reprow(sqrt(w_sample), m)
     # yt_G <- (yt -  D %*% z) / w_sqrt
     # V_b_post_inv <- V_b_prior_inv + kronecker(xt_G %*% t(xt_G),Sigma2_inv)
     # b_post <- kronecker(xt_G, Sigma2_inv) %*% vec(yt_G)
@@ -1075,15 +1075,15 @@ BVAR.Skew.multiStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits
       acount_w <- rep(0,t_max)
     }
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu",c(1:K), sep = ""),
-                        sprintf("w_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K)))
+                        sprintf("w_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)))
   return(as.mcmc(t(mcmc)))
 }
 
@@ -1138,7 +1138,7 @@ BVAR.Hyper.multiStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, init
 
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
-  w <- rep.row(w_sample, K)
+  w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
   w_sqrt_inv <- 1/w_sqrt
   # Output
@@ -1272,15 +1272,15 @@ BVAR.Hyper.multiStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, init
       acount_w <- rep(0,t_max)
     }
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu",c(1:K), sep = ""),
-                        sprintf("w_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K))
+                        sprintf("w_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K))
   )
 
   return(as.mcmc(t(mcmc)))

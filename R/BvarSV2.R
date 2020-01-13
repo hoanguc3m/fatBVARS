@@ -142,15 +142,15 @@ BVAR.Gaussian.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NUL
       mcmc <- cbind(mcmc, c(b_sample, a_sample, as.vector(paravol), as.vector(h)))
     if (j %% 100 == 0) { cat(" Iteration ", j, " \n")}
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("mu_vol",c(1:K), sep = ""),
                         paste("phi_vol",c(1:K), sep = ""),
                         paste("sigma_vol",c(1:K), sep = ""),
-                        sprintf("h_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K))
+                        sprintf("h_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K))
   )
   return(as.mcmc(t(mcmc)))
 }
@@ -199,7 +199,7 @@ BVAR.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
   acount_w <- rep(0, t_max)
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
-  w <- rep.row(w_sample, K)
+  w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
 
   svdraw <- list()
@@ -268,7 +268,7 @@ BVAR.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
     for (i in c(1:t_max)){
       w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% (t(A)%*% diag(1/exp(h[,i])) %*% A) %*% u[,i])
     }
-    w <- rep.row(w_sample, K)
+    w <- reprow(w_sample, K)
     w_sqrt <- sqrt(w)
 
 
@@ -305,16 +305,16 @@ BVAR.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
       acount_w <- rep(0,t_max)
     }
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("nu"),
                         paste("mu_vol",c(1:K), sep = ""),
                         paste("phi_vol",c(1:K), sep = ""),
                         paste("sigma_vol",c(1:K), sep = ""),
-                        sprintf("h_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K)),
+                        sprintf("h_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)),
                         paste("w",c(1:t_max), sep = ""))
 
   return(as.mcmc(t(mcmc)))
@@ -372,7 +372,7 @@ BVAR.Skew.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
 
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
-  w <- rep.row(w_sample, K)
+  w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
   # Init z as Truncated Gaussian
   z <- matrix(abs(rnorm(K * t_max)), ncol = t_max, nrow = K)
@@ -463,7 +463,7 @@ BVAR.Skew.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
     for (i in c(1:t_max)){
       w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% (t(A)%*% diag(1/exp(h[,i])) %*% A) %*% u[,i])
     }
-    w <- rep.row(w_sample, K)
+    w <- reprow(w_sample, K)
     w_sqrt <- sqrt(w)
 
     # Sample nu
@@ -498,17 +498,17 @@ BVAR.Skew.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
       acount_w <- rep(0,t_max)
     }
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu"),
                         paste("mu_vol",c(1:K), sep = ""),
                         paste("phi_vol",c(1:K), sep = ""),
                         paste("sigma_vol",c(1:K), sep = ""),
-                        sprintf("h_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K)),
+                        sprintf("h_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)),
                         paste("w",c(1:t_max), sep = ""))
   return(as.mcmc(t(mcmc)))
 }
@@ -562,7 +562,7 @@ BVAR.Hyper.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits 
 
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
-  w <- rep.row(w_sample, K)
+  w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
 
   svdraw <- list()
@@ -702,17 +702,17 @@ BVAR.Hyper.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits 
       acount_w <- rep(0,t_max)
     }
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu"),
                         paste("mu_vol",c(1:K), sep = ""),
                         paste("phi_vol",c(1:K), sep = ""),
                         paste("sigma_vol",c(1:K), sep = ""),
-                        sprintf("h_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K)),
+                        sprintf("h_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)),
                         paste("w",c(1:t_max), sep = ""))
 
   return(as.mcmc(t(mcmc)))
@@ -763,7 +763,7 @@ BVAR.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
   acount_w <- rep(0, t_max)
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
-  w <- rep.row(w_sample, K)
+  w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
   w_sqrt_inv <- 1/w_sqrt
 
@@ -899,17 +899,17 @@ BVAR.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
       acount_w <- rep(0,t_max)
     }
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("nu",c(1:K), sep = ""),
                         paste("mu_vol",c(1:K), sep = ""),
                         paste("phi_vol",c(1:K), sep = ""),
                         paste("sigma_vol",c(1:K), sep = ""),
-                        sprintf("h_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K)),
-                        sprintf("w_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K)))
+                        sprintf("h_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)),
+                        sprintf("w_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)))
 
   return(as.mcmc(t(mcmc)))
 }
@@ -964,7 +964,7 @@ BVAR.Hyper.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, i
 
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
-  w <- rep.row(w_sample, K)
+  w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
   w_sqrt_inv <- 1/w_sqrt
 
@@ -1109,18 +1109,18 @@ BVAR.Hyper.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, i
       acount_w <- rep(0,t_max)
     }
   }
-  nameA <- matrix(paste("a", rep.row(c(1:K),K), rep.col(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",rep.row(c(1:p),K*K), rep(rep.col(c(1:K),K), p), rep(rep.row(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
                         nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu",c(1:K), sep = ""),
                         paste("mu_vol",c(1:K), sep = ""),
                         paste("phi_vol",c(1:K), sep = ""),
                         paste("sigma_vol",c(1:K), sep = ""),
-                        sprintf("h_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K)),
-                        sprintf("w_%d_%d", rep.col(c(1:K),t_max), rep.row(c(1:t_max),K))
+                        sprintf("h_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)),
+                        sprintf("w_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K))
   )
 
   return(as.mcmc(t(mcmc)))

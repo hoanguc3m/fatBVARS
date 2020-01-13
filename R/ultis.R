@@ -47,12 +47,12 @@ Vec_to_Mat <- function(b, K, p){
 }
 
 #' @export
-rep.row<-function(x,n){
+reprow<-function(x,n){
   matrix(rep(x,each=n),nrow=n)
 }
 
 #' @export
-rep.col<-function(x,n){
+repcol<-function(x,n){
   matrix(rep(x,each=n), ncol=n, byrow=TRUE)
 }
 

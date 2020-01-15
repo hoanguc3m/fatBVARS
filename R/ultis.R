@@ -144,6 +144,16 @@ get_post.numeric <- function(obj, element = NULL){
 }
 
 #' @export
+get_post.matrix <- function(obj, element = NULL){
+  if (is.null(element)) {
+    return(obj)
+  } else {
+    mcmc_name <- substr(colnames(obj), start = 1, stop = nchar(element))
+    mcmc_id = (mcmc_name == element)
+    return(obj[,mcmc_id])
+  }
+}
+#' @export
 get_post.mcmc <- function(obj, element = NULL){
   if (is.null(element)) {
     return(obj)

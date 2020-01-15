@@ -193,16 +193,13 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
         # } else {
         #   pred_dens <- predict(appximate_density, y_max)$y
         # }
-        pred_dens <- min(predict_den$y)
-        if(pred_dens <= 0 ) {
-          cat("t_current : ", t_current, " ", i, " ", j, " ", y_obs, " ", y_min, " ", y_max)
-          print(predict_den)
-          stop(" NA log ")
-        }
-
+        pred_dens <- min(predict_den$y[predict_den$y > 0])
+        # if(pred_dens <= 0 ) {
+        #   cat("t_current : ", t_current, " ", i, " ", j, " ", y_obs, " ", y_min, " ", y_max)
+        #   print(predict_den)
+        #   stop(" NA log ")
+        # }
       }
-      # if(y_obs < y_min) {y_obs = y_min}
-      # if(y_obs > y_max) {y_obs = y_max}
       log_pred[j,i] <- log(pred_dens)
 
       emp_CDF[j,i] <- ecdf(x = predictive_samples$y_pred[j,i,])(y_obs)

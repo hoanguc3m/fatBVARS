@@ -17,15 +17,18 @@ marginalLL <- function(Chain){
   m <- K + K*K*p
 
   dist <- Chain$dist
+  prior <- Chain$prior
   SV <- Chain$prior$SV
 
   y <- Chain$y
+  yt <- t(y)
   t_max <- nrow(y)
   if (is.null(Chain$y0)){
     y0 <- matrix(0, ncol = K, nrow = p)
   } else {
     y0 <- Chain$y0
   }
+  xt <- makeRegressor(y, y0, t_max, K, p)
 
   # y_combine <- rbind( tail(y0, p) , y)
 
@@ -36,28 +39,60 @@ marginalLL <- function(Chain){
   A_mat <- get_post(mcmc, element = "a")
   Gamma_mat <- get_post(mcmc, element = "gamma")
   BAG_samples <- Normal_approx(cbind(B_mat,A_mat, Gamma_mat), ndraws = ndraws)
-  B_gen <- BAG_samples$B_gen
-  A_gen <- BAG_samples$A_gen
-  Gamma_gen <- BAG_samples$Gamma_gen
+  B_gen <- get_post(BAG_samples$new_samples, element = "B")
+  A_gen <- get_post(BAG_samples$new_samples, element = "a")
+  Gamma_gen <- get_post(BAG_samples$new_samples, element = "gamma")
   sum_log_prop <- BAG_samples$sum_log_prop
 
-  Sigma_mat <- get_post(mcmc, element = "sigma") # No SV
-  Sigma_H <- sqrt(get_post(mcmc, element = "sigma_h")) # SV
+  Sigma_mat <- get_post(mcmc, element = "sigma") # No SV / SV
+  # Sigma_H <- sqrt(get_post(mcmc, element = "sigma_h")) # SV
+  Sigma_gen_list <- InvGamma_approx(Sigma_mat, ndraws = ndraws)
+  Sigma_gen <- Sigma_gen_list$new_samples
+  sum_log_prop <- sum_log_prop + Sigma_gen_list$sum_log_prop
+
   H_mat <- get_post(mcmc, element = "h")
   Nu_mat <- as.matrix(get_post(mcmc, element = "nu"))
-  colnames(Nu_mat) <- rep("nu", ncol(Nu_mat))
+  if (ncol(Nu_mat) == 1) colnames(Nu_mat) <- "nu"
   W_mat <- get_post(mcmc, element = "w")
 
   sum_log <- rep(0, ndraws)
 
 
   if (SV){
+    H_mat <- H_mat[,1:K]
+    H0_gen_list <- Normal_approx(H_mat, ndraws = ndraws)
+    H0_gen <- H0_gen_list$new_samples
+    sum_log_prop <- sum_log_prop + H0_gen_list$sum_log_prop
+
+    #################### prior ###########################
+
+    if (dist == "Gaussian") {
+      # param <- cbind(B_gen, A_gen, Sigma_gen)
+
+      for (j in c(1:ndraws)){
+        B <- matrix(B_gen[j,], nrow = K)
+        A <- matrix(0, nrow = K, ncol = K)
+        A[upper.tri(A)] <- A_gen[j,]
+        A <- t(A)
+        diag(A) <- 1
+
+        sigma_h <- Sigma_gen[j,]
+        h0 <- H0_gen[j,]
+
+        ytilde <- as.vector(A %*% (yt - B %*% xt))
+
+        sum_log[j] <- intlike(ytilde = ytilde, h0 = h0, sigma_h = sigma_h, t_max = t_max, K = K) +
+          mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+          mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+          sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
+          sum(dnorm(h0, mean = 0, sd = 1, log = T))
+      }
+    }
+
+
 
   } else {
 
-    Sigma_gen_list <- InvGamma_approx(Sigma_mat, ndraws = ndraws)
-    Sigma_gen <- Sigma_gen_list$new_samples
-    sum_log_prop <- sum_log_prop + Sigma_gen_list$sum_log_prop
 
     if (dist == "Gaussian") {
       param <- cbind(B_gen, A_gen, Sigma_gen)
@@ -120,6 +155,62 @@ marginalLL <- function(Chain){
   return( list( LL = ml,
                 std = mlstd))
 }
+# This function evaluates the integrated likelihood of the VAR-SV model in
+# Chan and Eisenstat (2018)
+#' @export
+intlike <- function(ytilde, h0, sigma_h, t_max, K){
+    s2 = ytilde^2
+    max_loop = 100
+    Hh = sparseMatrix(i = 1:(t_max*K),
+                      j = 1:(t_max*K),
+                      x = rep(1,t_max*K)) -
+      sparseMatrix( i = (K+1):(t_max*K),
+                    j = 1:((t_max-1)*K),
+                    x = rep(1,(t_max-1)*K),
+                    dims =  c(t_max*K, t_max*K))
+    SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = rep(1./sigma_h, t_max))
+    HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
+    alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
+
+    e_h = 1
+    ht = rep(h0,t_max)
+    count = 0
+    while ( e_h> .01 & count < max_loop){
+      einvhts2 = exp(-ht)*s2
+      gh = - HinvSH_h %*% (ht-alph) - 0.5 * (1-einvhts2)
+      Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+      newht = ht - Matrix::solve(Gh,gh)
+      e_h = max(abs(newht-ht));
+      ht = newht;
+      count = count + 1;
+    }
+    if (count == max_loop){
+      ht = rep(h0,t_max)
+      einvhts2 = exp(-ht)*s2
+      Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+    }
+
+    Kh = -Gh
+    CKh = Matrix::t(Matrix::chol(Kh))
+
+    c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
+    c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
+
+    R = 10
+    store_llike = rep(0,R)
+    for (i in c(1:R)){
+      hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
+      llike = -t_max*K*0.5*log(2*pi) - 0.5*sum(hc) -
+        0.5*t(ytilde) %*% sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = exp(-hc)) %*% ytilde
+      store_llike[i] = as.numeric(llike + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
+                                    (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
+
+    }
+
+  maxllike = max(store_llike)
+  llk = log(mean(exp(store_llike-maxllike))) + maxllike
+  return(llk)
+}
 
 #' @export
 Normal_approx <- function(mcmc_sample, ndraws){
@@ -129,20 +220,32 @@ Normal_approx <- function(mcmc_sample, ndraws){
   # mcmc_chol <- t(chol(cov(mcmc_sample)))
   new_samples <- mvnfast::rmvn(ndraws, mu = mcmc_mean, sigma = mcmc_Sigma)
   colnames(new_samples) <- colnames(mcmc_sample)
-  nB = sum(substr(colnames(mcmc_sample),1,1) == "B")
-  nA = sum(substr(colnames(mcmc_sample),1,1) == "a")
-  nG = sum(substr(colnames(mcmc_sample),1,5) == "gamma")
-  B_gen <- new_samples[,1:nB]
-  A_gen <- new_samples[,(nB+1):(nB+nA)]
-  Gamma_gen <- NULL
-  if (nG > 0) {
-    Gamma_gen <- new_samples[,(nB+nA+1):(nB+nA+nG)]
-  }
+  # nB = sum(substr(colnames(mcmc_sample),1,1) == "B")
+  # nA = sum(substr(colnames(mcmc_sample),1,1) == "a")
+  # nG = sum(substr(colnames(mcmc_sample),1,5) == "gamma")
+  # B_gen <- new_samples[,1:nB]
+  # A_gen <- new_samples[,(nB+1):(nB+nA)]
+  # Gamma_gen <- NULL
+  # if (nG > 0) {
+  #   Gamma_gen <- new_samples[,(nB+nA+1):(nB+nA+nG)]
+  # }
   sum_log_prop <- mvnfast::dmvn(X = new_samples,
                                 mu = as.vector(mcmc_mean), sigma = mcmc_Sigma, log = T)
-  return(list(B_gen = B_gen,
-              A_gen = A_gen,
-              Gamma_gen = Gamma_gen,
+  return(list(new_samples = new_samples,
+              sum_log_prop = sum_log_prop))
+}
+
+#' @export
+H0_approx <- function(mcmc_sample, ndraws){
+  mcmc_mean <- apply(mcmc_sample, 2, mean)
+  mcmc_Sigma <- cov(mcmc_sample)
+  nElements <- length(mcmc_mean)
+  # mcmc_chol <- t(chol(cov(mcmc_sample)))
+  new_samples <- mvnfast::rmvn(ndraws, mu = mcmc_mean, sigma = mcmc_Sigma)
+  colnames(new_samples) <- colnames(mcmc_sample)
+  sum_log_prop <- mvnfast::dmvn(X = new_samples,
+                                mu = as.vector(mcmc_mean), sigma = mcmc_Sigma, log = T)
+  return(list(H0_gen = new_samples,
               sum_log_prop = sum_log_prop))
 }
 
@@ -153,15 +256,27 @@ InvGamma_approx <- function(mcmc_sample, ndraws){
   Density_prop <-  matrix(NA, ncol = nElements, nrow = ndraws)
   shape_param <- rep(0, nElements)
   rate_param <- rep(0, nElements)
+  mcmc_mean <- apply(mcmc_sample, 2, mean)
+  mcmc_sd <- apply(mcmc_sample, 2, sd)
+  if (mean(mcmc_mean) < 0.01)  mcmc_sample <- mcmc_sample * 100
+
   for (i in c(1:nElements)){
-    fit.gamma <- fitdistrplus::fitdist(1/as.numeric(mcmc_sample[,i]), distr = "gamma", method = "mle")
-    shape_param[i] <- fit.gamma$estimate[1]
-    rate_param[i] <- fit.gamma$estimate[2]
-    new_samples[,i] <- rinvgamma(ndraws, shape = shape_param[i], rate_param[i])
-    Density_prop[,i] <- invgamma::dinvgamma(new_samples[,i],
-                                               shape = shape_param[i],
-                                               rate = rate_param[i], log = T)
+    if (mcmc_sd[i] > 0){
+      fit.gamma <- fitdistrplus::fitdist(1/as.numeric(mcmc_sample[,i]), distr = "gamma", method = "mle")
+      shape_param[i] <- fit.gamma$estimate[1]
+      rate_param[i] <- fit.gamma$estimate[2]
+      new_samples[,i] <- rinvgamma(ndraws, shape = shape_param[i], rate_param[i])
+      Density_prop[,i] <- invgamma::dinvgamma(new_samples[,i],
+                                              shape = shape_param[i],
+                                              rate = rate_param[i], log = T)
+    } else {
+      new_samples[,i] <- as.numeric(mcmc_sample[,i])
+      Density_prop[,i] <- 0
+    }
+
   }
+
+  if (mean(mcmc_mean) < 0.01)  new_samples <- new_samples / 100
   return(list(new_samples = new_samples,
               sum_log_prop = apply(Density_prop, 1, sum)))
 }

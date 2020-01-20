@@ -44,10 +44,15 @@ marginalLL <- function(Chain){
   Gamma_gen <- get_post(BAG_samples$new_samples, element = "gamma")
   sum_log_prop <- BAG_samples$sum_log_prop
 
-  Sigma_mat <- get_post(mcmc, element = "sigma") # No SV / SV
+  Sigma_mat <- get_post(mcmc, element = "sigma") # No SV is sigma / SV is sigma^2
   # Sigma_H <- sqrt(get_post(mcmc, element = "sigma_h")) # SV
-  Sigma_gen_list <- InvGamma_approx(Sigma_mat, ndraws = ndraws)
-  Sigma_gen <- Sigma_gen_list$new_samples
+  if (SV) {
+    Sigma_gen_list <- InvGamma_approx(Sigma_mat, ndraws = ndraws)
+    Sigma_gen <- Sigma_gen_list$new_samples
+  } else {
+    Sigma_gen_list <- InvGamma_approx(Sigma_mat^2, ndraws = ndraws)
+    Sigma_gen <- sqrt(Sigma_gen_list$new_samples)
+  }
   sum_log_prop <- sum_log_prop + Sigma_gen_list$sum_log_prop
 
   H_mat <- get_post(mcmc, element = "h")
@@ -81,7 +86,7 @@ marginalLL <- function(Chain){
 
         ytilde <- as.vector(A %*% (yt - B %*% xt))
 
-        sum_log[j] <- intlike(ytilde = ytilde, h0 = h0, sigma_h = sigma_h, t_max = t_max, K = K) +
+        sum_log[j] <- int_h(ytilde = ytilde, h0 = h0, sigma_h = sigma_h, t_max = t_max, K = K) +
           mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
           mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
           sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
@@ -104,33 +109,115 @@ marginalLL <- function(Chain){
       Nu_gen <- Nu_gen_list$new_samples
       sum_log_prop <- sum_log_prop + Nu_gen_list$sum_log_prop
 
-      W_gen_list <- InvGamma_approx(W_mat, ndraws = ndraws)
-      W_gen <- W_gen_list$new_samples
-      sum_log_prop <- sum_log_prop + W_gen_list$sum_log_prop
-
-      param <- cbind(B_gen, A_gen, Gamma_gen, Sigma_gen, Nu_gen, W_gen)
+      # W_gen_list <- InvGamma_approx(W_mat, ndraws = ndraws)
+      # W_gen <- W_gen_list$new_samples
+      # sum_log_prop <- sum_log_prop + W_gen_list$sum_log_prop
+      #
+      # param <- cbind(B_gen, A_gen, Gamma_gen, Sigma_gen, Nu_gen, W_gen)
 
       if (dist == "Student") {
         for (j in c(1:ndraws)){
-          sum_log[j] <- log_posterior(param[j,], Chain)
+          B <- matrix(B_gen[j,], nrow = K)
+          A <- matrix(0, nrow = K, ncol = K)
+          A[upper.tri(A)] <- A_gen[j,]
+          A <- t(A)
+          diag(A) <- 1
+
+          sigma <- Sigma_gen[j,]
+          nu <- Nu_gen[j]
+
+          llw <- int_w_Student(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu,
+                               t_max = t_max, K = K, R = 100)
+          # int_w_Student2(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu, t_max = t_max, K = K, R = 100)
+
+
+          sum_log[j] <- llw +
+            mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+            mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+            sum(invgamma::dinvgamma(sigma^2, shape = prior$sigma_T0 * 0.5,
+                                    rate = prior$sigma_S0 * 0.5, log = T)) +
+            dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)
         }
       }
 
       if (dist == "Hyper.Student") {
         for (j in c(1:ndraws)){
-          sum_log[j] <- log_posterior(param[j,], Chain)
+          B <- matrix(B_gen[j,], nrow = K)
+          A <- matrix(0, nrow = K, ncol = K)
+          A[upper.tri(A)] <- A_gen[j,]
+          A <- t(A)
+          diag(A) <- 1
+          gamma <- Gamma_gen[j,]
+
+          sigma <- Sigma_gen[j,]
+          nu <- Nu_gen[j]
+
+          llw <- int_w_HyperStudent(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu, gamma = gamma,
+                                    t_max = t_max, K = K, R = 100)
+
+          sum_log[j] <- llw +
+            mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+            mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+            sum(invgamma::dinvgamma(sigma^2, shape = prior$sigma_T0 * 0.5,
+                                    rate = prior$sigma_S0 * 0.5, log = T)) +
+            sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
+            mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
+
+          # sum_log[j] <- log_posterior(param[j,], Chain)
         }
       }
 
       if (dist == "multiStudent") {
         for (j in c(1:ndraws)){
-          sum_log[j] <- log_posterior(param[j,], Chain)
+          B <- matrix(B_gen[j,], nrow = K)
+          A <- matrix(0, nrow = K, ncol = K)
+          A[upper.tri(A)] <- A_gen[j,]
+          A <- t(A)
+          diag(A) <- 1
+
+          sigma <- Sigma_gen[j,]
+          nu <- Nu_gen[j,]
+
+          llw <- int_w_MultiStudent(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu,
+                                    t_max = t_max, K = K, R = 100)
+
+          sum_log[j] <- llw +
+            mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+            mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+            sum(invgamma::dinvgamma(sigma^2, shape = prior$sigma_T0 * 0.5,
+                                    rate = prior$sigma_S0 * 0.5, log = T)) +
+            sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
+
+
+          # sum_log[j] <- log_posterior(param[j,], Chain)
         }
       }
 
       if (dist == "Hyper.multiStudent") {
         for (j in c(1:ndraws)){
-          sum_log[j] <- log_posterior(param[j,], Chain)
+          B <- matrix(B_gen[j,], nrow = K)
+          A <- matrix(0, nrow = K, ncol = K)
+          A[upper.tri(A)] <- A_gen[j,]
+          A <- t(A)
+          diag(A) <- 1
+          gamma <- Gamma_gen[j,]
+
+          sigma <- Sigma_gen[j,]
+          nu <- Nu_gen[j,]
+
+          llw <- int_w_HyperMultiStudent(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu, gamma = gamma,
+                                         t_max = t_max, K = K, R = 100)
+
+          sum_log[j] <- llw +
+            mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+            mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+            sum(invgamma::dinvgamma(sigma^2, shape = prior$sigma_T0 * 0.5,
+                                    rate = prior$sigma_S0 * 0.5, log = T)) +
+            sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
+            mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
+
+
+          # sum_log[j] <- log_posterior(param[j,], Chain)
         }
       }
 
@@ -155,10 +242,117 @@ marginalLL <- function(Chain){
   return( list( LL = ml,
                 std = mlstd))
 }
+
+int_w_Student <- function(y, xt, A, B, sigma, nu, t_max, K, R = 100){
+  u <- (y - t(xt) %*% t(B))
+  #ytilde <- (A %*% (yt - B %*% xt))
+  ytilde <- (A %*% t(u))
+  shape <- nu*0.5 + K*0.5
+  rate <- nu*0.5 + 0.5 * apply(ytilde^2, 2, sum)/sigma^2
+
+  store_llw <- matrix(NA, nrow = t_max, ncol = R)
+  for (i in c(1:R)){
+    w <- mapply(FUN = rinvgamma, n = 1, shape = shape, rate = rate)
+    dens_w <- mapply(FUN = dinvgamma,x = w, shape = shape, rate = rate, log = T)
+    Prior_dens_w <- mapply(FUN = dinvgamma,x = w, shape = nu * 0.5, rate = nu * 0.5, log = T)
+    store_llw[,i] <- mvnfast::dmvn(X = u/repcol(sqrt(w),K),
+                                      mu = rep(0,K),
+                                      sigma = solve(A) %*% diag(sigma), log = T, isChol = T) -
+                    0.5 * K * log(w) + Prior_dens_w - dens_w
+  }
+  maxllike = apply(store_llw, MARGIN = 1, max)
+  llw = log( apply(exp(store_llw-maxllike), MARGIN = 1, FUN = mean) ) + maxllike
+  return(sum(llw))
+}
+
+int_w_Student2 <- function(y, xt, A, B, sigma, nu, t_max, K, R = 100){
+  u <- (y - t(xt) %*% t(B))
+  allw <- mvnfast::dmvt(X = u,
+                                 mu = rep(0,K),
+                                 sigma = solve(A) %*% diag(sigma), df = nu, log = T, isChol = T)
+
+  return(sum(allw))
+}
+
+int_w_HyperStudent <- function(y, xt, A, B, sigma, nu, gamma, t_max, K, R = 100){
+  u <- (y - t(xt) %*% t(B))
+  #ytilde <- (A %*% (yt - B %*% xt))
+  ytilde <- (A %*% t(u))
+  shape <- nu*0.5 + K*0.5
+  rate <- nu*0.5 + 0.5 * apply(ytilde^2, 2, sum)/sigma^2
+
+  store_llw <- matrix(NA, nrow = t_max, ncol = R)
+  for (i in c(1:R)){
+    w <- matrix(mapply(FUN = rinvgamma, n = 1, shape = shape, rate = rate), ncol = 1)
+    dens_w <- mapply(FUN = dinvgamma,x = w, shape = shape, rate = rate, log = T)
+    Prior_dens_w <- mapply(FUN = dinvgamma,x = w, shape = nu * 0.5, rate = nu * 0.5, log = T)
+    store_llw[,i] <- mvnfast::dmvn(X = (u - repcol(w,K) * reprow(gamma, t_max))/repcol(sqrt(w),K),
+                                   mu = rep(0,K),
+                                   sigma = solve(A) %*% diag(sigma), log = T, isChol = T) -
+      0.5 * K * log(w) + Prior_dens_w - dens_w # proposal
+  }
+  maxllike = apply(store_llw, MARGIN = 1, max)
+  llw = log( apply(exp(store_llw-maxllike), MARGIN = 1, FUN = mean) ) + maxllike
+  return(sum(llw))
+}
+
+
+int_w_MultiStudent <- function(y, xt, A, B, sigma, nu, t_max, K, R = 100){
+  # u <- (y - t(xt) %*% t(B))
+  # u_proposal <- (A %*% t(u))
+
+  u <- (t(y) - B %*%xt)
+  u_proposal <- A %*% (u)
+
+  a_target <- (nu*0.5 + 1*0.5)
+  b_target <- (nu*0.5 + 0.5 * u_proposal^2 / sigma^2)
+
+
+  store_llw <- matrix(NA, nrow = t_max, ncol = R)
+  for (i in c(1:R)){
+    w <- matrix(mapply(FUN = rinvgamma, n = 1, shape = a_target, rate = b_target), nrow = K)
+    dens_w <- matrix(mapply(FUN = dinvgamma, x = w, shape = a_target, rate = b_target, log = T), nrow = K)
+    Prior_dens_w <- matrix(mapply(FUN = dinvgamma, x = w, shape = nu*0.5, rate = nu*0.5, log = T), nrow = K)
+    store_llw[,i] <- mvnfast::dmvn(X = t(u/sqrt(w)),
+                                   mu = rep(0,K),
+                                   sigma = solve(A) %*% diag(sigma), log = T, isChol = T) -
+      0.5 * apply(log(w), MARGIN = 2, FUN = sum) + apply(Prior_dens_w, MARGIN = 2, FUN = sum) - apply(dens_w, MARGIN = 2, FUN = sum)
+  }
+  maxllike = apply(store_llw, MARGIN = 1, max)
+  llw = log( apply(exp(store_llw-maxllike), MARGIN = 1, FUN = mean) ) + maxllike
+  return(sum(llw))
+}
+
+int_w_HyperMultiStudent <- function(y, xt, A, B, sigma, nu, gamma, t_max, K, R = 100){
+  # u <- (y - t(xt) %*% t(B))
+  # u_proposal <- (A %*% t(u))
+
+  u <- (t(y) - B %*%xt)
+  u_proposal <- A %*% (u)
+
+  a_target <- (nu*0.5 + 1*0.5)
+  b_target <- (nu*0.5 + 0.5 * u_proposal^2 / sigma^2)
+
+
+  store_llw <- matrix(NA, nrow = t_max, ncol = R)
+  for (i in c(1:R)){
+    w <- matrix(mapply(FUN = rinvgamma, n = 1, shape = a_target, rate = b_target), nrow = K)
+    dens_w <- matrix(mapply(FUN = dinvgamma, x = w, shape = a_target, rate = b_target, log = T), nrow = K)
+    Prior_dens_w <- matrix(mapply(FUN = dinvgamma, x = w, shape = nu*0.5, rate = nu*0.5, log = T), nrow = K)
+    store_llw[,i] <- mvnfast::dmvn(X = t( (u - w * repcol(gamma, t_max) )  /sqrt(w)),
+                                   mu = rep(0,K),
+                                   sigma = solve(A) %*% diag(sigma), log = T, isChol = T) -
+      0.5 * apply(log(w), MARGIN = 2, FUN = sum) + apply(Prior_dens_w, MARGIN = 2, FUN = sum) - apply(dens_w, MARGIN = 2, FUN = sum)
+  }
+  maxllike = apply(store_llw, MARGIN = 1, max)
+  llw = log( apply(exp(store_llw-maxllike), MARGIN = 1, FUN = mean) ) + maxllike
+  return(sum(llw))
+}
+
 # This function evaluates the integrated likelihood of the VAR-SV model in
 # Chan and Eisenstat (2018)
 #' @export
-intlike <- function(ytilde, h0, sigma_h, t_max, K){
+int_h <- function(ytilde, h0, sigma_h, t_max, K){
     s2 = ytilde^2
     max_loop = 100
     Hh = sparseMatrix(i = 1:(t_max*K),
@@ -298,3 +492,4 @@ Gamma_approx <- function(mcmc_sample, ndraws){
   return(list(new_samples = new_samples,
               sum_log_prop = apply(Density_prop, 1, sum)))
 }
+

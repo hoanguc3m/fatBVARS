@@ -4,7 +4,7 @@
 \alias{marginalLL}
 \title{Marginal log likelihood of BVAR model}
 \usage{
-marginalLL(Chain)
+marginalLL(Chain, ndraws = NULL)
 }
 \arguments{
 \item{Chain}{The fatBVARSV object from command BVAR.}

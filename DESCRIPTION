@@ -15,10 +15,8 @@ Depends:
     Rcpp,
     Rcpp11, 
     matrixcalc,
-    TruncatedNormal,
-    pracma,
+    Matrix,
     coda,
-    BayesianTools,
     invgamma
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.0.2

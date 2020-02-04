@@ -246,41 +246,78 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
 #' }
 #'
 #' @export
-recursive_forecast <- function(Chain, y0 = NULL, y_future, t_pred = 12, reestimated = F){
-  K <- Chain$K
-  p <- Chain$p
+recursive_forecast <- function(Chain = NULL, y0 = NULL, y_future, t_pred = 12, reestimated = F){
+  if( reestimated == F) {
+    K <- Chain$K
+    p <- Chain$p
 
-  if (! ncol(y_future) == K) { stop("ncol(y_future) != K") }
+    if (! ncol(y_future) == K) { stop("ncol(y_future) != K") }
 
-  if (is.null(y0)){
-    y0 <- Chain$y
+    if (is.null(y0)){
+      y0 <- Chain$y
+    }
+
+    t_length <- nrow(y_future)
+    if (t_length < t_pred)  { stop("ncol(y_future) < t_pred)") }
+    max_rolling <- t_length - t_pred + 1
+
+    y_combine <- rbind( tail(y0, p) , y_future)
+    sum_log_pred <- array(NA, dim = c(t_pred, K, max_rolling))
+    sum_MSFE <- array(NA, dim = c(t_pred, K, max_rolling))
+    sum_MAFE <- array(NA, dim = c(t_pred, K, max_rolling))
+    PIT <- array(NA, dim = c(t_pred, K, max_rolling))
+    for (time_id in c(1:max_rolling)){
+      if (time_id %% 10 == 0 ) cat("At rolling ", time_id, " \t")
+      y_current <- y_combine[c(time_id:(time_id+p-1)), ]
+      y_obs_future <- y_combine[c((time_id+p):(time_id+p+t_pred-1)), ]
+
+      forecast_err <- forecast_density(Chain = Chain, y_current = y_current,
+                                       y_obs_future = y_obs_future,
+                                       t_current = which(Chain$y == y_current[p,1]) )
+      log_pred <- forecast_err$log_pred
+      MSFE <- forecast_err$MSFE
+      MAFE <- forecast_err$MAFE
+      PIT[,,time_id] <- forecast_err$emp_CDF
+    }
+  } else {
+    if (is.null(y0)){
+      y0 <- Chain$y
+    }
+    t_length <- nrow(y_future)
+    if (t_length < t_pred)  { stop("ncol(y_future) < t_pred)") }
+    max_rolling <- t_length - t_pred + 1
+
+    y_combine <- rbind( tail(y0, p) , y_future)
+    sum_log_pred <- array(NA, dim = c(t_pred, K, max_rolling))
+    sum_MSFE <- array(NA, dim = c(t_pred, K, max_rolling))
+    sum_MAFE <- array(NA, dim = c(t_pred, K, max_rolling))
+    PIT <- array(NA, dim = c(t_pred, K, max_rolling))
+    for (time_id in c(1:max_rolling)){
+      if (time_id %% 10 == 0 ) cat("At rolling ", time_id, " \t")
+      y_current <- y_combine[c(time_id:(time_id+p-1)), ]
+      y_obs_future <- y_combine[c((time_id+p):(time_id+p+t_pred-1)), ]
+      #####################################
+      Chain = estimat
+      #####################################
+      forecast_err <- forecast_density(Chain = Chain, y_current = y_current,
+                                       y_obs_future = y_obs_future,
+                                       t_current = which(Chain$y == y_current[p,1]) )
+      log_pred <- forecast_err$log_pred
+      MSFE <- forecast_err$MSFE
+      MAFE <- forecast_err$MAFE
+      PIT[,,time_id] <- forecast_err$emp_CDF
+    }
   }
 
-  t_length <- nrow(y_future)
-  if (t_length < t_pred)  { stop("ncol(y_future) < t_pred)") }
-  max_rolling <- t_length - t_pred + 1
+  sum_log_pred <- apply(log_pred, MARGIN = c(2,3), FUN = sum)
+  sum_log_pred <- apply(sum_MSFE, MARGIN = c(2,3), FUN = sum)
+  sum_log_pred <- apply(sum_MAFE, MARGIN = c(2,3), FUN = sum)
 
-  y_combine <- rbind( tail(y0, p) , y_future)
-  sum_log_pred <- matrix(0, nrow = t_pred, ncol = K)
-  sum_MSFE <- matrix(0, nrow = t_pred, ncol = K)
-  sum_MAFE <- matrix(0, nrow = t_pred, ncol = K)
-  PIT <- array(0, dim = c(t_pred, K, max_rolling))
-  for (time_id in c(1:max_rolling)){
-    if (time_id %% 10 == 0 ) cat("At rolling ", time_id, " \t")
-    y_current <- y_combine[c(time_id:(time_id+p-1)), ]
-    y_obs_future <- y_combine[c((time_id+p):(time_id+p+t_pred-1)), ]
-
-    forecast_err <- forecast_density(Chain = Chain, y_current = y_current,
-                                     y_obs_future = y_obs_future,
-                                     t_current = which(Chain$y == y_current[p,1]) )
-    sum_log_pred <- sum_log_pred + forecast_err$log_pred
-    sum_MSFE <- sum_MSFE + forecast_err$MSFE
-    sum_MAFE <- sum_MAFE + forecast_err$MAFE
-    PIT[,,time_id] <- forecast_err$emp_CDF
-  }
-
-  return( list( LP = sum_log_pred / max_rolling,
-                MSFE = sum_MSFE / max_rolling,
-                MAFE = sum_MAFE / max_rolling,
+  return( list( mLP = sum_log_pred / max_rolling,
+                mMSFE = sum_MSFE / max_rolling,
+                mMAFE = sum_MAFE / max_rolling,
+                log_pred = log_pred,
+                MSFE = MSFE,
+                MAFE = MAFE,
                 PIT = PIT))
 }

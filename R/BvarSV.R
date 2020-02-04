@@ -293,7 +293,7 @@ BVAR.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc <- cbind(mcmc, c(b_sample, a_sample, nu, diag(sigma_h), as.vector(h), as.vector(w_sample)))
     if (j %% 100 == 0) {
-      cat(" Iteration ", j, " ", logsigma_nu," ", nu," \n")
+      cat(" Iteration ", j, " ", logsigma_nu," ", round(nu,2)," \n")
       acount_w <- rep(0,t_max)
     }
   }
@@ -481,7 +481,7 @@ BVAR.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc <- cbind(mcmc, c(b_sample, a_sample, gamma, nu, diag(sigma_h), as.vector(h), as.vector(w_sample)))
     if (j %% 100 == 0) {
-      cat(" Iteration ", j, " ", logsigma_nu," ", " ", nu ," \n")
+      cat(" Iteration ", j, " ", logsigma_nu," ", " ", round(nu,2)," \n")
       acount_w <- rep(0,t_max)
     }
   }
@@ -872,7 +872,7 @@ BVAR.multiStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
       mcmc <- cbind(mcmc, c(b_sample, a_sample, nu, diag(sigma_h), as.vector(h), as.vector(w)))
 
     if (j %% 100 == 0) {
-      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", nu ,  " \n")
+      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2), " \n")
       acount_w <- rep(0,t_max)
     }
   }
@@ -1077,7 +1077,7 @@ BVAR.Hyper.multiStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits =
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc <- cbind(mcmc, c(b_sample, a_sample, gamma, nu, diag(sigma_h), as.vector(h), as.vector(w)))
     if (j %% 100 == 0) {
-      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", nu , " gamma ", gamma , " \n")
+      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2), " gamma ", round(gamma,2) ," \n")
       acount_w <- rep(0,t_max)
     }
   }

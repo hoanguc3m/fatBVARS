@@ -385,16 +385,17 @@ int_h <- function(ytilde, h0, sigma_h, t_max, K, R = 10){
     alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
 
     e_h = 1
-    ht = rep(h0,t_max)
+    # ht = rep(h0,t_max)
+    ht = log(s2)
     count = 0
-    while ( e_h> .01 & count < max_loop){
+    while ( (e_h > .01) && (count < max_loop)){
       einvhts2 = exp(-ht)*s2
       gh = - HinvSH_h %*% (ht-alph) - 0.5 * (1-einvhts2)
       Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
       newht = ht - Matrix::solve(Gh,gh)
-      e_h = max(abs(newht-ht));
-      ht = newht;
-      count = count + 1;
+      e_h = max(abs(newht-ht))
+      ht = newht
+      count = count + 1
     }
     if (count == max_loop){
       ht = rep(h0,t_max)
@@ -492,7 +493,10 @@ InvGamma_approx <- function(mcmc_sample, ndraws){
   rate_param <- rep(0, nElements)
   mcmc_mean <- apply(mcmc_sample, 2, mean)
   mcmc_sd <- apply(mcmc_sample, 2, sd)
-  if (mean(mcmc_mean) < 0.01)  mcmc_sample <- mcmc_sample * 100
+  for (i in c(1:ncol(mcmc_sample))){
+    if (mcmc_mean[i] < 0.01)  mcmc_sample[,i] <- mcmc_sample[,i] * 100
+  }
+
 
   for (i in c(1:nElements)){
     if (mcmc_sd[i] > 0){
@@ -510,7 +514,9 @@ InvGamma_approx <- function(mcmc_sample, ndraws){
 
   }
 
-  if (mean(mcmc_mean) < 0.01)  new_samples <- new_samples / 100
+  for (i in c(1:ncol(mcmc_sample))){
+    if (mcmc_mean[i] < 0.01)  new_samples[,i] <- new_samples[,i] / 100
+  }
   return(list(new_samples = new_samples,
               sum_log_prop = apply(Density_prop, 1, sum)))
 }

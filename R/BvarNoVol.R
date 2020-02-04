@@ -273,7 +273,7 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc <- cbind(mcmc, c(b_sample, a_sample, sigma, nu, as.vector(w_sample)))
     if (j %% 100 == 0) {
-      cat(" Iteration ", j, " ", logsigma_nu," ", nu," \n")
+      cat(" Iteration ", j, " ", logsigma_nu," ", round(nu,2)," \n")
       acount_w <- rep(0,t_max)
     }
   }
@@ -656,7 +656,7 @@ BVAR.Hyper.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = N
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc <- cbind(mcmc, c(b_sample, a_sample, sigma, gamma, nu, as.vector(w_sample)))
     if (j %% 100 == 0) {
-      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", nu ,  " \n")
+      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2), " ", round(gamma,2), " \n")
       acount_w <- rep(0,t_max)
     }
   }
@@ -838,7 +838,7 @@ BVAR.multiStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc <- cbind(mcmc, c(b_sample, a_sample, sigma, nu, as.vector(w)))
     if (j %% 100 == 0) {
-      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", nu ,  " \n")
+      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2), " \n")
       acount_w <- rep(0,t_max)
     }
   }
@@ -1268,7 +1268,7 @@ BVAR.Hyper.multiStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, init
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc <- cbind(mcmc, c(b_sample, a_sample, sigma, gamma, nu, as.vector(w)))
     if (j %% 100 == 0) {
-      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", nu ,  " \n")
+      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2) , " ", round(gamma,2),  " \n")
       acount_w <- rep(0,t_max)
     }
   }

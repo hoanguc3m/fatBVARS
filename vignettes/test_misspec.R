@@ -16,6 +16,8 @@ Chain10 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.multiStudent", y0 = NULL, prio
 
 log_posterior(Chain10$mcmc[1,], Chain10)
 waic_chain10 <- WAIC(Chain10)
+ML_chain10 <- marginalLL(Chain10)
+
 recur_chain10 <- recursive_forecast(Chain = Chain10, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 
 ###########################################################################
@@ -169,6 +171,7 @@ inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
 Chain8 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.Student", y0 = NULL, prior = prior, inits = inits)
 waic_chain8 <- WAIC(Chain8)
 recur_chain8 <- recursive_forecast(Chain = Chain8, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
+ML_chain8 <- marginalLL(Chain8)
 
 # plot(Chain8)
 lub <- get_lu_param(Chain8$mcmc)

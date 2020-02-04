@@ -4,7 +4,7 @@
 \alias{recursive_forecast}
 \title{Forecast density of future observations of BVAR model}
 \usage{
-recursive_forecast(Chain, y0 = NULL, y_future, t_pred = 12,
+recursive_forecast(Chain = NULL, y0 = NULL, y_future, t_pred = 12,
   reestimated = F)
 }
 \arguments{

@@ -27,7 +27,7 @@ bridge_result1 <- bridge_sampler(samples = Chain1$mcmc, log_posterior = log_post
 datagen <- sim.VAR.novol(dist="Student")
 y <- datagen$y
 prior <- get_prior(y, p = 2, dist="Student", SV = F)
-inits <- get_init(prior,  samples = 6000, burnin = 1000, thin = 1)
+inits <- get_init(prior)
 Chain2 <- BVAR.novol(y, K = 5, p = 2, dist = "Student", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain2)
 lub <- get_lu_param(Chain2$mcmc)
@@ -103,7 +103,7 @@ error_measures(bridge_result5)
 datagen <- sim.VAR.SV(dist="Gaussian")
 y <- datagen$y
 prior <- get_prior(y, p = 2, dist="Gaussian", SV = T)
-inits <- get_init(prior,  samples = 2000, burnin = 1000, thin = 1)
+inits <- get_init(prior)
 Chain6 <- BVAR.SV(y, K = 5, p = 2, dist = "Gaussian", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain6)
 lub <- get_lu_param(Chain6$mcmc)

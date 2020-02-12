@@ -1,7 +1,7 @@
 
-#' Posterior distribution of BVAR model
+#' Posterior distribution up to a nomalizing constant of BVAR model
 #'
-#' This function returns a posterior distribution of BVAR-SV-fatTail model.
+#' This function returns a posterior distribution up to a nomalizing constant of BVAR-SV-fatTail model.
 #' @param param The one posterior sample of the parameters obtained by fatBVARSVobj$mcmc
 #' @param data The fatBVARSV object from command BVAR.
 #' @return The unnormalized log posterior density of the fatBVARSVobj at param.
@@ -445,11 +445,19 @@ WAIC <- function(Chain){
   ndraws <- nrow(Chain$mcmc)
   t_max <- nrow(Chain$y)
 
-  log_ll <- matrix(NA, nrow = ndraws, ncol = t_max)
-  for (j in c(1:ndraws)){
-    log_ll[j,] <- log_likelihood(param = Chain$mcmc[j,], data = Chain, aggregate = F)
-    if(anyNA(log_ll[j,])) { cat("Error ", j, " \t")}
+  if(.Platform$OS.type == "unix") {
+    log_ll <- parallel::mclapply(1:ndraws,
+                                 FUN = function(j) log_likelihood(param = Chain$mcmc[j,], data = Chain, aggregate = F),
+                                 mc.cores = parallel::detectCores()*0.5  )
+    log_ll <- t(matrix(unlist(log_ll), nrow = t_max))
+  } else {
+    log_ll <- matrix(NA, nrow = ndraws, ncol = t_max)
+    for (j in c(1:ndraws)){
+      log_ll[j,] <- log_likelihood(param = Chain$mcmc[j,], data = Chain, aggregate = F)
+      if(anyNA(log_ll[j,])) { cat("Error ", j, " \t")}
+    }
   }
+
   lpd = sum(log(apply(exp(log_ll), MARGIN = 2, mean))) # log predicted density
   p_waic = sum(apply(log_ll, MARGIN = 2, FUN = var)) # Effective parameters
   waic_deviance <- -2 * ( lpd - p_waic )

@@ -1,6 +1,6 @@
-#' Bayesian inference of VAR model with SV
+#' Bayesian inference of VAR model with Stochvol package
 #'
-#' Bayesian inference of VAR model with SV
+#' Bayesian inference of VAR model with Stochvol package
 #' \deqn{y_t = B x_t + SQRT(w_t) A^(-1) Sigma eps_t}
 #' @param y The input data as matrix T x K where T is the number of observations and K is the number of variables
 #' @param K The number of variables in BVAR model.
@@ -25,7 +25,7 @@ BVAR.Stochvol <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
   Start = Sys.time()
   if (dist == "Gaussian") Chain <- BVAR.Gaussian.Stochvol(y, K, p, y0, prior, inits)
   if (dist == "Student") Chain <- BVAR.Student.Stochvol(y, K, p, y0, prior, inits)
-  if (dist == "Skew.Student") Chain <- BVAR.Skew.Student.Stochvol(y, K, p, y0, prior, inits)
+  # if (dist == "Skew.Student") Chain <- BVAR.Skew.Student.Stochvol(y, K, p, y0, prior, inits)
   if (dist == "Hyper.Student") Chain <- BVAR.Hyper.Student.Stochvol(y, K, p, y0, prior, inits)
   if (dist == "multiStudent") Chain <- BVAR.multiStudent.Stochvol(y, K, p, y0, prior, inits)
   if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.Stochvol(y, K, p, y0, prior, inits)
@@ -112,7 +112,7 @@ BVAR.Gaussian.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NUL
     # sigma_h <- aux$sigma_h
 
     for (i in c(1:K)){
-      svdraw[[i]] <- svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
+      svdraw[[i]] <- Stochvol::svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
                                startlatent = latent(svdraw[[i]]), priormu = priormu,
                                priorphi = priorphi, priorsigma = priorsigma)
       paravol[i,] <- para(svdraw[[i]])
@@ -236,7 +236,7 @@ BVAR.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
     sigma_h <- aux$sigma_h
 
     for (i in c(1:K)){
-      svdraw[[i]] <- svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
+      svdraw[[i]] <- Stochvol::svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
                                startlatent = latent(svdraw[[i]]), priormu = priormu,
                                priorphi = priorphi, priorsigma = priorsigma)
       paravol[i,] <- para(svdraw[[i]])
@@ -320,198 +320,7 @@ BVAR.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
   return(as.mcmc(t(mcmc)))
 }
 
-#############################################################################################
-# library(Matrix)
-# library(magic)
-# library(tmvnsim)
-#' @export
-BVAR.Skew.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
-  # Init regressors in the right hand side
-  t_max <- nrow(y)
-  yt = t(y)
-  xt <- makeRegressor(y, y0, t_max, K, p)
 
-  # Init prior and initial values
-  m = K * p + 1
-  if (is.null(prior)){
-    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "Skew.Student", SV = TRUE)
-  }
-  # prior B
-  b_prior = prior$b_prior
-  V_b_prior = prior$V_b_prior
-  # prior sigma
-  sigma0_T0 <- prior$sigma_T0
-  sigma0_S0 <- prior$sigma_S0
-  # prior A
-  a_prior = prior$a_prior
-  V_a_prior = prior$V_a_prior
-  # prior nu
-  nu_gam_a = prior$nu_gam_a
-  nu_gam_b = prior$nu_gam_b
-  # prior gamma
-  gamma_prior = prior$gamma_prior
-  V_gamma_prior = prior$V_gamma_prior
-  # Initial values
-  if (is.null(inits)){
-    inits <- get_init(prior)
-  }
-  samples <- inits$samples
-  A <- inits$A0
-  B <- inits$B0
-  h <- inits$h
-  sigma_h <- inits$sigma_h
-
-  V_b_prior_inv <- solve(V_b_prior)
-
-  nu <- inits$nu
-  logsigma_nu <- 0
-  acount_nu <- 0
-  acount_w <- rep(0, t_max)
-  gamma <- inits$gamma
-  D <- diag(gamma)
-
-  # Init w as Gaussian
-  w_sample <- rep(1, t_max)
-  w <- reprow(w_sample, K)
-  w_sqrt <- sqrt(w)
-  # Init z as Truncated Gaussian
-  z <- matrix(abs(rnorm(K * t_max)), ncol = t_max, nrow = K)
-
-  svdraw <- list()
-  paravol <- matrix(0, ncol = 3, nrow = K)
-  for (i in c(1:K)){
-    svdraw[[i]] <- list(para = c(mu = 0, phi = 0.95, sigma = 0.2),
-                        latent = h[i,])
-  }
-  priormu <- c(0, 2)
-  priorphi <- c(20, 1.5)
-  priorsigma <- 1
-
-  # Output
-  mcmc <- NULL
-  bg_prior <- c(gamma_prior, b_prior)
-  #V_bg_prior <-  bdiag(V_gamma_prior, V_b_prior)  # Sparse matrix
-  V_bg_prior <-  adiag(V_gamma_prior, V_b_prior)
-  V_bg_prior_inv <- solve(V_bg_prior)
-
-  for (j in c(1:samples)){
-    # Sample B and gamma
-    bg_post = rep(0,K + m*K) # first K elements are gamma
-    V_bg_post_inv = V_bg_prior_inv
-    for (i in c(1:t_max)){
-      zx <- cbind(diag(z[,i]), kronecker(t(xt[,i]), diag(K)))
-      V_bg_post_inv <- V_bg_post_inv +  t(zx) %*% ( (t(A)%*% diag(1/exp(h[,i])) %*% A) /w_sample[i]) %*% zx
-      bg_post <- bg_post + t(zx) %*% ( (t(A)%*% diag(1/exp(h[,i])) %*% A) /w_sample[i]) %*% yt[,i]
-    }
-    V_bg_post <- solve(V_bg_post_inv)
-    V_bg_post <- (V_bg_post + t(V_bg_post))/2
-    bg_post <- V_bg_post %*% ( V_bg_prior_inv %*% bg_prior + bg_post)
-    bg_sample <- bg_post + t(chol(V_bg_post)) %*% rnorm(K + m*K)
-    gamma <- bg_sample[1:K]
-    D <- diag(gamma)
-    b_sample <- bg_sample[(K+1):(K+m*K)]
-    B <- Vec_to_Mat(b_sample, K,p)
-
-    # Sample Z
-    lb <- rep(0, K)
-    for (i in c(1:t_max)){
-      V_Zt_inv <- diag(rep(1,K)) + D %*% ( (t(A)%*% diag(1/exp(h[,i])) %*% A) /w_sample[i]) %*% D
-      V_Zt <- solve(V_Zt_inv)
-      mu_Zt <- as.vector(V_Zt %*% D %*% ( (t(A)%*% diag(1/exp(h[,i])) %*% A) /w_sample[i]) %*% (yt[,i] - B %*% xt[,i]) )
-      z[,i] <- TruncatedNormal::rtmvnorm(n = 1, mu = mu_Zt, sigma = V_Zt, lb = lb) # library(TruncatedNormal)
-      # z[,i] <- tmvtnorm::rtmvnorm(1, mean = mu_Zt, sigma = V_Zt, lower=rep(0, length = K)) # library(tmvtnorm)
-      # z[,i] <- tmvnsim(1, K, means = mu_Zt, sigma = V_Zt, lower=rep(0, length = K))$samp # library(tmvnsim)
-    }
-
-    # Sample vol
-    ytilde <- A%*% (yt - B %*% xt- - D%*% z)/w_sqrt    # change from Gaussian
-    aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
-    h <- aux$Sigtdraw
-    sqrtvol <- aux$sigt
-    sigma_h <- aux$sigma_h
-
-    for (i in c(1:K)){
-      svdraw[[i]] <- svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
-                               startlatent = latent(svdraw[[i]]), priormu = priormu,
-                               priorphi = priorphi, priorsigma = priorsigma)
-      paravol[i,] <- para(svdraw[[i]])
-      h[i,] <- as.vector(latent(svdraw[[i]]))
-    }
-    sqrtvol <- exp(h/2)
-
-    # Sample A0
-    u_std <- (yt - B %*%xt - D%*% z)/ w_sqrt # change from Gaussian
-    u_neg <- - u_std
-    a_sample <- rep(0, K * (K - 1) /2)
-    for (i in c(2:K)){
-      id_end <- i*(i-1)/2
-      id_start <- id_end - i + 2
-      a_sub <- a_prior[id_start:id_end]
-      V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
-      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = u_std[i,] / sqrtvol[i,],
-                                                   xsub = matrix(u_neg[1:(i-1),] / sqrtvol[i,], nrow = i-1),
-                                                   a_sub = a_sub,
-                                                   V_a_sub = V_a_sub)
-    }
-    A_post <- matrix(0, nrow = K, ncol = K)
-    A_post[upper.tri(A)] <- a_sample
-    A <- t(A_post)
-    diag(A) <- 1
-
-    # Sample w
-    u <- (yt - B %*%xt - D%*% z)
-    for (i in c(1:t_max)){
-      w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% (t(A)%*% diag(1/exp(h[,i])) %*% A) %*% u[,i])
-    }
-    w <- reprow(w_sample, K)
-    w_sqrt <- sqrt(w)
-
-    # Sample nu
-    nu_temp = nu + exp(logsigma_nu)*rnorm(1)
-    if (nu_temp > 2 && nu_temp < 100){
-      num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-        sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
-      denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-        sum(dinvgamma(w_sample, shape = nu*0.5, rate = nu*0.5, log = T))
-      alpha = num_mh - denum_mh;
-      temp = log(runif(1));
-      if (alpha > temp){
-        nu = nu_temp
-        acount_nu = acount_nu + 1
-      }
-
-    }
-
-    if(j %% batchlength == 0 ){
-      if (acount_nu > batchlength * TARGACCEPT){
-        logsigma_nu = logsigma_nu + adaptamount(j %/% batchlength);
-      }
-      if (acount_nu < batchlength * TARGACCEPT){
-        logsigma_nu = logsigma_nu - adaptamount(j %/% batchlength);
-      }
-      acount_nu = 0
-    }
-    if ((j > inits$burnin) & (j %% inits$thin == 0))
-      mcmc <- cbind(mcmc, c(b_sample, a_sample, gamma, nu, as.vector(paravol), as.vector(h), as.vector(w_sample)))
-    if (j %% 100 == 0) {
-      cat(" Iteration ", j, " ", logsigma_nu," ", " ", nu ," \n")
-      acount_w <- rep(0,t_max)
-    }
-  }
-  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
-  nameA <- nameA[upper.tri(nameA, diag = F)]
-  row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
-                        nameA,
-                        paste("gamma",c(1:K), sep = ""),
-                        paste("nu"),
-                        paste("mu_vol",c(1:K), sep = ""),
-                        paste("phi_vol",c(1:K), sep = ""),
-                        paste("sigma_vol",c(1:K), sep = ""),
-                        sprintf("h_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)),
-                        paste("w",c(1:t_max), sep = ""))
-  return(as.mcmc(t(mcmc)))
-}
 
 #############################################################################################
 #' @export
@@ -612,7 +421,7 @@ BVAR.Hyper.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits 
     sigma_h <- aux$sigma_h
 
     for (i in c(1:K)){
-      svdraw[[i]] <- svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
+      svdraw[[i]] <- Stochvol::svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
                                startlatent = latent(svdraw[[i]]), priormu = priormu,
                                priorphi = priorphi, priorsigma = priorsigma)
       paravol[i,] <- para(svdraw[[i]])
@@ -801,7 +610,7 @@ BVAR.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
     sigma_h <- aux$sigma_h
 
     for (i in c(1:K)){
-      svdraw[[i]] <- svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
+      svdraw[[i]] <- Stochvol::svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
                                startlatent = latent(svdraw[[i]]), priormu = priormu,
                                priorphi = priorphi, priorsigma = priorsigma)
       paravol[i,] <- para(svdraw[[i]])
@@ -1014,7 +823,7 @@ BVAR.Hyper.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, i
     sigma_h <- aux$sigma_h
 
     for (i in c(1:K)){
-      svdraw[[i]] <- svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
+      svdraw[[i]] <- Stochvol::svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
                                startlatent = latent(svdraw[[i]]), priormu = priormu,
                                priorphi = priorphi, priorsigma = priorsigma)
       paravol[i,] <- para(svdraw[[i]])
@@ -1125,3 +934,196 @@ BVAR.Hyper.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, i
 
   return(as.mcmc(t(mcmc)))
 }
+
+# #############################################################################################
+# # library(Matrix)
+# # library(magic)
+# # library(tmvnsim)
+# #' @export
+# BVAR.Skew.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
+#   # Init regressors in the right hand side
+#   t_max <- nrow(y)
+#   yt = t(y)
+#   xt <- makeRegressor(y, y0, t_max, K, p)
+
+#   # Init prior and initial values
+#   m = K * p + 1
+#   if (is.null(prior)){
+#     prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "Skew.Student", SV = TRUE)
+#   }
+#   # prior B
+#   b_prior = prior$b_prior
+#   V_b_prior = prior$V_b_prior
+#   # prior sigma
+#   sigma0_T0 <- prior$sigma_T0
+#   sigma0_S0 <- prior$sigma_S0
+#   # prior A
+#   a_prior = prior$a_prior
+#   V_a_prior = prior$V_a_prior
+#   # prior nu
+#   nu_gam_a = prior$nu_gam_a
+#   nu_gam_b = prior$nu_gam_b
+#   # prior gamma
+#   gamma_prior = prior$gamma_prior
+#   V_gamma_prior = prior$V_gamma_prior
+#   # Initial values
+#   if (is.null(inits)){
+#     inits <- get_init(prior)
+#   }
+#   samples <- inits$samples
+#   A <- inits$A0
+#   B <- inits$B0
+#   h <- inits$h
+#   sigma_h <- inits$sigma_h
+
+#   V_b_prior_inv <- solve(V_b_prior)
+
+#   nu <- inits$nu
+#   logsigma_nu <- 0
+#   acount_nu <- 0
+#   acount_w <- rep(0, t_max)
+#   gamma <- inits$gamma
+#   D <- diag(gamma)
+
+#   # Init w as Gaussian
+#   w_sample <- rep(1, t_max)
+#   w <- reprow(w_sample, K)
+#   w_sqrt <- sqrt(w)
+#   # Init z as Truncated Gaussian
+#   z <- matrix(abs(rnorm(K * t_max)), ncol = t_max, nrow = K)
+
+#   svdraw <- list()
+#   paravol <- matrix(0, ncol = 3, nrow = K)
+#   for (i in c(1:K)){
+#     svdraw[[i]] <- list(para = c(mu = 0, phi = 0.95, sigma = 0.2),
+#                         latent = h[i,])
+#   }
+#   priormu <- c(0, 2)
+#   priorphi <- c(20, 1.5)
+#   priorsigma <- 1
+
+#   # Output
+#   mcmc <- NULL
+#   bg_prior <- c(gamma_prior, b_prior)
+#   #V_bg_prior <-  bdiag(V_gamma_prior, V_b_prior)  # Sparse matrix
+#   V_bg_prior <-  adiag(V_gamma_prior, V_b_prior)
+#   V_bg_prior_inv <- solve(V_bg_prior)
+
+#   for (j in c(1:samples)){
+#     # Sample B and gamma
+#     bg_post = rep(0,K + m*K) # first K elements are gamma
+#     V_bg_post_inv = V_bg_prior_inv
+#     for (i in c(1:t_max)){
+#       zx <- cbind(diag(z[,i]), kronecker(t(xt[,i]), diag(K)))
+#       V_bg_post_inv <- V_bg_post_inv +  t(zx) %*% ( (t(A)%*% diag(1/exp(h[,i])) %*% A) /w_sample[i]) %*% zx
+#       bg_post <- bg_post + t(zx) %*% ( (t(A)%*% diag(1/exp(h[,i])) %*% A) /w_sample[i]) %*% yt[,i]
+#     }
+#     V_bg_post <- solve(V_bg_post_inv)
+#     V_bg_post <- (V_bg_post + t(V_bg_post))/2
+#     bg_post <- V_bg_post %*% ( V_bg_prior_inv %*% bg_prior + bg_post)
+#     bg_sample <- bg_post + t(chol(V_bg_post)) %*% rnorm(K + m*K)
+#     gamma <- bg_sample[1:K]
+#     D <- diag(gamma)
+#     b_sample <- bg_sample[(K+1):(K+m*K)]
+#     B <- Vec_to_Mat(b_sample, K,p)
+
+#     # Sample Z
+#     lb <- rep(0, K)
+#     for (i in c(1:t_max)){
+#       V_Zt_inv <- diag(rep(1,K)) + D %*% ( (t(A)%*% diag(1/exp(h[,i])) %*% A) /w_sample[i]) %*% D
+#       V_Zt <- solve(V_Zt_inv)
+#       mu_Zt <- as.vector(V_Zt %*% D %*% ( (t(A)%*% diag(1/exp(h[,i])) %*% A) /w_sample[i]) %*% (yt[,i] - B %*% xt[,i]) )
+#       z[,i] <- TruncatedNormal::rtmvnorm(n = 1, mu = mu_Zt, sigma = V_Zt, lb = lb) # library(TruncatedNormal)
+#       # z[,i] <- tmvtnorm::rtmvnorm(1, mean = mu_Zt, sigma = V_Zt, lower=rep(0, length = K)) # library(tmvtnorm)
+#       # z[,i] <- tmvnsim(1, K, means = mu_Zt, sigma = V_Zt, lower=rep(0, length = K))$samp # library(tmvnsim)
+#     }
+
+#     # Sample vol
+#     ytilde <- A%*% (yt - B %*% xt- - D%*% z)/w_sqrt    # change from Gaussian
+#     aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
+#     h <- aux$Sigtdraw
+#     sqrtvol <- aux$sigt
+#     sigma_h <- aux$sigma_h
+
+#     for (i in c(1:K)){
+#       svdraw[[i]] <- Stochvol::svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
+#                                startlatent = latent(svdraw[[i]]), priormu = priormu,
+#                                priorphi = priorphi, priorsigma = priorsigma)
+#       paravol[i,] <- para(svdraw[[i]])
+#       h[i,] <- as.vector(latent(svdraw[[i]]))
+#     }
+#     sqrtvol <- exp(h/2)
+
+#     # Sample A0
+#     u_std <- (yt - B %*%xt - D%*% z)/ w_sqrt # change from Gaussian
+#     u_neg <- - u_std
+#     a_sample <- rep(0, K * (K - 1) /2)
+#     for (i in c(2:K)){
+#       id_end <- i*(i-1)/2
+#       id_start <- id_end - i + 2
+#       a_sub <- a_prior[id_start:id_end]
+#       V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
+#       a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = u_std[i,] / sqrtvol[i,],
+#                                                    xsub = matrix(u_neg[1:(i-1),] / sqrtvol[i,], nrow = i-1),
+#                                                    a_sub = a_sub,
+#                                                    V_a_sub = V_a_sub)
+#     }
+#     A_post <- matrix(0, nrow = K, ncol = K)
+#     A_post[upper.tri(A)] <- a_sample
+#     A <- t(A_post)
+#     diag(A) <- 1
+
+#     # Sample w
+#     u <- (yt - B %*%xt - D%*% z)
+#     for (i in c(1:t_max)){
+#       w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% (t(A)%*% diag(1/exp(h[,i])) %*% A) %*% u[,i])
+#     }
+#     w <- reprow(w_sample, K)
+#     w_sqrt <- sqrt(w)
+
+#     # Sample nu
+#     nu_temp = nu + exp(logsigma_nu)*rnorm(1)
+#     if (nu_temp > 2 && nu_temp < 100){
+#       num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
+#         sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
+#       denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
+#         sum(dinvgamma(w_sample, shape = nu*0.5, rate = nu*0.5, log = T))
+#       alpha = num_mh - denum_mh;
+#       temp = log(runif(1));
+#       if (alpha > temp){
+#         nu = nu_temp
+#         acount_nu = acount_nu + 1
+#       }
+
+#     }
+
+#     if(j %% batchlength == 0 ){
+#       if (acount_nu > batchlength * TARGACCEPT){
+#         logsigma_nu = logsigma_nu + adaptamount(j %/% batchlength);
+#       }
+#       if (acount_nu < batchlength * TARGACCEPT){
+#         logsigma_nu = logsigma_nu - adaptamount(j %/% batchlength);
+#       }
+#       acount_nu = 0
+#     }
+#     if ((j > inits$burnin) & (j %% inits$thin == 0))
+#       mcmc <- cbind(mcmc, c(b_sample, a_sample, gamma, nu, as.vector(paravol), as.vector(h), as.vector(w_sample)))
+#     if (j %% 100 == 0) {
+#       cat(" Iteration ", j, " ", logsigma_nu," ", " ", nu ," \n")
+#       acount_w <- rep(0,t_max)
+#     }
+#   }
+#   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
+#   nameA <- nameA[upper.tri(nameA, diag = F)]
+#   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
+#                         sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+#                         nameA,
+#                         paste("gamma",c(1:K), sep = ""),
+#                         paste("nu"),
+#                         paste("mu_vol",c(1:K), sep = ""),
+#                         paste("phi_vol",c(1:K), sep = ""),
+#                         paste("sigma_vol",c(1:K), sep = ""),
+#                         sprintf("h_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)),
+#                         paste("w",c(1:t_max), sep = ""))
+#   return(as.mcmc(t(mcmc)))
+# }

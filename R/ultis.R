@@ -70,7 +70,7 @@ sample_A_ele <- function(ysub, xsub, a_sub, V_a_sub){
   return(a_post  + t(chol(V_a_post)) %*% rnorm(n))
 }
 
-
+#' @export
 sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K),
                          h = matrix(0, nrow = t_max, ncol = K), K, t_max){
   tmp <- getmix()
@@ -81,15 +81,17 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K),
 
 
   sigma_prmean <- rep(0,K) # mean h_0
-  sigma_prvar <- diag(K)   # variance h_0
+  sigma_prvar <- 10*diag(K)   # variance h_0
 
   aux <- sigmahelper4(t(ytilde^2), q, m_mean, u2, h, Zs, sigma_h, sigma_prmean, sigma_prvar)
   h <- aux$Sigtdraw
-  sqrtvol <- aux$sigt
-
-  sse_2 <- apply( (h[,2:t_max] - h[,1:(t_max-1)])^2, MARGIN = 1, FUN = sum)
-  sigma_post_a <- 1 + rep(t_max,K)
-  sigma_post_b <- 0.0001 + sse_2
+  h0 <- as.numeric(aux$h0)
+  # sqrtvol <- aux$sigt
+  # [TODO] fix this
+  # sse_2 <- apply( (h[,2:t_max] - h[,1:(t_max-1)])^2, MARGIN = 1, FUN = sum)
+  sse_2 <- apply( (h[,1:t_max] - cbind(h0,h[,1:(t_max-1)]) )^2, MARGIN = 1, FUN = sum)
+  sigma_post_a <- 1 + rep(t_max,K) # prior of sigma_h Gamma(1,0.0001)
+  sigma_post_b <- 0.0001 + sse_2 # prior of sigma_h
 
   for (i in c(1:K)){
     sigma_h[i,i] <- rinvgamma(1, shape = sigma_post_a[i] * 0.5, rate = sigma_post_b[i] * 0.5)

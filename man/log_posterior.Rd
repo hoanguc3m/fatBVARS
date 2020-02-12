@@ -2,7 +2,7 @@
 % Please edit documentation in R/posterior.R
 \name{log_posterior}
 \alias{log_posterior}
-\title{Posterior distribution of BVAR model}
+\title{Posterior distribution up to a nomalizing constant of BVAR model}
 \usage{
 log_posterior(param, data)
 }
@@ -15,7 +15,7 @@ log_posterior(param, data)
 The unnormalized log posterior density of the fatBVARSVobj at param.
 }
 \description{
-This function returns a posterior distribution of BVAR-SV-fatTail model.
+This function returns a posterior distribution up to a nomalizing constant of BVAR-SV-fatTail model.
 }
 \examples{
 \dontrun{

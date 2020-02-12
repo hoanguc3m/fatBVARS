@@ -27,7 +27,7 @@ return(out);
 List carterkohn(arma::mat y, arma::mat Z, arma::mat Ht, arma::mat Qt, double m, double p, double t, arma::colvec B0, arma::mat V0) {
 
 arma::colvec bp = B0; // reuses memory and avoids extra copy
-arma::mat Vp = V0;
+arma::mat Vp = V0 + Qt; // bp = E(x^(0)_(1)), Vp = Var(x^(0)_(1)),
 arma::colvec btt = B0;	// initialize now s/t that their scope extends beyond loop
 arma::mat Vtt = V0;
 arma::mat f = arma::zeros(p, Ht.n_cols);
@@ -47,9 +47,9 @@ for (int i = 1; i < (t+1); i++) {
   f = H*Vp*H.t() + R;    	  // variance of the conditional forecast error
   invf = f.i();		  // invert only once
   loglik = loglik + log(det(f)) + cfe.t()*invf*cfe;
-
-  btt = bp + Vp*H.t()*invf*cfe;
-  Vtt = Vp - Vp*H.t()*invf*H*Vp;
+  arma::mat Kalman = Vp*H.t()*invf;
+  btt = bp + Kalman*cfe;
+  Vtt = Vp - Kalman*H*Vp;
 
   if (i < t){
     bp = btt;
@@ -62,6 +62,7 @@ for (int i = 1; i < (t+1); i++) {
 
 arma::mat bdraw = arma::zeros(t,m);
 bdraw.row(t-1) = mvndrawC(btt,Vtt).t();
+arma::rowvec b0draw = arma::zeros(1,m);
 
 for (int i = 1; i < t; i++) {	// Backward recursions
     arma::colvec bf = bdraw.row(t-i).t();
@@ -74,8 +75,20 @@ for (int i = 1; i < t; i++) {	// Backward recursions
     arma::mat bvar = Vtt - Vtt*invf*Vtt;
     bdraw.row(t-i-1) = mvndrawC(bmean, bvar).t();
 }
+    // Sample H0
+    arma::colvec bf = bdraw.row(0).t();
+    btt = B0;
+    Vtt = V0;
+    f = Vtt + Qt;
+    invf = f.i();
+    cfe = bf - btt;
+    arma::colvec bmean = btt + Vtt*invf*cfe;
+    arma::mat bvar = Vtt - Vtt*invf*Vtt;
+    b0draw = mvndrawC(bmean, bvar).t();
 
-return List::create(Named("loglik") = loglik, Named("bdraws") = bdraw.t());
+return List::create(Named("loglik") = loglik,
+                    Named("bdraws") = bdraw.t(),
+                    Named("b0draws") = b0draw.t());
 }
 
 // [[Rcpp::export]]
@@ -229,11 +242,16 @@ List sigmahelper4(arma::mat y2, arma::colvec qs, arma::colvec ms, arma::colvec u
       yss1(i-1,j-1) = yss(i-1,j-1) - ms(imix-1) + 1.2704;
     }
   }
-  arma::mat Sigtdraw_new = carterkohn(yss1.t(),Zs,vart,Wdraw,M,M,t,sigma_prmean,sigma_prvar)["bdraws"];
+  List H_new = carterkohn(yss1.t(),Zs,vart,Wdraw,M,M,t,sigma_prmean,sigma_prvar);
+  arma::mat Sigtdraw_new = H_new["bdraws"];
+  arma::rowvec H0_new = H_new["b0draws"];
+  // arma::mat Sigtdraw_new = carterkohn(yss1.t(),Zs,vart,Wdraw,M,M,t,sigma_prmean,sigma_prvar)["bdraws"];
 
   arma::mat sigt = exp(0.5*Sigtdraw_new);
 
-  return List::create(Named("Sigtdraw") = Sigtdraw_new, Named("sigt") = sigt);
+  return List::create(Named("Sigtdraw") = Sigtdraw_new,
+                      Named("sigt") = sigt,
+                      Named("h0") = H0_new);
 }
 
 

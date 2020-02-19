@@ -2,29 +2,31 @@
 % Please edit documentation in R/forecast.R
 \name{recursive_forecast}
 \alias{recursive_forecast}
-\title{Forecast density of future observations of BVAR model}
+\title{Recursive forecast of BVAR model}
 \usage{
-recursive_forecast(Chain = NULL, y0 = NULL, y_future, t_pred = 12,
-  reestimated = F)
+recursive_forecast(y, t_start = 100, t_pred = 12, K, p,
+  dist = "Hyper.multiStudent", SV = T)
 }
 \arguments{
-\item{Chain}{The fatBVARSV object from command BVAR.}
+\item{y}{the whole data matrix T x k.}
+
+\item{t_start}{the start point for forecast.}
 
 \item{t_pred}{The time prediction horizon.}
 
-\item{y_current}{The current values of y.}
+\item{K}{The number of variables in y.}
 
-\item{y_obs_future}{The future observable values of y.}
+\item{p}{The number of lags in BVAR model.}
 }
 \value{
-The forecast density of future observations of BVAR model
+The recursive forecast density of future observations of BVAR model
 }
 \description{
-This function returns a forecast density of future observations of BVAR-SV-fatTail model.
+This function returns a recursive forecast of future observations of BVAR-SV-fatTail model.
 }
 \examples{
 \dontrun{
-forecast_dens1 <- forecast_density(Chain1, y_obs_future)
+recuresive_model1 <- recursive_forecast(y, t_start, t_pred, K, p, dist = "Hyper.multiStudent", SV = T)
 }
 
 }

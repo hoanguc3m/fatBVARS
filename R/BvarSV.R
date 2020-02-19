@@ -29,6 +29,8 @@ BVAR.SV <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
   if (dist == "Hyper.Student") Chain <- BVAR.Hyper.Student.SV(y, K, p, y0, prior, inits)
   if (dist == "multiStudent") Chain <- BVAR.multiStudent.SV(y, K, p, y0, prior, inits)
   if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.SV(y, K, p, y0, prior, inits)
+  if (dist == "multiOrthStudent") Chain <- BVAR.multiOrthStudent.SV(y, K, p, y0, prior, inits)
+  if (dist == "Hyper.multiOrthStudent") Chain <- BVAR.Hyper.multiOrthStudent.SV(y, K, p, y0, prior, inits)
   elapsedTime = Sys.time() - Start
   print(elapsedTime)
   out <- list(mcmc = Chain,
@@ -91,7 +93,7 @@ BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   for (j in c(1:samples)){
     # Sample B, use reduce sum here
     # b_post = rep(0, m*K)
-    # V_b_post_inv = solve(V_b_prior)
+    # V_b_post_inv = V_b_prior_inv
     # for (i in c(1:t_max)){
     #   V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i])) %*% A)
     #   b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i])) %*% A) %*% yt[,i])
@@ -389,7 +391,7 @@ BVAR.Hyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
   for (j in c(1:samples)){
     # Sample B
     b_post = rep(0, m*K)
-    V_b_post_inv = solve(V_b_prior)
+    V_b_post_inv = V_b_prior_inv
     for (i in c(1:t_max)){
       V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i])) %*% A /w_sample[i])
       b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i])) %*% A /w_sample[i]) %*% (yt[,i] - gamma * w_sample[i] ) )
@@ -788,7 +790,7 @@ BVAR.Hyper.multiStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits =
   for (j in c(1:samples)){
     # Sample B
     b_post = rep(0, m*K)
-    V_b_post_inv = solve(V_b_prior)
+    V_b_post_inv = V_b_prior_inv
     for (i in c(1:t_max)){
       V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), diag(w_sqrt_inv[,i]) %*% (t(A)%*% diag(1/exp(h[,i])) %*% A) %*% diag(w_sqrt_inv[,i]) )
       b_post <- b_post + kronecker(xt[,i], (diag(w_sqrt_inv[,i]) %*% (t(A)%*% diag(1/exp(h[,i])) %*% A) %*% diag(w_sqrt_inv[,i])) %*% (yt[,i] - gamma * w[,i]))
@@ -930,6 +932,375 @@ BVAR.Hyper.multiStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits =
 
   return(as.mcmc(t(mcmc)))
 }
+
+###########################################################################
+#' @export
+BVAR.multiOrthStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
+  # Init regressors in the right hand side
+  t_max <- nrow(y)
+  yt = t(y)
+  xt <- makeRegressor(y, y0, t_max, K, p)
+
+  # Init prior and initial values
+  m = K * p + 1
+  if (is.null(prior)){
+    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "multiStudent", SV = TRUE)
+  }
+  # prior B
+  b_prior = prior$b_prior
+  V_b_prior = prior$V_b_prior
+  # prior sigma
+  sigma0_T0 <- prior$sigma_T0
+  sigma0_S0 <- prior$sigma_S0
+  # prior A
+  a_prior = prior$a_prior
+  V_a_prior = prior$V_a_prior
+  # prior nu
+  nu_gam_a = prior$nu_gam_a
+  nu_gam_b = prior$nu_gam_b
+
+  # Initial values
+  if (is.null(inits)){
+    inits <- get_init(prior)
+  }
+  samples <- inits$samples
+  A <- inits$A0
+  B <- inits$B0
+  h <- inits$h
+  sigma_h <- inits$sigma_h
+
+  V_b_prior_inv <- solve(V_b_prior)
+
+  # Multi degrees of freedom
+  nu <- inits$nu
+  logsigma_nu <- rep(0,K)
+  acount_nu <- rep(0,K)
+  acount_w <- rep(0, t_max)
+  # Init w as Gaussian
+  w_sample <- rep(1, t_max)
+  w <- reprow(w_sample, K)
+  w_sqrt <- sqrt(w)
+
+  # svdraw <- list()
+  # paravol <- matrix(0, ncol = 3, nrow = K)
+  # for (i in c(1:K)){
+  #   svdraw[[i]] <- list(para = c(mu = 0, phi = 0.95, sigma = 0.2),
+  #                       latent = h[i,])
+  # }
+
+  # Output
+  mcmc <- matrix(NA, nrow = m*K + 0.5*K*(K-1) + K + K + K + K*t_max + K*t_max,
+                 ncol = (samples - inits$burnin)%/% inits$thin)
+  for (j in c(1:samples)){
+    # Sample B
+    b_post = rep(0, m*K)
+    V_b_post_inv = V_b_prior_inv
+    for (i in c(1:t_max)){
+      V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i]) / w[,i] ) %*% A )
+      b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i])/ w[,i] ) %*% A) %*% yt[,i])
+    }
+
+    V_b_post <- solve(V_b_post_inv)
+    b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
+    b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
+    B <- Vec_to_Mat(b_sample, K,p)
+
+    # Sample vol
+    ytilde <- A %*% (yt - B %*% xt) / w_sqrt
+    aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
+    h <- aux$Sigtdraw
+    h0 <- as.numeric(aux$h0)
+    sqrtvol <- aux$sigt
+    sigma_h <- aux$sigma_h
+
+    # for (i in c(1:K)){
+    #   svdraw[[i]] <- svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
+    #                            startlatent = latent(svdraw[[i]]), priormu = priormu,
+    #                            priorphi = priorphi, priorsigma = priorsigma)
+    #   paravol[i,] <- para(svdraw[[i]])
+    #   h[i,] <- as.numeric(latent(svdraw[[i]]))
+    # }
+    # sqrtvol <- exp(h/2)
+
+    # Sample A0
+    u_std <- (yt - B %*%xt) # change from Gaussian
+    u_neg <- - u_std
+    a_sample <- rep(0, K * (K - 1) /2)
+    for (i in c(2:K)){
+      id_end <- i*(i-1)/2
+      id_start <- id_end - i + 2
+      a_sub <- a_prior[id_start:id_end]
+      V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
+      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = u_std[i,] / sqrtvol[i,] / w_sqrt[i,],
+                                                   xsub = matrix(u_neg[1:(i-1),] / reprow(sqrtvol[i,],i-1) / reprow(w_sqrt[i,], i-1), nrow = i-1),
+                                                   a_sub = a_sub,
+                                                   V_a_sub = V_a_sub)
+    }
+    A_post <- matrix(0, nrow = K, ncol = K)
+    A_post[upper.tri(A)] <- a_sample
+    A <- t(A_post)
+    diag(A) <- 1
+
+    # Sample w
+    u <-  A %*% (yt - B %*%xt)
+    for (i in c(1:t_max)){
+      w[,i] <- mapply(rinvgamma, n = 1, shape = nu*0.5 + 1*0.5, rate = nu*0.5 + 0.5 * (u[,i]^2) / exp(h[,i]))
+    }
+    w_sqrt <- sqrt(w)
+
+
+    # Sample nu
+    nu_temp = nu + exp(logsigma_nu)*rnorm(K)
+    for (k in c(1:K)){
+      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+        num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
+          sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
+        denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
+          sum(dinvgamma(w[k,], shape = nu[k]*0.5, rate = nu[k]*0.5, log = T))
+        alpha = num_mh - denum_mh;
+        temp = log(runif(1));
+        if (alpha > temp){
+          nu[k] = nu_temp[k]
+          acount_nu[k] = acount_nu[k] + 1
+        }
+
+      }
+    }
+
+
+    if(j %% batchlength == 0 ){
+      for (jj in c(1:K)) {
+        if (acount_nu[jj] > batchlength * TARGACCEPT){
+          logsigma_nu[jj] = logsigma_nu[jj] + adaptamount(j %/% batchlength);
+        }
+        if (acount_nu[jj] < batchlength * TARGACCEPT){
+          logsigma_nu[jj] = logsigma_nu[jj] - adaptamount(j %/% batchlength);
+        }
+        acount_nu[jj] = 0
+      }
+    }
+
+    if ((j > inits$burnin) & (j %% inits$thin == 0))
+      mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, nu, diag(sigma_h), h0, as.numeric(h), as.numeric(w))
+
+    if (j %% 100 == 0) {
+      cat(" Iteration ", j, " ", logsigma_nu," ", round(nu,2)," \n")
+      acount_w <- rep(0,t_max)
+    }
+  }
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        nameA,
+                        paste("nu",c(1:K), sep = ""),
+                        paste("sigma_h",c(1:K), sep = ""),
+                        paste("lh0",c(1:K), sep = ""),
+                        sprintf("h_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)),
+                        sprintf("w_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)))
+
+  return(as.mcmc(t(mcmc)))
+}
+
+#############################################################################################
+#' @export
+BVAR.Hyper.multiOrthStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
+  # Init regressors in the right hand side
+  t_max <- nrow(y)
+  yt = t(y)
+  xt <- makeRegressor(y, y0, t_max, K, p)
+
+  # Init prior and initial values
+  m = K * p + 1
+  if (is.null(prior)){
+    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "Hyper.multiStudent", SV = TRUE)
+  }
+  # prior B
+  b_prior = prior$b_prior
+  V_b_prior = prior$V_b_prior
+  # prior sigma
+  sigma0_T0 <- prior$sigma_T0
+  sigma0_S0 <- prior$sigma_S0
+  # prior A
+  a_prior = prior$a_prior
+  V_a_prior = prior$V_a_prior
+  # prior nu
+  nu_gam_a = prior$nu_gam_a
+  nu_gam_b = prior$nu_gam_b
+  # prior gamma
+  gamma_prior = prior$gamma_prior
+  V_gamma_prior = prior$V_gamma_prior
+  # Initial values
+  if (is.null(inits)){
+    inits <- get_init(prior)
+  }
+  samples <- inits$samples
+  A <- inits$A0
+  B <- inits$B0
+  h <- inits$h
+  sigma_h <- inits$sigma_h
+
+  V_b_prior_inv <- solve(V_b_prior)
+
+  # Multi degrees of freedom
+  nu <- inits$nu
+  logsigma_nu <- rep(0,K)
+  acount_nu <- rep(0,K)
+  acount_w <- rep(0, t_max)
+  gamma <- inits$gamma
+  D <- diag(gamma)
+
+  # Init w as Gaussian
+  w_sample <- rep(1, t_max)
+  w <- reprow(w_sample, K)
+  w_sqrt <- sqrt(w)
+
+  # svdraw <- list()
+  # paravol <- matrix(0, ncol = 3, nrow = K)
+  # for (i in c(1:K)){
+  #   svdraw[[i]] <- list(para = c(mu = 0, phi = 0.95, sigma = 0.2),
+  #                       latent = h[i,])
+  # }
+
+  # Output
+  mcmc <-  matrix(NA, nrow = m*K + 0.5*K*(K-1) + K + K + K + K + K*t_max + K*t_max,
+                  ncol = (samples - inits$burnin)%/% inits$thin)
+  for (j in c(1:samples)){
+    # Sample B
+    b_post = rep(0, m*K)
+    V_b_post_inv = V_b_prior_inv
+    inv_A <- solve(A)
+    for (i in c(1:t_max)){
+      V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i]) / w[,i] ) %*% A )
+      b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i])/ w[,i] ) %*% A) %*% (yt[,i] - inv_A %*% (gamma * w[,i])) )
+    }
+
+    V_b_post <- solve(V_b_post_inv)
+    b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
+    b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
+    B <- Vec_to_Mat(b_sample, K,p)
+
+    # Sample gamma
+    gamma_post = rep(0, K)
+    V_gamma_post_inv = solve(V_gamma_prior)
+    u <- A %*% (yt - B %*%xt)
+
+    V_gamma_post_inv <- solve(V_gamma_prior) + diag(apply(w / exp(h), MARGIN = 1, FUN = sum))
+    gamma_post <- apply(u / exp(h), MARGIN = 1, FUN = sum)
+
+    V_gamma_post <- solve(V_gamma_post_inv)
+    gamma_post <- V_gamma_post %*% ( solve(V_gamma_prior) %*% gamma_prior + gamma_post)
+    gamma <- as.numeric(gamma_post + t(chol(V_gamma_post)) %*% rnorm(K))
+    D <- diag(gamma)
+
+    # Sample vol
+    ytilde <- (A %*% (yt - B %*% xt) - D %*% w) / w_sqrt
+    aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
+    h <- aux$Sigtdraw
+    h0 <- as.numeric(aux$h0)
+    sqrtvol <- aux$sigt
+    sigma_h <- aux$sigma_h
+
+    # Sample A0
+    u_std <- (yt - B %*% xt) # change from Gaussian
+    u_neg <- - u_std
+    a_sample <- rep(0, K * (K - 1) /2)
+    for (i in c(2:K)){
+      id_end <- i*(i-1)/2
+      id_start <- id_end - i + 2
+      a_sub <- a_prior[id_start:id_end]
+      V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
+      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - w_sqrt[i,] * gamma[i]) / sqrtvol[i,] / w_sqrt[i,],
+                                                   xsub = matrix(u_neg[1:(i-1),] / reprow(sqrtvol[i,],i-1) / reprow(w_sqrt[i,], i-1), nrow = i-1),
+                                                   a_sub = a_sub,
+                                                   V_a_sub = V_a_sub)
+    }
+    A_post <- matrix(0, nrow = K, ncol = K)
+    A_post[upper.tri(A)] <- a_sample
+    A <- t(A_post)
+    diag(A) <- 1
+
+    # Sample w
+    u <- A %*% (yt - B %*%xt)
+    for (i in c(1:t_max)){
+      ran_stu = rt(K, df = 4)
+      Sigma2_inv_t = 1/exp(h[,i])
+      a_eq <- -0.5* (gamma^2 * Sigma2_inv_t)
+      b_eq <- -((0.5*1 + nu/2+1))
+      c_eq =  0.5 * (u[,i]^2 * Sigma2_inv_t) + nu/2
+      w_mode <- (- b_eq - sqrt(b_eq^2-4*a_eq*c_eq))/(2*a_eq)
+      mode_target <- log( w_mode )
+      cov_target <- 1/( c_eq / w_mode - a_eq * w_mode) * 1.2 # scale by 1.2
+
+      log_w_temp = mode_target + sqrt(cov_target)*ran_stu
+      w_temp = exp(log_w_temp)
+
+      num_mh =  mapply( dinvgamma, x = w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
+        ( - 0.5 * 1 * log_w_temp - 0.5 * (u[,i] - gamma*w_temp)^2 * Sigma2_inv_t / w_temp) - # posterior
+        dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
+      denum_mh = mapply( dinvgamma, x = w[,i], shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
+        ( - 0.5 * 1 * log(w[,i]) - 0.5 * (u[,i] - gamma*w[,i])^2 * Sigma2_inv_t / w[,i]) - # posterior
+        dt( (log(w[,i]) - mode_target)/sqrt(cov_target), df = 4, log = T) + log(w[,i]) # proposal
+      alpha = num_mh - denum_mh
+      temp = log(runif(K))
+      acre = alpha > temp
+      w[,i] <- ifelse(acre, w_temp, w[,i])
+      w_sqrt[,i] <- sqrt(w[,i])
+      acount_w[i] <- acount_w[i] + mean(acre)
+    }
+
+    # Sample nu
+    nu_temp = nu + exp(logsigma_nu)*rnorm(K)
+    for (k in c(1:K)){
+      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+        num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
+          sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
+        denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
+          sum(dinvgamma(w[k,], shape = nu[k]*0.5, rate = nu[k]*0.5, log = T))
+        alpha = num_mh - denum_mh;
+        temp = log(runif(1));
+        if (alpha > temp){
+          nu[k] = nu_temp[k]
+          acount_nu[k] = acount_nu[k] + 1
+        }
+
+      }
+    }
+
+    if(j %% batchlength == 0 ){
+      for (jj in c(1:K)) {
+        if (acount_nu[jj] > batchlength * TARGACCEPT){
+          logsigma_nu[jj] = logsigma_nu[jj] + adaptamount(j %/% batchlength);
+        }
+        if (acount_nu[jj] < batchlength * TARGACCEPT){
+          logsigma_nu[jj] = logsigma_nu[jj] - adaptamount(j %/% batchlength);
+        }
+        acount_nu[jj] = 0
+      }
+    }
+
+    if ((j > inits$burnin) & (j %% inits$thin == 0))
+      mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, gamma, nu, diag(sigma_h), h0, as.numeric(h), as.numeric(w))
+    if (j %% 100 == 0) {
+      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2) , " ", round(gamma,2) ,  " \n")
+      acount_w <- rep(0,t_max)
+    }
+  }
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        nameA,
+                        paste("gamma",c(1:K), sep = ""),
+                        paste("nu",c(1:K), sep = ""),
+                        paste("sigma_h",c(1:K), sep = ""),
+                        paste("lh0",c(1:K), sep = ""),
+                        sprintf("h_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)),
+                        sprintf("w_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)))
+
+  return(as.mcmc(t(mcmc)))
+}
+
 
 #' #############################################################################################
 #' # library(Matrix)

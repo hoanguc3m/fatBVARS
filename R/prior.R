@@ -183,7 +183,9 @@ get_prior <- function(y, p, priorStyle = c("Minnesota"),
     prior_collect$nu_gam_b = 0.1
   }
   #Skew.Student
-  if (dist =="Skew.Student" | dist =="Hyper.Student" | dist =="Skew.multiStudent" | dist =="Hyper.multiStudent" ){
+  if (dist =="Skew.Student" | dist =="Hyper.Student" |
+      dist =="Skew.multiStudent" | dist =="Hyper.multiStudent"|
+      dist =="Hyper.multiOrthStudent"){
     prior_collect$gamma_prior = rep(0, K)
     prior_collect$V_gamma_prior = diag(K)
   }
@@ -235,11 +237,13 @@ get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
     inits$nu = 6
   }
   #Skew.Student
-  if (dist =="Skew.Student" | dist =="Hyper.Student" | dist =="Skew.multiStudent" | dist =="Hyper.multiStudent" ){
-    inits$gamma = rep(0,K)
+  if (dist =="Skew.Student" | dist =="Hyper.Student" | dist =="Skew.multiStudent" | dist =="Hyper.multiStudent" |
+      dist =="Hyper.multiOrthStudent" ){
+    inits$gamma = rep(0.001,K)
   }
   #multiStudent
-  if (dist =="multiStudent" | dist =="Skew.multiStudent" | dist =="Hyper.multiStudent" ){
+  if (dist =="multiStudent" | dist =="Skew.multiStudent" | dist =="Hyper.multiStudent" |
+      dist =="multiOrthStudent" | dist =="Hyper.multiOrthStudent" ){
     inits$nu = rep(6,K)
   }
   #Stochastic vol

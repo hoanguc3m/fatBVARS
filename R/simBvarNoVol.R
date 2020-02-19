@@ -31,6 +31,8 @@ sim.VAR.novol <- function(dist, K = 5, p = 2, t_max = 1000,
   if (dist == "Hyper.Student") datagen <- sim.VAR.Hyper.Student.novol(K, p, t_max, b0, a0, h, y0, nu, gamma, seednum, burn_in)
   if (dist == "multiStudent") datagen <- sim.VAR.multiStudent.novol(K, p, t_max, b0, a0, h, y0, nu, seednum, burn_in)
   if (dist == "Hyper.multiStudent") datagen <- sim.VAR.Hyper.multiStudent.novol(K, p, t_max, b0, a0, h, y0, nu, gamma, seednum, burn_in)
+  if (dist == "multiOrthStudent") datagen <- sim.VAR.multiOrthStudent.novol(K, p, t_max, b0, a0, h, y0, nu, seednum, burn_in)
+  if (dist == "Hyper.multiOrthStudent") datagen <- sim.VAR.Hyper.multiOrthStudent.novol(K, p, t_max, b0, a0, h, y0, nu, gamma, seednum, burn_in)
 
   return(datagen)
 }
@@ -374,7 +376,145 @@ sim.VAR.Hyper.multiStudent.novol <- function(K = 5, p = 2, t_max = 1000,
        w = w_t[(burn_in+1):(burn_in+t_max),],
        dist = "Hyper.multiStudent", SV = FALSE)
 }
+#' @export
+sim.VAR.multiOrthStudent.novol <- function(K = 5, p = 2, t_max = 1000,
+                                           b0 = 0.6, a0 = 0.5, h = 0,
+                                           y0 = matrix(0, ncol = K, nrow = p),
+                                           nu = 6, seednum = 0, burn_in = 0){
+  t_max = t_max + burn_in
+  set.seed(seednum)
+  # Sample matrix coefficient B
+  B0 <- cbind(rep(0,K))
+  if (length(b0) == 1) {
+    for (i in c(1:p)){
+      B0 <- cbind(B0, b0^i*diag(K))
+    }
+  } else {
+    B0 <- matrix(b0, nrow = K)
+  }
 
+  # Sample matrix corr A0
+  if (length(a0) == 1) {
+    A0 <- matrix(a0, K, K)
+    diag(A0) <- 1
+    A0[upper.tri(A0)] <- 0
+  } else {
+    A0 <- matrix(0, nrow = K, ncol = K)
+    A0[upper.tri(A0)] <- a0
+    A0 <- t(A0)
+    diag(A0) <- 1
+  }
+  # Sample matrix variance h
+  if (length(h) == 1){
+    h <- rep(h,K)
+  }
+  # No skew
+  # Tail of student
+  if (length(nu) == 1) nu = rep(nu,K)
+  w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
+  w_sqrt_t <- sqrt(w_t)
+
+  # No volatility
+  ystar <- tail(y0, p)
+  y_mean <- matrix(NA, nrow = t_max, ncol = K)
+  y_var <- matrix(NA, nrow = t_max, ncol = K)
+  volatility <- matrix(NA, nrow = t_max, ncol = K)
+
+  eps <- matrix(rnorm(t_max*K), ncol = K)
+  volatility <- reprow(h, t_max)
+  inv_A0 <- solve(A0)
+
+  for (i in c(1:t_max)){
+    Sigma <-  inv_A0 %*% diag(w_sqrt_t[i,] * exp(0.5*h))
+    Sigma2 <- Sigma %*% t(Sigma)
+
+    y_var[i,] <- diag(Sigma2)
+    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    y_mean[i,] <- B0 %*% xt
+    ysim <-  B0 %*% xt +  inv_A0 %*% (w_sqrt_t[i,] * exp(0.5*h) * eps[i,])
+    ystar <- rbind(ystar, t(ysim))
+  }
+
+  t_max = t_max - burn_in
+  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+       y0 = y0, y_mean = y_mean, y_var = y_var, logvol = volatility,
+       K = K, p = p, t_max = t_max,
+       A0 = A0, B0 =B0, h = h, Sigma = Sigma,
+       nu = nu, w = w_t[(burn_in+1):(burn_in+t_max),],
+       dist = "multiOrthStudent", SV = FALSE)
+}
+#' @export
+sim.VAR.Hyper.multiOrthStudent.novol <- function(K = 5, p = 2, t_max = 1000,
+                                                 b0 = 0.6, a0 = 0.5, h = 0,
+                                                 y0 = matrix(0, ncol = K, nrow = p),
+                                                 nu = 6, gamma = 0, seednum = 0, burn_in = 0){
+  t_max = t_max + burn_in
+  set.seed(seednum)
+  # Sample matrix coefficient B
+  B0 <- cbind(rep(0,K))
+  if (length(b0) == 1) {
+    for (i in c(1:p)){
+      B0 <- cbind(B0, b0^i*diag(K))
+    }
+  } else {
+    B0 <- matrix(b0, nrow = K)
+  }
+
+  # Sample matrix corr A0
+  if (length(a0) == 1) {
+    A0 <- matrix(a0, K, K)
+    diag(A0) <- 1
+    A0[upper.tri(A0)] <- 0
+  } else {
+    A0 <- matrix(0, nrow = K, ncol = K)
+    A0[upper.tri(A0)] <- a0
+    A0 <- t(A0)
+    diag(A0) <- 1
+  }
+  # Sample matrix variance h
+  if (length(h) == 1){
+    h <- rep(h,K)
+  }
+  # Skewness
+  if (length(gamma) == 1){
+    gamma <- seq(-gamma, gamma, length.out = K)
+  }
+  D <- diag(gamma)
+  # Tail of student
+  if (length(nu) == 1) nu = rep(nu,K)
+  w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
+  w_sqrt_t <- sqrt(w_t)
+
+  # No volatility
+  ystar <- tail(y0, p)
+  y_mean <- matrix(NA, nrow = t_max, ncol = K)
+  y_var <- matrix(NA, nrow = t_max, ncol = K)
+  volatility <- matrix(NA, nrow = t_max, ncol = K)
+
+  eps <- matrix(rnorm(t_max*K), ncol = K)
+  volatility <- reprow(h, t_max)
+  inv_A0 <- solve(A0)
+
+  for (i in c(1:t_max)){
+    Sigma <-  inv_A0 %*% diag(w_sqrt_t[i,] * exp(0.5*h))
+    Sigma2 <- Sigma %*% t(Sigma)
+    y_var[i,] <- diag(Sigma2)
+
+    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    y_mean[i,] <- B0 %*% xt + inv_A0 %*% (gamma * w_t[i,])
+    ysim <-  B0 %*% xt + inv_A0 %*% (gamma * w_t[i,]  + w_sqrt_t[i,] * exp(0.5*h) * eps[i,])
+    ystar <- rbind(ystar, t(ysim))
+  }
+
+  t_max = t_max - burn_in
+  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+       y0 = y0, y_mean = y_mean, y_var = y_var, logvol = volatility,
+       K = K, p = p, t_max = t_max,
+       A0 = A0, B0 =B0, h = h, Sigma = Sigma,
+       nu = nu, gamma = gamma,
+       w = w_t[(burn_in+1):(burn_in+t_max),],
+       dist = "Hyper.multiOrthStudent", SV = FALSE)
+}
 # #' @export
 # sim.VAR.Skew.Student.novol <- function(K = 5, p = 2, t_max = 1000,
 #                                        b0 = 0.6, a0 = 0.5, h = 0,

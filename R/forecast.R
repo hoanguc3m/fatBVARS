@@ -210,13 +210,7 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
         bilog_pred[j,(i-1)*K + k-i*(i+1)*0.5] <- log(pred_bidens)
       }
     }
-  #       # KernSmooth::bkde2D(x = cbind(predictive_samples$y_pred[j,i,],
-  #       #                              predictive_samples$y_pred[j,k,]), bandwidth = ?)
-  #       predict_den <- MASS::kde2d(x = predictive_samples$y_pred[j,i,],
-  #                                 y = predictive_samples$y_pred[j,k,], n = 100)
-  #
-  #       log_biv_pred[(i-1)*K+k-i,j] <- log(fields::interp.surface(predict_den, cbind(y_obs_future[j,i], y_obs_future[j,k])))
-      }
+  }
 
   return(list(log_pred = log_pred,
               bilog_pred = bilog_pred,
@@ -224,7 +218,6 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
               MAFE = abs(apply(predictive_samples$y_pred, MARGIN = c(1,2), FUN = mean) - y_obs_future),
               predictive_samples = predictive_samples,
               t_current = t_current,
-              # log_biv_pred = log_biv_pred,
               emp_CDF = emp_CDF))
 }
 
@@ -244,7 +237,7 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
 #' }
 #'
 #' @export
-recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hyper.multiStudent", SV = T){
+recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hyper.multiStudent", SV = T, numCores = NULL){
     t_max = nrow(y)
     max_rolling <- t_max - (t_start + t_pred) + 1
 
@@ -254,28 +247,37 @@ recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hype
     MAFE <- array(NA, dim = c(t_pred, K, max_rolling))
     PIT <- array(NA, dim = c(t_pred, K, max_rolling))
 
-    for (time_id in c(1:max_rolling)){
-      if (time_id %% 10 == 0 ) cat("At rolling ", time_id, " \t")
-      time_current <- time_id + t_start - 1
-      y_current <- y[c(1:time_current), ]
-      prior <- get_prior(tail(y_current, time_current - p), p = p, dist=dist, SV = SV)
-      inits <- get_init(prior, samples = 15000, burnin = 5000, thin = 1)
-      if (SV) {
-        Chain <- BVAR.SV(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,
-                            y0 = head(y_current, p), prior = prior, inits = inits)
-      } else {
-        Chain <- BVAR.novol(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,
-                            y0 = head(y_current, p), prior = prior, inits = inits)
+    if (is.null(numCores)) numCores <- parallel::detectCores()*0.5
+    out_recursive <- parallel::mclapply(1:max_rolling,
+                       FUN = function(j) {
+                         time_current <- j + t_start - 1
+                         y_current <- y[c(1:time_current), ]
+                         prior <- get_prior(tail(y_current, time_current - p), p = p, dist=dist, SV = SV)
+                         inits <- get_init(prior, samples = 15000, burnin = 5000, thin = 1)
+                         if (SV) {
+                           Chain <- BVAR.SV(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,
+                                            y0 = head(y_current, p), prior = prior, inits = inits)
+                         } else {
+                           Chain <- BVAR.novol(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,
+                                               y0 = head(y_current, p), prior = prior, inits = inits)
 
-      }
-      y_obs_future <- y[c((time_current+1):(time_current+t_pred)), ]
-      forecast_err <- forecast_density(Chain = Chain, y_obs_future = y_obs_future)
+                         }
+                         y_obs_future <- y[c((time_current+1):(time_current+t_pred)), ]
+                         forecast_err <- forecast_density(Chain = Chain, y_obs_future = y_obs_future)
+                         list(time_id = j, forecast_err = forecast_err)
+                       },
+                       mc.cores = numCores)
+
+    for (forecast_element in out_recursive){
+      time_id = forecast_element$time_id
+      forecast_err = forecast_element$forecast_err
       log_pred[,,time_id] <- forecast_err$log_pred
       bilog_pred[,,time_id] <- forecast_err$bilog_pred
       MSFE[,,time_id] <- forecast_err$MSFE
       MAFE[,,time_id] <- forecast_err$MAFE
       PIT[,,time_id] <- forecast_err$emp_CDF
     }
+
     mlog_pred <- apply(log_pred, MARGIN = c(1,2), FUN = mean)
     mbLP <- apply(bilog_pred, MARGIN = c(1,2), FUN = mean)
     mMSFE <- apply(MSFE, MARGIN = c(1,2), FUN = mean)
@@ -291,3 +293,50 @@ recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hype
                 MAFE = MAFE,
                 PIT = PIT))
 }
+# recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hyper.multiStudent", SV = T, core = NULL){
+#   t_max = nrow(y)
+#   max_rolling <- t_max - (t_start + t_pred) + 1
+#
+#   log_pred <- array(NA, dim = c(t_pred, K, max_rolling))
+#   bilog_pred <- array(NA, dim = c(t_pred, K*(K-1)*0.5, max_rolling))
+#   MSFE <- array(NA, dim = c(t_pred, K, max_rolling))
+#   MAFE <- array(NA, dim = c(t_pred, K, max_rolling))
+#   PIT <- array(NA, dim = c(t_pred, K, max_rolling))
+#
+#   for (time_id in c(1:max_rolling)){
+#     if (time_id %% 10 == 0 ) cat("At rolling ", time_id, " \t")
+#     time_current <- time_id + t_start - 1
+#     y_current <- y[c(1:time_current), ]
+#     prior <- get_prior(tail(y_current, time_current - p), p = p, dist=dist, SV = SV)
+#     inits <- get_init(prior, samples = 15000, burnin = 5000, thin = 1)
+#     if (SV) {
+#       Chain <- BVAR.SV(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,
+#                        y0 = head(y_current, p), prior = prior, inits = inits)
+#     } else {
+#       Chain <- BVAR.novol(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,
+#                           y0 = head(y_current, p), prior = prior, inits = inits)
+#
+#     }
+#     y_obs_future <- y[c((time_current+1):(time_current+t_pred)), ]
+#     forecast_err <- forecast_density(Chain = Chain, y_obs_future = y_obs_future)
+#     log_pred[,,time_id] <- forecast_err$log_pred
+#     bilog_pred[,,time_id] <- forecast_err$bilog_pred
+#     MSFE[,,time_id] <- forecast_err$MSFE
+#     MAFE[,,time_id] <- forecast_err$MAFE
+#     PIT[,,time_id] <- forecast_err$emp_CDF
+#   }
+#   mlog_pred <- apply(log_pred, MARGIN = c(1,2), FUN = mean)
+#   mbLP <- apply(bilog_pred, MARGIN = c(1,2), FUN = mean)
+#   mMSFE <- apply(MSFE, MARGIN = c(1,2), FUN = mean)
+#   mMAFE <- apply(MAFE, MARGIN = c(1,2), FUN = mean)
+#
+#   return( list( mLP = mlog_pred,
+#                 mbLP = mbLP,
+#                 mMSFE = mMSFE,
+#                 mMAFE = mMAFE,
+#                 log_pred = log_pred,
+#                 bilog_pred = bilog_pred,
+#                 MSFE = MSFE,
+#                 MAFE = MAFE,
+#                 PIT = PIT))
+# }

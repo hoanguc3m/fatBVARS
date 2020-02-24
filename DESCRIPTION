@@ -19,7 +19,8 @@ Depends:
     coda,
     invgamma,
     mvnfast,
-    fitdistrplus
+    fitdistrplus,
+    KernSmooth
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.0.2
 Suggests: knitr,

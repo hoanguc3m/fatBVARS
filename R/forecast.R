@@ -171,6 +171,7 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
   predictive_samples <- get_forecast(Chain = Chain, y0 = tail(y_current,p), t_pred = t_pred, t_current = t_current) # Nfsample
 
   log_pred<- matrix(NA, nrow = t_pred, ncol = K)
+  bilog_pred<- matrix(NA, nrow = t_pred, ncol = K*(K-1)*0.5)
   emp_CDF<- matrix(NA, nrow = t_pred, ncol = K)
   log_biv_pred <- array(NA, dim = c(K*(K-1)*0.5,t_pred))
 
@@ -182,47 +183,43 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
       y_max <- max(predict_den$x)
       y_obs <- as.numeric(y_obs_future[j,i])
 
-      # appximate_density <- approxfun(predict_den)
-      # log_pred[j,i] <- log(appximate_density(y_obs))
-
       appximate_density <- smooth.spline(x = predict_den$x, y = predict_den$y)
       pred_dens <- predict(appximate_density, y_obs)$y
       if ( pred_dens <= 0) {
-        # if ( abs(y_obs - y_min) < abs(y_obs - y_max) ) {
-        #   pred_dens <- predict(appximate_density, y_min)$y
-        # } else {
-        #   pred_dens <- predict(appximate_density, y_max)$y
-        # }
-        pred_dens <- min(predict_den$y[predict_den$y > 0])
-        # if(pred_dens <= 0 ) {
-        #   cat("t_current : ", t_current, " ", i, " ", j, " ", y_obs, " ", y_min, " ", y_max)
-        #   print(predict_den)
-        #   stop(" NA log ")
-        # }
+        # pred_dens <- min(predict_den$y[predict_den$y > 0])
+        pred_dens <- .Machine$double.eps
       }
       log_pred[j,i] <- log(pred_dens)
-
       emp_CDF[j,i] <- ecdf(x = predictive_samples$y_pred[j,i,])(y_obs)
+
     }
   }
-  # for (i in c(1: (K-1))){
-  #   for (k in c((i+1):K)){
-  #     for (j in c(1:t_pred)){
-  #       # predict_den <- pmpp::kde2D(data = cbind(predictive_samples$y_pred[j,i,],
-  #       #                                             predictive_samples$y_pred[j,k,])
-  #       #                                   )
+  for (i in c(1: (K-1))){
+    for (k in c((i+1):K)){
+      for (j in c(1:t_pred)){
+        bivarsim <- cbind(predictive_samples$y_pred[j,i,],
+                          predictive_samples$y_pred[j,k,])
+        predict_den <- kde2D(data = bivarsim, n = 100, limits = c(range(bivarsim[,1]), range(bivarsim[,2])))
+        desi <- predict_den$density
+        desi[desi < 0] <- .Machine$double.eps
+        pred_bidens <- pracma::interp2(predict_den$X[1,], predict_den$Y[,1], desi, y_obs_future[j,i], y_obs_future[j,k])
+        if (is.na(pred_bidens)) pred_bidens <- .Machine$double.eps
+        if ( pred_bidens <= 0) {
+          pred_bidens <- .Machine$double.eps
+        }
+        bilog_pred[j,(i-1)*K + k-i*(i+1)*0.5] <- log(pred_bidens)
+      }
+    }
   #       # KernSmooth::bkde2D(x = cbind(predictive_samples$y_pred[j,i,],
   #       #                              predictive_samples$y_pred[j,k,]), bandwidth = ?)
   #       predict_den <- MASS::kde2d(x = predictive_samples$y_pred[j,i,],
   #                                 y = predictive_samples$y_pred[j,k,], n = 100)
   #
   #       log_biv_pred[(i-1)*K+k-i,j] <- log(fields::interp.surface(predict_den, cbind(y_obs_future[j,i], y_obs_future[j,k])))
-  #     }
-  #
-  #   }
-  # }
+      }
 
   return(list(log_pred = log_pred,
+              bilog_pred = bilog_pred,
               MSFE = (apply(predictive_samples$y_pred, MARGIN = c(1,2), FUN = mean) - y_obs_future)^2,
               MAFE = abs(apply(predictive_samples$y_pred, MARGIN = c(1,2), FUN = mean) - y_obs_future),
               predictive_samples = predictive_samples,
@@ -252,6 +249,7 @@ recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hype
     max_rolling <- t_max - (t_start + t_pred) + 1
 
     log_pred <- array(NA, dim = c(t_pred, K, max_rolling))
+    bilog_pred <- array(NA, dim = c(t_pred, K*(K-1)*0.5, max_rolling))
     MSFE <- array(NA, dim = c(t_pred, K, max_rolling))
     MAFE <- array(NA, dim = c(t_pred, K, max_rolling))
     PIT <- array(NA, dim = c(t_pred, K, max_rolling))
@@ -273,18 +271,22 @@ recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hype
       y_obs_future <- y[c((time_current+1):(time_current+t_pred)), ]
       forecast_err <- forecast_density(Chain = Chain, y_obs_future = y_obs_future)
       log_pred[,,time_id] <- forecast_err$log_pred
+      bilog_pred[,,time_id] <- forecast_err$bilog_pred
       MSFE[,,time_id] <- forecast_err$MSFE
       MAFE[,,time_id] <- forecast_err$MAFE
       PIT[,,time_id] <- forecast_err$emp_CDF
     }
     mlog_pred <- apply(log_pred, MARGIN = c(1,2), FUN = mean)
+    mbLP <- apply(bilog_pred, MARGIN = c(1,2), FUN = mean)
     mMSFE <- apply(MSFE, MARGIN = c(1,2), FUN = mean)
     mMAFE <- apply(MAFE, MARGIN = c(1,2), FUN = mean)
 
   return( list( mLP = mlog_pred,
+                mbLP = mbLP,
                 mMSFE = mMSFE,
                 mMAFE = mMAFE,
                 log_pred = log_pred,
+                bilog_pred = bilog_pred,
                 MSFE = MSFE,
                 MAFE = MAFE,
                 PIT = PIT))

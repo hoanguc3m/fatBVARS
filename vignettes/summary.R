@@ -14,7 +14,7 @@ xtable::xtable(round(table_1), digits = 0)
 #############################
 setwd("/home/hoanguc3m/Dropbox/WP5/")
 pdf(file='img/SV1.pdf', width = 9, height = 9)
-colnames(datafin) <- c("IndPro", "RPI", "OilPrice","OilProduct")
+colnames(datafin) <- c("IndPro", "CPI_Commodity", "OilPrice","OilProduct")
 head(datafin)
 i <- 1
 Time <- seq(as.Date("1974/2/1"), as.Date("2016/12/1"), "months")
@@ -94,3 +94,97 @@ dev.off()
 # hist(Nu_matC10[,i],ylab = colnames(datafin)[i], xlab = "", main = "", prob = TRUE, ylim = c(0,0.1), xlim = c(0,40) )
 # lines(density(Nu_matC5[,i]))
 # ndraws <- nrow(Nu_matC10)
+
+
+#############################
+# Report
+#############################
+library(ggthemr)
+ggthemr('light')
+
+pdf(file='img/postNu_v1.pdf', width = 9, height = 9)
+par(mar=c(2,5,3,1))
+layout(matrix(c(1,2,3,4,5,6,7,8), 4, 2, byrow = F))
+ndraws <- nrow(Gamma_matC10)
+Gamma_matC10 <- get_post(Chain10, element = "gamma")
+Nu_matC10 <- get_post(Chain10, element = "nu")
+Gamma_matC5 <- get_post(Chain5, element = "gamma")
+Nu_matC5 <- get_post(Chain5, element = "nu")
+
+Gamma_matC12 <- get_post(Chain12, element = "gamma")
+Nu_matC12 <- get_post(Chain12, element = "nu")
+Gamma_matC14 <- get_post(Chain14, element = "gamma")
+Nu_matC14 <- get_post(Chain14, element = "nu")
+
+i <- 1
+gg_nu_mat <- function(i){
+  data_nu <- data.frame(nu = c(Nu_matC5[,i], Nu_matC12[,i]), models = c(rep("mST-NonSV", ndraws), rep("oST-NonSV", ndraws)))
+  ggplot(data_nu, aes(x=nu,..density.., fill = models, colour = models)) +
+    geom_histogram(position = "identity", alpha = 0.8, bins = 30) +
+    geom_density(position = "identity", alpha = 0.5) + xlab("nu") + ylab(colnames(datafin)[i])
+}
+gg_gamma_mat <- function(i){
+  data_gamma <- data.frame(gamma = c(Gamma_matC5[,i], Gamma_matC12[,i]), models = c(rep("mST-NonSV", ndraws), rep("oST-NonSV", ndraws)))
+  ggplot(data_gamma, aes(x=gamma,..density.., fill = models, colour = models)) +
+    geom_histogram(position = "identity", alpha = 0.8, bins = 30) +
+    geom_density(position = "identity", alpha = 0.5) + xlab("gamma") + ylab(colnames(datafin)[i])
+}
+
+p1 <- gg_nu_mat(1)
+p2 <- gg_nu_mat(2)
+p3 <- gg_nu_mat(3)
+p4 <- gg_nu_mat(4)
+
+p5 <- gg_gamma_mat(1)
+p6 <- gg_gamma_mat(2)
+p7 <- gg_gamma_mat(3)
+p8 <- gg_gamma_mat(4)
+library(gridExtra)
+grid.arrange(p1, p5, p2, p6, p3, p7, p4, p8, nrow = 4, ncol = 2)
+dev.off()
+#############################
+# Report
+#############################
+library(ggthemr)
+ggthemr('light')
+
+pdf(file='img/postNu_v2.pdf', width = 9, height = 9)
+par(mar=c(2,5,3,1))
+layout(matrix(c(1,2,3,4,5,6,7,8), 4, 2, byrow = F))
+ndraws <- nrow(Gamma_matC10)
+Gamma_matC10 <- get_post(Chain10, element = "gamma")
+Nu_matC10 <- get_post(Chain10, element = "nu")
+Gamma_matC5 <- get_post(Chain5, element = "gamma")
+Nu_matC5 <- get_post(Chain5, element = "nu")
+
+Gamma_matC12 <- get_post(Chain12, element = "gamma")
+Nu_matC12 <- get_post(Chain12, element = "nu")
+Gamma_matC14 <- get_post(Chain14, element = "gamma")
+Nu_matC14 <- get_post(Chain14, element = "nu")
+
+i <- 1
+gg_nu_mat <- function(i){
+  data_nu <- data.frame(nu = c(Nu_matC10[,i], Nu_matC14[,i]), models = c(rep("mST-SV", ndraws), rep("oST-SV", ndraws)))
+  ggplot(data_nu, aes(x=nu,..density.., fill = models, colour = models)) +
+    geom_histogram(position = "identity", alpha = 0.8, bins = 30) +
+    geom_density(position = "identity", alpha = 0.5) + xlab("nu") + ylab(colnames(datafin)[i])
+}
+gg_gamma_mat <- function(i){
+  data_gamma <- data.frame(gamma = c(Gamma_matC10[,i], Gamma_matC14[,i]), models = c(rep("mST-SV", ndraws), rep("oST-SV", ndraws)))
+  ggplot(data_gamma, aes(x=gamma,..density.., fill = models, colour = models)) +
+    geom_histogram(position = "identity", alpha = 0.8, bins = 30) +
+    geom_density(position = "identity", alpha = 0.5) + xlab("gamma") + ylab(colnames(datafin)[i])
+}
+
+p1 <- gg_nu_mat(1)
+p2 <- gg_nu_mat(2)
+p3 <- gg_nu_mat(3)
+p4 <- gg_nu_mat(4)
+
+p5 <- gg_gamma_mat(1)
+p6 <- gg_gamma_mat(2)
+p7 <- gg_gamma_mat(3)
+p8 <- gg_gamma_mat(4)
+library(gridExtra)
+grid.arrange(p1, p5, p2, p6, p3, p7, p4, p8, nrow = 4, ncol = 2)
+dev.off()

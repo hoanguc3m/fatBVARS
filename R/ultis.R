@@ -101,104 +101,6 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K),
   return(aux)
 }
 
-#' #' @export
-#' lh_post <- function(ytilde, hc, alph, HinvSH_h, t_max, K){
-#'   llike = - 0.5*sum(hc) -
-#'             0.5*t(ytilde) %*% sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = exp(-hc)) %*% ytilde
-#'   lpost = as.numeric(llike +  -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph))
-#'   return(lpost)
-#' }
-#'
-#' #' @export
-#' sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K),
-#'                          h = matrix(0, ncol = t_max, nrow = K),
-#'                          s0 = rep(0,K), K, t_max){
-#'   u = as.numeric(ytilde)
-#'   s2 = u^2
-#'
-#'   Hh = sparseMatrix(i = 1:(t_max*K),
-#'                     j = 1:(t_max*K),
-#'                     x = rep(1,t_max*K)) -
-#'     sparseMatrix( i = (K+1):(t_max*K),
-#'                   j = 1:((t_max-1)*K),
-#'                   x = rep(1,(t_max-1)*K),
-#'                   dims =  c(t_max*K, t_max*K))
-#'   SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = rep(1./diag(sigma_h), t_max))
-#'
-#'   HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
-#'   alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = s0, dims = c(t_max*K,1)))
-#'
-#'   e_h = 1
-#'   # ht = rep(s0,t_max)
-#'   ht = log(s2)
-#'
-#'   while (e_h > .001){
-#'     einvhts2 = exp(-ht)*s2
-#'     gh = - HinvSH_h %*% (ht-alph) - 0.5 * (1-einvhts2)
-#'     Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
-#'     newht = ht - Matrix::solve(Gh,gh)
-#'     e_h = max(abs(newht-ht))
-#'     ht = newht
-#'   }
-#'
-#'
-#'   Kh = -Gh
-#'   CKh = Matrix::t(Matrix::chol(Kh))
-#'
-#'   # c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
-#'   # c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
-#'
-#'   logc = lh_post(u, ht, alph, HinvSH_h, t_max, K) + log(3)
-#'   # AR-step:
-#'   flag = 0
-#'   while (flag == 0){
-#'     hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
-#'     alpARc =  lh_post(u, hc, alph, HinvSH_h, t_max, K) +
-#'               as.numeric(0.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)) - logc
-#'     if (alpARc > log(runif(1))){
-#'       flag = 1
-#'     }
-#'   }
-#'   # MH-step
-#'   h <- as.numeric(h)
-#'   alpAR = lh_post(u, h, alph, HinvSH_h, t_max, K) +
-#'           as.numeric(0.5*Matrix::t(h-ht)%*%Kh%*%(h-ht)) - logc
-#'   if (alpAR < 0){
-#'     alpMH = 1
-#'   } else if (alpARc < 0){
-#'     alpMH = - alpAR
-#'   } else {
-#'     alpMH = alpARc - alpAR
-#'   }
-#'
-#'   if (alpMH > log(runif(1))){
-#'     h = hc
-#'   }
-#'   h <- matrix(h, nrow = K)
-#'
-#'   # sample h0
-#'   V_h0 <- rep(10, K)
-#'   mu_h0 <- rep(0, K)
-#'   invV_h0post <- diag(1/diag(sigma_h)+1/V_h0)
-#'   h0_mean <- solve(invV_h0post) %*% (mu_h0/V_h0 + h[,1]/ diag(sigma_h) )
-#'   s0 <- as.numeric(h0_mean) + Matrix::solve(Matrix::t(invV_h0post), rnorm(K))
-#'
-#'
-#'   # sample sigma_h
-#'   sse_2 <- apply( (h[,2:t_max] - h[,1:(t_max-1)])^2, MARGIN = 1, FUN = sum)
-#'   sigma_post_a <- 1 + rep(t_max,K)
-#'   sigma_post_b <- 0.0001 + sse_2
-#'
-#'   for (i in c(1:K)){
-#'     sigma_h[i,i] <- rinvgamma(1, shape = sigma_post_a[i] * 0.5, rate = sigma_post_b[i] * 0.5)
-#'   }
-#'   aux <- list(sigma_h = sigma_h,
-#'               Sigtdraw = h,
-#'               sigt = exp(h/2),
-#'               s0 = s0)
-#'
-#'   return(aux)
-#' }
 ##########################################################################
 # Plot functions  #
 ##########################################################################
@@ -327,7 +229,6 @@ get_lu_param <- function(param){
 #'
 #' @importFrom pracma accumarray repmat fzero meshgrid histc numel zeros ones ifft
 #' @importFrom stats mvfft
-#' @export
 kde2D <- function(data, n = 2 ^ 8, limits = NULL) {
   # define auxiliary functions
   ndhist <- function(data, M) {

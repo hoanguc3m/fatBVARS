@@ -199,14 +199,44 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
       for (j in c(1:t_pred)){
         bivarsim <- cbind(predictive_samples$y_pred[j,i,],
                           predictive_samples$y_pred[j,k,])
-        predict_den <- kde2D(data = bivarsim, n = 100, limits = c(range(bivarsim[,1]), range(bivarsim[,2])))
-        desi <- predict_den$density
+        # Not accurate
+        # predict_den <- kde2D(data = bivarsim, n = 100, limits = c(range(bivarsim[,1]), range(bivarsim[,2])))
+        # desi <- predict_den$density
+        # desi[desi < 0] <- .Machine$double.eps
+        # pred_bidens <- pracma::interp2(predict_den$X[1,], predict_den$Y[,1], desi, y_obs_future[j,i], y_obs_future[j,k])
+        # contour(predict_den$X[1,], predict_den$Y[,1], predict_den$density)
+        # points( bivarsim[,1],  bivarsim[,2], pch = ".")
+        # persp(predict_den$fhat)
+
+        #############################
+        bw <- c(diff(range(bivarsim[,1]))/25, diff(range(bivarsim[,2]))/25)
+        predict_den <- KernSmooth::bkde2D(x = bivarsim, bandwidth = bw, gridsize = c(128L, 128L),
+                              range.x = list(range(bivarsim[,1]), range(bivarsim[,2])),
+                              truncate = TRUE)
+        desi <- predict_den$fhat
         desi[desi < 0] <- .Machine$double.eps
-        pred_bidens <- pracma::interp2(predict_den$X[1,], predict_den$Y[,1], desi, y_obs_future[j,i], y_obs_future[j,k])
+        pred_bidens <- pracma::interp2(predict_den$x1, predict_den$x2, desi, y_obs_future[j,i], y_obs_future[j,k])
+
+        # contour(predict_den$x1, predict_den$x2, predict_den$fhat)
+        # points( bivarsim[,1],  bivarsim[,2], pch = ".")
+        # persp(predict_den$fhat)
+
+        # ###############################
+        # Similar but slower
+        # bw <- c(diff(range(bivarsim[,1]))/7, diff(range(bivarsim[,2]))/7)
+        # predict_den <- MASS::kde2d(x = bivarsim[,1], y = bivarsim[,2], h = bw, n = 128)
+        # desi <- predict_den$z
+        # desi[desi < 0] <- .Machine$double.eps
+        # pred_bidens <- pracma::interp2(predict_den$x, predict_den$y, desi, y_obs_future[j,i], y_obs_future[j,k])
+        # contour(predict_den$x, predict_den$y, predict_den$z)
+        # points( bivarsim[,1],  bivarsim[,2], pch = ".")
+        # persp(predict_den$z)
+
         if (is.na(pred_bidens)) pred_bidens <- .Machine$double.eps
         if ( pred_bidens <= 0) {
           pred_bidens <- .Machine$double.eps
         }
+
         bilog_pred[j,(i-1)*K + k-i*(i+1)*0.5] <- log(pred_bidens)
       }
     }

@@ -129,7 +129,7 @@ get_post.fatBVARSV <- function(obj, element = NULL){
   } else {
     mcmc_name <- substr(colnames(obj$mcmc), start = 1, stop = nchar(element))
     mcmc_id = (mcmc_name == element)
-    return(obj$mcmc[,mcmc_id])
+    return(obj$mcmc[,mcmc_id, drop = FALSE])
   }
 }
 
@@ -151,7 +151,7 @@ get_post.matrix <- function(obj, element = NULL){
   } else {
     mcmc_name <- substr(colnames(obj), start = 1, stop = nchar(element))
     mcmc_id = (mcmc_name == element)
-    return(obj[,mcmc_id])
+    return(as.matrix(obj[,mcmc_id], nrow = nrow(obj)))
   }
 }
 #' @export
@@ -161,46 +161,45 @@ get_post.mcmc <- function(obj, element = NULL){
   } else {
     mcmc_name <- substr(colnames(obj), start = 1, stop = nchar(element))
     mcmc_id = (mcmc_name == element)
-    return(obj[,mcmc_id])
+    return(obj[,mcmc_id, drop = FALSE])
   }
 }
 
-#' @export
-get_lu_param <- function(param){
-  if (class(param) == "mcmc") {
-    mcmc_name <- colnames(param)
-  }
-
-  if (class(param) == "numeric") {
-    mcmc_name <- names(param)
-  }
-  num_param <- length(mcmc_name)
-  lb <- rep(-Inf, num_param)
-  ub <- rep(Inf, num_param)
-  names(lb) <- names(ub) <- mcmc_name
-
-  # B : no restrict
-  # A : no restrict
-
-  # sigma : positive restrict
-  mcmc_id <- (substr(mcmc_name, start = 1, stop = nchar("sigma")) == "sigma")
-  lb[mcmc_id] <- 0
-
-  # w : positive restrict
-  mcmc_id <- (substr(mcmc_name, start = 1, stop = nchar("nu")) == "nu")
-  lb[mcmc_id] <- 2
-  ub[mcmc_id] <- 100
-
-  # w : positive restrict
-  mcmc_id <- (substr(mcmc_name, start = 1, stop = nchar("w")) == "w")
-  lb[mcmc_id] <- 0
-
-  # gamma : no restrict
-
-  return(list(lb = lb,
-              ub = ub))
-
-}
+# get_lu_param <- function(param){
+#   if (class(param) == "mcmc") {
+#     mcmc_name <- colnames(param)
+#   }
+#
+#   if (class(param) == "numeric") {
+#     mcmc_name <- names(param)
+#   }
+#   num_param <- length(mcmc_name)
+#   lb <- rep(-Inf, num_param)
+#   ub <- rep(Inf, num_param)
+#   names(lb) <- names(ub) <- mcmc_name
+#
+#   # B : no restrict
+#   # A : no restrict
+#
+#   # sigma : positive restrict
+#   mcmc_id <- (substr(mcmc_name, start = 1, stop = nchar("sigma")) == "sigma")
+#   lb[mcmc_id] <- 0
+#
+#   # w : positive restrict
+#   mcmc_id <- (substr(mcmc_name, start = 1, stop = nchar("nu")) == "nu")
+#   lb[mcmc_id] <- 2
+#   ub[mcmc_id] <- 100
+#
+#   # w : positive restrict
+#   mcmc_id <- (substr(mcmc_name, start = 1, stop = nchar("w")) == "w")
+#   lb[mcmc_id] <- 0
+#
+#   # gamma : no restrict
+#
+#   return(list(lb = lb,
+#               ub = ub))
+#
+# }
 
 #' Compute a two-dimensional kernel density estimate
 #'

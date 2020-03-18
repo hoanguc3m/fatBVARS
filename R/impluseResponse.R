@@ -128,3 +128,31 @@ IRFmats <- function(B, H.chol = NULL, n.ahead = 20){
   }
   return(Phi)
 }
+
+#' @export
+stability <- function(b, K, p){
+  # Dimensions
+  B <- matrix(b, nrow = K)
+  B <- B[,c(2:(K*p+1))]
+
+  if (p > 1){
+    # VAR matrices
+    Bc <- matrix(0, K*p, K*p)
+    Bc[1:K, ] <- B
+    Bc[-(1:K), 1:(K*(p-1))] <- diag(K*(p-1))
+
+  }
+  ee = max(abs(eigen(Bc)$values))
+  return(ee<1)
+}
+
+#' @export
+check_post <- function(Chain){
+  b_mat <- get_post(Chain, element = "B")
+  stabi <- rep(F, nrow(b_mat))
+  for (i in c(1:nrow(b_mat))){
+    b <- b_mat[i,]
+    stabi[i] <- stability(b = b, K = K, p = p)
+  }
+  return(sum(stabi))
+}

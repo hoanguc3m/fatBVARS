@@ -13,7 +13,6 @@ Imports:
 Depends:
     R (>= 3.5.0),
     Rcpp,
-    Rcpp11, 
     matrixcalc,
     Matrix,
     coda,

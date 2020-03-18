@@ -91,6 +91,21 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, t_current = NULL, Nfsamp
                                                        y0 = y0, nu = nu, gamma = gamma,
                                                        seednum = sample(1:100000,1), burn_in = 0)
         }
+        if (dist == "multiOrthStudent") {
+          nu <- Nu_mat[i,]
+          pred_tmp <- sim.VAR.multiOrthStudent.SV(K = K, p = p, t_max = t_pred,
+                                              b0 = b0, a0 = a0, h = h, sigma_h = sigma_h,
+                                              y0 = y0, nu = nu,
+                                              seednum = sample(1:100000,1), burn_in = 0)
+        }
+        if (dist == "Hyper.multiOrthStudent") {
+          nu <- Nu_mat[i,]
+          gamma <- Gamma_mat[i,]
+          pred_tmp <- sim.VAR.Hyper.multiOrthStudent.SV(K = K, p = p, t_max = t_pred,
+                                                    b0 = b0, a0 = a0, h = h, sigma_h = sigma_h,
+                                                    y0 = y0, nu = nu, gamma = gamma,
+                                                    seednum = sample(1:100000,1), burn_in = 0)
+        }
       } else {
         sigma <- Sigma_mat[i,]
         h <- log(sigma)
@@ -129,6 +144,21 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, t_current = NULL, Nfsamp
                                                  b0 = b0, a0 = a0, h = h,
                                                  y0 = y0, nu = nu, gamma = gamma,
                                                  seednum = sample(1:100000,1), burn_in = 0)
+        }
+        if (dist == "multiOrthStudent") {
+          nu <- Nu_mat[i,]
+          pred_tmp <- sim.VAR.multiOrthStudent.novol(K = K, p = p, t_max = t_pred,
+                                                 b0 = b0, a0 = a0, h = h,
+                                                 y0 = y0, nu = nu,
+                                                 seednum = sample(1:100000,1), burn_in = 0)
+        }
+        if (dist == "Hyper.multiOrthStudent") {
+          nu <- Nu_mat[i,]
+          gamma <- Gamma_mat[i,]
+          pred_tmp <- sim.VAR.Hyper.multiOrthStudent.novol(K = K, p = p, t_max = t_pred,
+                                                       b0 = b0, a0 = a0, h = h,
+                                                       y0 = y0, nu = nu, gamma = gamma,
+                                                       seednum = sample(1:100000,1), burn_in = 0)
         }
       }
 
@@ -170,10 +200,12 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
   t_pred = nrow(y_obs_future)
   predictive_samples <- get_forecast(Chain = Chain, y0 = tail(y_current,p), t_pred = t_pred, t_current = t_current) # Nfsample
 
+  #############################################################
+  # Non cummulative
+  #############################################################
   log_pred<- matrix(NA, nrow = t_pred, ncol = K)
   bilog_pred<- matrix(NA, nrow = t_pred, ncol = K*(K-1)*0.5)
   emp_CDF<- matrix(NA, nrow = t_pred, ncol = K)
-  log_biv_pred <- array(NA, dim = c(K*(K-1)*0.5,t_pred))
 
   for (i in c(1:K)){
     for (j in c(1:t_pred)){
@@ -241,14 +273,69 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
       }
     }
   }
+  #############################################################
+  # Cummulative
+  #############################################################
+  clog_pred<- matrix(NA, nrow = t_pred, ncol = K)
+  cbilog_pred<- matrix(NA, nrow = t_pred, ncol = K*(K-1)*0.5)
+  cemp_CDF<- matrix(NA, nrow = t_pred, ncol = K)
+  cy_pred <- apply(predictive_samples$y_pred, MARGIN = c(2,3), FUN = cumsum)
+  cy_obs_future <- apply(y_obs_future, MARGIN = 2, FUN = cumsum)
+  for (i in c(1:K)){
+    for (j in c(1:t_pred)){
+      #predict_den <- stats::density(predictive_samples$y_pred[j,i,])
+      predict_den <- KernSmooth::bkde(x = cy_pred[j,i,]) # fast and accurate
+      y_min <- min(predict_den$x)
+      y_max <- max(predict_den$x)
+      y_obs <- as.numeric(cy_obs_future[j,i])
+
+      appximate_density <- smooth.spline(x = predict_den$x, y = predict_den$y)
+      pred_dens <- predict(appximate_density, y_obs)$y
+      if ( pred_dens <= 0) {
+        # pred_dens <- min(predict_den$y[predict_den$y > 0])
+        pred_dens <- .Machine$double.eps
+      }
+      clog_pred[j,i] <- log(pred_dens)
+      cemp_CDF[j,i] <- ecdf(x = cy_pred[j,i,])(y_obs)
+    }
+  }
+  for (i in c(1: (K-1))){
+    for (k in c((i+1):K)){
+      for (j in c(1:t_pred)){
+        bivarsim <- cbind(cy_pred[j,i,],
+                          cy_pred[j,k,])
+        #############################
+        bw <- c(diff(range(bivarsim[,1]))/25, diff(range(bivarsim[,2]))/25)
+        predict_den <- KernSmooth::bkde2D(x = bivarsim, bandwidth = bw, gridsize = c(128L, 128L),
+                                          range.x = list(range(bivarsim[,1]), range(bivarsim[,2])),
+                                          truncate = TRUE)
+        desi <- predict_den$fhat
+        desi[desi < 0] <- .Machine$double.eps
+        pred_bidens <- pracma::interp2(predict_den$x1, predict_den$x2, desi, cy_obs_future[j,i], cy_obs_future[j,k])
+
+        if (is.na(pred_bidens)) pred_bidens <- .Machine$double.eps
+        if ( pred_bidens <= 0) {
+          pred_bidens <- .Machine$double.eps
+        }
+
+        cbilog_pred[j,(i-1)*K + k-i*(i+1)*0.5] <- log(pred_bidens)
+      }
+    }
+  }
 
   return(list(log_pred = log_pred,
               bilog_pred = bilog_pred,
+              emp_CDF = emp_CDF,
               MSFE = (apply(predictive_samples$y_pred, MARGIN = c(1,2), FUN = mean) - y_obs_future)^2,
               MAFE = abs(apply(predictive_samples$y_pred, MARGIN = c(1,2), FUN = mean) - y_obs_future),
-              predictive_samples = predictive_samples,
+              # predictive_samples = predictive_samples,
               t_current = t_current,
-              emp_CDF = emp_CDF))
+              clog_pred = clog_pred,
+              cbilog_pred = cbilog_pred,
+              cemp_CDF = cemp_CDF,
+              cMSFE = (apply(cy_pred, MARGIN = c(1,2), FUN = mean) - cy_obs_future)^2,
+              cMAFE = abs(apply(cy_pred, MARGIN = c(1,2), FUN = mean) - cy_obs_future)
+  ))
 }
 
 #' Recursive forecast of BVAR model
@@ -322,6 +409,34 @@ recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hype
                 MSFE = MSFE,
                 MAFE = MAFE,
                 PIT = PIT))
+}
+
+#' @export
+recursive_seperate <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hyper.multiStudent", SV = T, outname = NULL){
+  t_max = nrow(y)
+  if (is.null(outname)) outname = paste("Recursive_", dist, "_", SV, "_", t_start+1, ".RData", sep = "")
+  time_current <- t_start
+  y_current <- y[c(1:time_current), ]
+  prior <- get_prior(tail(y_current, time_current - p), p = p, dist=dist, SV = SV)
+  inits <- get_init(prior, samples = 15000, burnin = 5000, thin = 1)
+  if (SV) {
+    Chain <- BVAR.SV(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,
+                     y0 = head(y_current, p), prior = prior, inits = inits)
+  } else {
+    Chain <- BVAR.novol(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,
+                        y0 = head(y_current, p), prior = prior, inits = inits)
+
+  }
+  y_obs_future <- y[c((time_current+1):(time_current+t_pred)), ]
+  forecast_err <- forecast_density(Chain = Chain, y_obs_future = y_obs_future)
+  out_recursive <- list(time_id = time_current+1,
+                        forecast_err = forecast_err,
+                        dist = dist,
+                        SV = SV,
+                        y = y)
+  save(out_recursive, file = outname)
+  return( out_recursive)
+
 }
 # recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hyper.multiStudent", SV = T, core = NULL){
 #   t_max = nrow(y)

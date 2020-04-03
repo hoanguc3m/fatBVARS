@@ -14,10 +14,7 @@ inits <- get_init(prior)
 Chain1 <- BVAR.novol(y, K = 5, p = 2, dist = "Gaussian", y0 = NULL, prior = prior, inits = inits)
 ML_chain1 <- marginalLL(Chain1)
 waic_chain1 <- WAIC(Chain1)
-recursive_model1 <- recursive_forecast(y = y, t_start = 750, t_pred = 12, K = K, p = p, dist="Gaussian", SV = F)
-recursive_model1v1 <- recursive_forecast(y = head(y,112), t_start = 100, t_pred = 12, K = K, p = p, dist="Gaussian", SV = F)
-recursive_model1v2 <- recursive_forecast(y = head(y,113), t_start = 100, t_pred = 12, K = K, p = p, dist="Gaussian", SV = F)
-recursive_model1v3 <- recursive_forecast(y = head(y,114), t_start = 100, t_pred = 12, K = K, p = p, dist="Gaussian", SV = F)
+
 ###########################################################################
 datagen <- sim.VAR.novol(dist="Student")
 y <- datagen$y
@@ -98,7 +95,7 @@ inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
 Chain10 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.multiStudent", y0 = NULL, prior = prior, inits = inits)
 ML_chain10 <- marginalLL(Chain10)
 waic_chain10 <- WAIC(Chain10)
-recursive_model10 <- recursive_forecast(y = y, t_start = 985, t_pred = 12, K = K, p = p, dist="Hyper.multiStudent", SV = T)
+
 ###########################################################################
 
 datagen <- sim.VAR.novol(dist="multiOrthStudent")

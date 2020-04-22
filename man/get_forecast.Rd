@@ -5,7 +5,7 @@
 \title{Forecast future observations of BVAR model}
 \usage{
 get_forecast(Chain, y0 = NULL, t_pred = 12, t_current = NULL,
-  Nfsample = NULL)
+  Nfsample = NULL, thin = 1)
 }
 \arguments{
 \item{Chain}{The fatBVARSV object from command BVAR.}

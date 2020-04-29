@@ -101,10 +101,10 @@ BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
     V_b_post_inv <- V_b_prior_inv +
       Reduce( f = "+",
-              x = lapply(1:t_max, function(i) kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i])) %*% A)),
+              x = lapply(1:t_max, function(i) kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A)),
               accumulate = FALSE)
     b_post <- Reduce(f = "+",
-                     x = lapply(1:t_max, function(i) kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i])) %*% A) %*% yt[,i])),
+                     x = lapply(1:t_max, function(i) kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A) %*% yt[,i])),
                      accumulate = FALSE)
 
     V_b_post <- solve(V_b_post_inv)
@@ -114,7 +114,7 @@ BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
     # Sample vol
     ytilde <- A%*% (yt - B %*% xt)
-    aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
+    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h = h, K = K, t_max = t_max)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
@@ -133,15 +133,17 @@ BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     u_std <- (yt - B %*%xt)
     u_neg <- - u_std
     a_sample <- rep(0, K * (K - 1) /2)
-    for (i in c(2:K)){
-      id_end <- i*(i-1)/2
-      id_start <- id_end - i + 2
-      a_sub <- a_prior[id_start:id_end]
-      V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
-      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = u_std[i,] / sqrtvol[i,],
-                                                   xsub = matrix(u_neg[1:(i-1),] / sqrtvol[i,], nrow = i-1),
-                                                   a_sub = a_sub,
-                                                   V_a_sub = V_a_sub)
+    if (K > 1) {
+      for (i in c(2:K)){
+        id_end <- i*(i-1)/2
+        id_start <- id_end - i + 2
+        a_sub <- a_prior[id_start:id_end]
+        V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
+        a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = u_std[i,] / sqrtvol[i,],
+                                                     xsub = matrix(u_neg[1:(i-1),] / sqrtvol[i,], nrow = i-1),
+                                                     a_sub = a_sub,
+                                                     V_a_sub = V_a_sub)
+      }
     }
     A_post <- matrix(0, nrow = K, ncol = K)
     A_post[upper.tri(A)] <- a_sample
@@ -225,8 +227,8 @@ BVAR.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     b_post = rep(0, m*K)
     V_b_post_inv = V_b_prior_inv
     for (i in c(1:t_max)){
-      V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i])) %*% A /w_sample[i])
-      b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i])) %*% A /w_sample[i]) %*% yt[,i])
+      V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A /w_sample[i])
+      b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A /w_sample[i]) %*% yt[,i])
     }
 
     V_b_post <- solve(V_b_post_inv)
@@ -255,15 +257,17 @@ BVAR.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     u_std <- (yt - B %*%xt)/ w_sqrt # change from Gaussian
     u_neg <- - u_std
     a_sample <- rep(0, K * (K - 1) /2)
-    for (i in c(2:K)){
-      id_end <- i*(i-1)/2
-      id_start <- id_end - i + 2
-      a_sub <- a_prior[id_start:id_end]
-      V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
-      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = u_std[i,] / sqrtvol[i,],
-                                                   xsub = matrix(u_neg[1:(i-1),] / sqrtvol[i,], nrow = i-1),
-                                                   a_sub = a_sub,
-                                                   V_a_sub = V_a_sub)
+    if (K > 1) {
+      for (i in c(2:K)){
+        id_end <- i*(i-1)/2
+        id_start <- id_end - i + 2
+        a_sub <- a_prior[id_start:id_end]
+        V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
+        a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = u_std[i,] / sqrtvol[i,],
+                                                     xsub = matrix(u_neg[1:(i-1),] / sqrtvol[i,], nrow = i-1),
+                                                     a_sub = a_sub,
+                                                     V_a_sub = V_a_sub)
+      }
     }
     A_post <- matrix(0, nrow = K, ncol = K)
     A_post[upper.tri(A)] <- a_sample
@@ -273,7 +277,7 @@ BVAR.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # Sample w
     u <- (yt - B %*%xt)
     for (i in c(1:t_max)){
-      w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% (t(A)%*% diag(1/exp(h[,i])) %*% A) %*% u[,i])
+      w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A) %*% u[,i])
     }
     w <- reprow(w_sample, K)
     w_sqrt <- sqrt(w)
@@ -371,7 +375,7 @@ BVAR.Hyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
   acount_nu <- 0
   acount_w <- rep(0, t_max)
   gamma <- inits$gamma
-  D <- diag(gamma)
+  D <- diag(gamma, nrow = K)
 
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
@@ -393,8 +397,8 @@ BVAR.Hyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
     b_post = rep(0, m*K)
     V_b_post_inv = V_b_prior_inv
     for (i in c(1:t_max)){
-      V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i])) %*% A /w_sample[i])
-      b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i])) %*% A /w_sample[i]) %*% (yt[,i] - gamma * w_sample[i] ) )
+      V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A /w_sample[i])
+      b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A /w_sample[i]) %*% (yt[,i] - gamma * w_sample[i] ) )
     }
 
     V_b_post <- solve(V_b_post_inv)
@@ -406,14 +410,14 @@ BVAR.Hyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
     gamma_post = rep(0, K)
     V_gamma_post_inv = solve(V_gamma_prior)
     for (i in c(1:t_max)){
-      V_gamma_post_inv <- V_gamma_post_inv +  w_sample[i] * t(A)%*% diag(1/exp(h[,i])) %*% A # ww' sqrt(w_inv) Signma_inv sqrt(w_inv)
-      gamma_post <- gamma_post + (t(A)%*% diag(1/exp(h[,i])) %*% A) %*% (yt[,i] - B %*% xt[,i] )
+      V_gamma_post_inv <- V_gamma_post_inv +  w_sample[i] * t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A # ww' sqrt(w_inv) Signma_inv sqrt(w_inv)
+      gamma_post <- gamma_post + (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A) %*% (yt[,i] - B %*% xt[,i] )
     }
 
     V_gamma_post <- solve(V_gamma_post_inv)
     gamma_post <- V_gamma_post %*% ( solve(V_gamma_prior) %*% gamma_prior + gamma_post)
     gamma <- as.numeric(gamma_post + t(chol(V_gamma_post)) %*% rnorm(K))
-    D <- diag(gamma)
+    D <- diag(gamma, nrow = K)
 
     # Sample vol
     ytilde <- A%*% (yt - B %*% xt  - D%*% w)/w_sqrt
@@ -436,15 +440,17 @@ BVAR.Hyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
     u_std <- (yt - B %*% xt - D%*% w)/ w_sqrt # change from Gaussian
     u_neg <- - u_std
     a_sample <- rep(0, K * (K - 1) /2)
-    for (i in c(2:K)){
-      id_end <- i*(i-1)/2
-      id_start <- id_end - i + 2
-      a_sub <- a_prior[id_start:id_end]
-      V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
-      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = u_std[i,] / sqrtvol[i,],
-                                                   xsub = matrix(u_neg[1:(i-1),] / sqrtvol[i,], nrow = i-1),
-                                                   a_sub = a_sub,
-                                                   V_a_sub = V_a_sub)
+    if (K > 1) {
+      for (i in c(2:K)){
+        id_end <- i*(i-1)/2
+        id_start <- id_end - i + 2
+        a_sub <- a_prior[id_start:id_end]
+        V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
+        a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = u_std[i,] / sqrtvol[i,],
+                                                     xsub = matrix(u_neg[1:(i-1),] / sqrtvol[i,], nrow = i-1),
+                                                     a_sub = a_sub,
+                                                     V_a_sub = V_a_sub)
+      }
     }
     A_post <- matrix(0, nrow = K, ncol = K)
     A_post[upper.tri(A)] <- a_sample
@@ -455,7 +461,7 @@ BVAR.Hyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
     u <- (yt - B %*%xt)
     for (i in c(1:t_max)){
       ran_stu = rt(1, df = 4)
-      Sigma2_inv_t = (t(A)%*% diag(1/exp(h[,i])) %*% A)
+      Sigma2_inv_t = (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A)
       a_eq <- -0.5* (t(gamma) %*% Sigma2_inv_t %*% gamma)
       b_eq <- -((0.5*K + nu/2+1))
       c_eq =  0.5 * t(u[,i]) %*% Sigma2_inv_t %*% u[,i] + nu/2

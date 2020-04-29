@@ -90,7 +90,7 @@ sim.VAR.Gaussian.SV <- function(K = 5, p = 2, t_max = 1000,
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(exp(0.5*h))
+    Sigma <-  inv_A0 %*% diag(exp(0.5*h), nrow = K)
     Sigma2 <- Sigma %*% t(Sigma)
     y_var[i,] <- diag(Sigma2)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
@@ -101,7 +101,7 @@ sim.VAR.Gaussian.SV <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
@@ -164,7 +164,7 @@ sim.VAR.Student.SV <- function(K = 5, p = 2, t_max = 1000,
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(exp(0.5*h))
+    Sigma <-  inv_A0 %*% diag(exp(0.5*h), nrow = K)
     Sigma2 <- Sigma %*% t(Sigma)
     y_var[i,] <- diag(Sigma2)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
@@ -175,7 +175,7 @@ sim.VAR.Student.SV <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
@@ -244,7 +244,7 @@ sim.VAR.Hyper.Student.SV <- function(K = 5, p = 2, t_max = 1000,
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(exp(0.5*h))
+    Sigma <-  inv_A0 %*% diag(exp(0.5*h), nrow = K)
     Sigma2 <- Sigma %*% t(Sigma)
     y_var[i,] <- diag(Sigma2)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
@@ -255,7 +255,7 @@ sim.VAR.Hyper.Student.SV <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
@@ -320,7 +320,7 @@ sim.VAR.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(exp(0.5*h))
+    Sigma <-  inv_A0 %*% diag(exp(0.5*h), nrow = K)
     Sigma2 <- Sigma %*% t(Sigma)
     y_var[i,] <- diag(Sigma2)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
@@ -331,7 +331,7 @@ sim.VAR.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
@@ -400,7 +400,7 @@ sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(exp(0.5*h))
+    Sigma <-  inv_A0 %*% diag(exp(0.5*h), nrow = K)
     Sigma2 <- Sigma %*% t(Sigma)
     y_var[i,] <- diag(Sigma2)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
@@ -413,7 +413,7 @@ sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
   # cat(" Hyper.multi.SV ", eps[1,1]," ", seednum, "\t")
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 = matrix(B0, nrow = K), h = h, Sigma = Sigma,
@@ -491,7 +491,7 @@ sim.VAR.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
@@ -571,7 +571,7 @@ sim.VAR.Hyper.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 = matrix(B0, nrow = K), h = h, Sigma = Sigma,
@@ -630,7 +630,7 @@ sim.VAR.Hyper.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 #'   }
 #'
 #'   t_max = t_max - burn_in
-#'   list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+#'   list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
 #'        K = K, p = p, t_max = t_max,
 #'        A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
 #'        nu = nu, gamma = gamma,

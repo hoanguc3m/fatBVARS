@@ -94,7 +94,7 @@ sim.VAR.Gaussian.novol <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = volatility,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 =B0, h = h, Sigma = Sigma,
@@ -159,7 +159,7 @@ sim.VAR.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = volatility,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 =B0, h = h, Sigma = Sigma,
@@ -229,7 +229,7 @@ sim.VAR.Hyper.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = volatility,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 =B0, h = h, Sigma = Sigma,
@@ -297,7 +297,7 @@ sim.VAR.multiStudent.novol <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = volatility,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 =B0, h = h, Sigma = Sigma,
@@ -368,7 +368,7 @@ sim.VAR.Hyper.multiStudent.novol <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = volatility,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 =B0, h = h, Sigma = Sigma,
@@ -436,7 +436,7 @@ sim.VAR.multiOrthStudent.novol <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = volatility,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 =B0, h = h, Sigma = Sigma,
@@ -507,7 +507,7 @@ sim.VAR.Hyper.multiOrthStudent.novol <- function(K = 5, p = 2, t_max = 1000,
   }
 
   t_max = t_max - burn_in
-  list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+  list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
        y0 = y0, y_mean = y_mean, y_var = y_var, logvol = volatility,
        K = K, p = p, t_max = t_max,
        A0 = A0, B0 =B0, h = h, Sigma = Sigma,
@@ -560,7 +560,7 @@ sim.VAR.Hyper.multiOrthStudent.novol <- function(K = 5, p = 2, t_max = 1000,
 #   }
 #
 #   t_max = t_max - burn_in
-#   list(y = ystar[(p+burn_in+1):(p+burn_in+t_max),],
+#   list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
 #        K = K, p = p, t_max = t_max,
 #        A0 = A0, B0 =B0, h = h, Sigma = Sigma,
 #        nu = nu, gamma = gamma,

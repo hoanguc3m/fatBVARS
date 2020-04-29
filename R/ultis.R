@@ -33,10 +33,10 @@ makeRegressor <- function(y, y0, t_max, K, p){
   }
   y0 <- rbind(y0, y)
   for (i in c(1:p)){
-    xt <- cbind(xt, rbind(1, vec( t(y0)[,(p+i-1):i])))
+    xt <- cbind(xt, rbind(1, vec( as.matrix( t(y0)[,(p+i-1):i]))) )
   }
   for (i in c( p:(t_max-1))){
-    xt <- cbind(xt, rbind(1, vec(yt[,i:(i-p+1)])))
+    xt <- cbind(xt, rbind(1, vec( as.matrix( yt[,i:(i-p+1)]))) )
   }
   return(xt)
 }
@@ -89,7 +89,12 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K),
   # sqrtvol <- aux$sigt
   # [TODO] fix this
   # sse_2 <- apply( (h[,2:t_max] - h[,1:(t_max-1)])^2, MARGIN = 1, FUN = sum)
-  sse_2 <- apply( (h[,1:t_max] - cbind(h0,h[,1:(t_max-1)]) )^2, MARGIN = 1, FUN = sum)
+  if (K>1) {
+    sse_2 <- apply( (h[,1:t_max] - cbind(h0,h[,1:(t_max-1)]) )^2, MARGIN = 1, FUN = sum)
+  } else {
+    sse_2 <- sum( (h[,1:t_max] - c(h0,h[,1:(t_max-1)]) )^2)
+  }
+
   sigma_post_a <- 1 + rep(t_max,K) # prior of sigma_h Gamma(1,0.0001)
   sigma_post_b <- 0.0001 + sse_2 # prior of sigma_h
 

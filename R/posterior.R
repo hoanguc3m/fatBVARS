@@ -163,7 +163,7 @@ log_posterior <- function(param, data){
           sum(invgamma::dinvgamma(sigma^2, shape = prior$sigma_T0 * 0.5, rate = prior$sigma_S0 * 0.5, log = T))
         log_likelihood <- sum(mvnfast::dmvn(X = (y - t(xt) %*% t(B)),
                                             mu = rep(0,K),
-                                            sigma = t(solve(A) %*% diag(sigma)), log = T, isChol = T))
+                                            sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T))
       }
 
       #Student
@@ -182,7 +182,7 @@ log_posterior <- function(param, data){
 
         log_likelihood <- sum(mvnfast::dmvn(X = (y - t(xt) %*% t(B))/repcol(sqrt(w),K),
                                             mu = rep(0,K),
-                                            sigma = t(solve(A) %*% diag(sigma)), log = T, isChol = T)) -
+                                            sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T)) -
           0.5 * K * sum(log(w)) # Jacobian
       }
 
@@ -203,7 +203,7 @@ log_posterior <- function(param, data){
         # D = diag(gamma)
         log_likelihood <- sum(mvnfast::dmvn(X = (y - t(xt) %*% t(B) - w %*% t(gamma))/repcol(sqrt(w),K),
                                             mu = rep(0,K),
-                                            sigma = t(solve(A) %*% diag(sigma)), log = T, isChol = T)) -
+                                            sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T)) -
           0.5 * K * sum(log(w)) # Jacobian
       }
 
@@ -223,7 +223,7 @@ log_posterior <- function(param, data){
 
         log_likelihood <- sum(mvnfast::dmvn(X = (y - t(xt) %*% t(B))/sqrt(t(w)),
                                             mu = rep(0,K),
-                                            sigma = t(solve(A) %*% diag(sigma)), log = T, isChol = T)) -
+                                            sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T)) -
           0.5 * sum(log(w)) # Jacobian
       }
 
@@ -244,7 +244,7 @@ log_posterior <- function(param, data){
         # D = diag(gamma)
         log_likelihood <- sum(mvnfast::dmvn(X = (y - t(xt) %*% t(B) - t(w * gamma))/sqrt(t(w)),
                                             mu = rep(0,K),
-                                            sigma = t(solve(A) %*% diag(sigma)), log = T, isChol = T)) -
+                                            sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T)) -
           0.5 * sum(log(w)) # Jacobian
       }
     }
@@ -394,7 +394,7 @@ log_likelihood <- function(param, data, aggregate = TRUE){
       if (dist == "Gaussian"){
         log_likelihood <- mvnfast::dmvn(X = (y - t(xt) %*% t(B)),
                                             mu = rep(0,K),
-                                            sigma = t(solve(A) %*% diag(sigma)), log = T, isChol = T)
+                                            sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T)
       }
 
       #Student
@@ -406,7 +406,7 @@ log_likelihood <- function(param, data, aggregate = TRUE){
 
         log_likelihood <- mvnfast::dmvn(X = (y - t(xt) %*% t(B))/repcol(sqrt(w),K),
                                             mu = rep(0,K),
-                                            sigma = t(solve(A) %*% diag(sigma)), log = T, isChol = T) -
+                                            sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T) -
           0.5 * K * log(w) # Jacobian
       }
 
@@ -420,7 +420,7 @@ log_likelihood <- function(param, data, aggregate = TRUE){
 
         log_likelihood <- mvnfast::dmvn(X = (y - t(xt) %*% t(B) - w %*% t(gamma))/repcol(sqrt(w),K),
                                             mu = rep(0,K),
-                                            sigma = t(solve(A) %*% diag(sigma)), log = T, isChol = T) -
+                                            sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T) -
           0.5 * K * log(w) # Jacobian
       }
 
@@ -434,7 +434,7 @@ log_likelihood <- function(param, data, aggregate = TRUE){
 
         log_likelihood <- mvnfast::dmvn(X = (y - t(xt) %*% t(B))/sqrt(t(w)),
                                             mu = rep(0,K),
-                                            sigma = t(solve(A) %*% diag(sigma)), log = T, isChol = T) -
+                                            sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T) -
           0.5 * apply(log(w), MARGIN = 2, sum)  # Jacobian
       }
 
@@ -448,7 +448,7 @@ log_likelihood <- function(param, data, aggregate = TRUE){
 
         log_likelihood <- mvnfast::dmvn(X = (y - t(xt) %*% t(B) - t(w * gamma))/sqrt(t(w)),
                                             mu = rep(0,K),
-                                            sigma = t(solve(A) %*% diag(sigma)), log = T, isChol = T) -
+                                            sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T) -
           0.5 * apply(log(w), MARGIN = 2, sum) # Jacobian
       }
 
@@ -461,7 +461,7 @@ log_likelihood <- function(param, data, aggregate = TRUE){
 
         log_likelihood <- mvnfast::dmvn(X = t(A %*% (yt - B %*% xt) )/sqrt(t(w)),
                                         mu = rep(0,K),
-                                        sigma = diag(sigma), log = T, isChol = T) -
+                                        sigma = diag(sigma, nrow = K), log = T, isChol = T) -
           0.5 * apply(log(w), MARGIN = 2, sum)  # Jacobian
       }
 
@@ -475,7 +475,7 @@ log_likelihood <- function(param, data, aggregate = TRUE){
 
         log_likelihood <- mvnfast::dmvn(X = t(A %*% (yt - B %*% xt) - w * gamma) /sqrt(t(w)),
                                         mu = rep(0,K),
-                                        sigma = diag(sigma), log = T, isChol = T) -
+                                        sigma = diag(sigma, nrow = K), log = T, isChol = T) -
           0.5 * apply(log(w), MARGIN = 2, sum) # Jacobian
       }
 

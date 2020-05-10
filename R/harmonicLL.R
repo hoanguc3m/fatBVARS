@@ -48,7 +48,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
     sum_log <- rep(0, ndraws)
 
-    if (is.null(numCores)) numCores <- parallel::detectCores()*0.5
+    if (is.null(numCores)) numCores <- parallel::detectCores()*0.75
     if (SV){
       h_mean <- matrix(apply(H_gen, MARGIN = 2, mean), nrow = K)
 
@@ -137,6 +137,11 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
         }
 
         if (dist == "multiStudent") {
+          param_trans <- cbind(B_gen, A_gen, H0_gen, Sigma_transform, Nu_transform)
+          sum_log_prop <- Laplace_approx(param_trans) -
+            apply(Sigma_transform, MARGIN = 1, FUN = sum) -
+            apply(Nu_transform, MARGIN = 1, FUN = sum) # Jacob trans
+
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -162,6 +167,10 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
         }
 
         if (dist == "Hyper.multiStudent") {
+          param_trans <- cbind(B_gen, A_gen, Gamma_gen, H0_gen, Sigma_transform, Nu_transform)
+          sum_log_prop <- Laplace_approx(param_trans) -
+            apply(Sigma_transform, MARGIN = 1, FUN = sum) -
+            apply(Nu_transform, MARGIN = 1, FUN = sum) # Jacob trans
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -188,6 +197,10 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
         }
 
         if (dist == "multiOrthStudent") {
+          param_trans <- cbind(B_gen, A_gen, H0_gen, Sigma_transform, Nu_transform)
+          sum_log_prop <- Laplace_approx(param_trans) -
+            apply(Sigma_transform, MARGIN = 1, FUN = sum) -
+            apply(Nu_transform, MARGIN = 1, FUN = sum) # Jacob trans
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -213,6 +226,10 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
         }
 
         if (dist == "Hyper.multiOrthStudent") {
+          param_trans <- cbind(B_gen, A_gen, Gamma_gen, H0_gen, Sigma_transform, Nu_transform)
+          sum_log_prop <- Laplace_approx(param_trans) -
+            apply(Sigma_transform, MARGIN = 1, FUN = sum) -
+            apply(Nu_transform, MARGIN = 1, FUN = sum) # Jacob trans
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)

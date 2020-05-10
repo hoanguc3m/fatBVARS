@@ -262,6 +262,28 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
         sum_log <- parallel::mclapply(1:ndraws,
                                       FUN = function(j) { log_posterior(param[j,], Chain) },
                                       mc.cores = numCores)
+
+
+        # sum_log2 <- parallel::mclapply(1:ndraws,
+        #                                FUN = function(j) {
+        #                                  B <- matrix(B_gen[j,], nrow = K)
+        #                                  A <- a0toA(A_gen[j,], K)
+        #                                  sigma <- Sigma_gen[j,]
+        #                                  log_post <- mvnfast::dmvn(X = (y - t(xt) %*% t(B)),
+        #                                                            mu = rep(0,K),
+        #                                                            sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T) +
+        #                                    (mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+        #                                       mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+        #                                       sum(invgamma::dinvgamma(Sigma_gen[j,]^2, shape = prior$sigma_T0 * 0.5, rate = prior$sigma_S0 * 0.5, log = T)) -
+        #                                       sum_log_prop[j])/t_max
+        #
+        #                                },
+        #                                mc.cores = numCores)
+        # sum_log2_unlist <- matrix(unlist(sum_log2), nrow = ndraws, byrow = T)
+        # sum_log2_max <- apply(sum_log2_unlist, MARGIN = 2, max)
+        # sum(log(apply( exp(sum_log2_unlist - reprow(sum_log2_max, ndraws)), MARGIN = 2, FUN = mean ))) + sum(sum_log2_max)
+        #
+        #
       } else {
         # Fat tail
         Nu_gen_list <- Gamma_approx(Nu_mat, ndraws = ndraws)

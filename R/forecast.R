@@ -36,9 +36,9 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, t_current = NULL, Nfsamp
   }
 
   y_pred <- array(NA, dim = c(t_pred, K, Nfsample))
-  ymean_pred <- array(NA, dim = c(t_pred, K, Nfsample))
-  yvar_pred <- array(NA, dim = c(t_pred, K, Nfsample))
-  vol_pred <- array(NA, dim = c(t_pred, K, Nfsample))
+  ymean_pred <- array(NA, dim = c(t_pred, K, Nfsample)) # Predictive mean
+  yvar_pred <- array(NA, dim = c(t_pred, 0.5*K*(K+1), Nfsample)) # Predictive Chol Sigma
+  vol_pred <- array(NA, dim = c(t_pred, K, Nfsample)) # Predictive diag(Sigma)
 
   B_mat <- get_post(mcmc, element = "B")
   A_mat <- get_post(mcmc, element = "a")
@@ -168,7 +168,7 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, t_current = NULL, Nfsamp
     y_pred[,,count_id] <- pred_tmp$y
     ymean_pred[,,count_id] <- pred_tmp$y_mean
     yvar_pred[,,count_id] <- pred_tmp$y_var
-    vol_pred[,,count_id] <- pred_tmp$logvol
+    vol_pred[,,count_id] <- pred_tmp$volatility
 
   }
   return(list(y_pred = y_pred,
@@ -201,7 +201,8 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
   if (is.null(t_current)) t_current = which(Chain$y == tail(y_current,p)[p,1] )
 
   t_pred = nrow(y_obs_future)
-  predictive_samples <- get_forecast(Chain = Chain, y0 = tail(y_current,p), t_pred = t_pred, t_current = t_current, thin = 10, Nfsample = 10000) # Nfsample
+  Nfsample = 10000
+  predictive_samples <- get_forecast(Chain = Chain, y0 = tail(y_current,p), t_pred = t_pred, t_current = t_current, thin = 10, Nfsample = Nfsample) # Nfsample
 
   #############################################################
   # Non cummulative
@@ -213,94 +214,31 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
   for (i in c(1:K)){
     for (j in c(1:t_pred)){
       y_obs <- as.numeric(y_obs_future[j,i])
-
-      predict_den <- stats::density(predictive_samples$y_pred[j,i,], adjust = 3)
-      id <- which(predict_den$y == 0);
-      if (length(id)>0) {
-        for (fix in id){
-          predict_den$y[fix] <- mean(predict_den$y[(fix-1):(fix+1)])
-        }
-      }
-      # predict_den <- ash::ash1(ash::bin1(predictive_samples$y_pred[j,i,],nbin=100),5)
-      # binbw <- KernSmooth::dpik(x = predictive_samples$y_pred[j,i,])
-      # predict_den <- KernSmooth::bkde(x = predictive_samples$y_pred[j,i,], bandwidth = binbw * 3) # fast and accurate
-
-
-
-      appximate_density <- smooth.spline(x = predict_den$x, y = log(predict_den$y))
-      pred_dens <- predict(appximate_density, y_obs)$y
-      # if ( pred_dens <= 0) {
-      #   # pred_dens <- min(predict_den$y[predict_den$y > 0])
-      #   pred_dens <- .Machine$double.eps
-      # }
-      log_pred[j,i] <- pred_dens
-
-      # norm_appx <- c(mean(predictive_samples$y_pred[j,i,]), var(predictive_samples$y_pred[j,i,]))
-      # log_pred[j,i] <- - 0.5 *( log(2*pi) + log(norm_appx[2]) + (y_obs - norm_appx[1])^2/norm_appx[2])
-
+      log_pred[j,i] <- log(mean(dnorm(y_obs, mean = predictive_samples$ymean_pred[j,i,], sd = sqrt(predictive_samples$vol_pred[j,i,]))))
       emp_CDF[j,i] <- ecdf(x = predictive_samples$y_pred[j,i,])(y_obs)
-
     }
   }
-  # for (i in c(1: (K-1))){
-  #   for (k in c((i+1):K)){
-  #     for (j in c(1:t_pred)){
-  #       bivarsim <- cbind(predictive_samples$y_pred[j,i,],
-  #                         predictive_samples$y_pred[j,k,])
-  #       # Not accurate
-  #       # predict_den <- kde2D(data = bivarsim, n = 100, limits = c(range(bivarsim[,1]), range(bivarsim[,2])))
-  #       # desi <- predict_den$density
-  #       # desi[desi < 0] <- .Machine$double.eps
-  #       # pred_bidens <- pracma::interp2(predict_den$X[1,], predict_den$Y[,1], desi, y_obs_future[j,i], y_obs_future[j,k])
-  #       # contour(predict_den$X[1,], predict_den$Y[,1], predict_den$density)
-  #       # points( bivarsim[,1],  bivarsim[,2], pch = ".")
-  #       # persp(predict_den$fhat)
-  #
-  #       # #############################
-  #       bw <- c(diff(range(bivarsim[,1]))/25, diff(range(bivarsim[,2]))/25)
-  #       predict_den <- KernSmooth::bkde2D(x = bivarsim, bandwidth = bw, gridsize = c(128L, 128L),
-  #                             range.x = list(range(bivarsim[,1]), range(bivarsim[,2])),
-  #                             truncate = TRUE)
-  #       desi <- predict_den$fhat
-  #       desi[desi < 0] <- .Machine$double.eps
-  #       pred_bidens <- pracma::interp2(predict_den$x1, predict_den$x2, log(desi), y_obs_future[j,i], y_obs_future[j,k])
-  #
-  #       # contour(predict_den$x1, predict_den$x2, predict_den$fhat)
-  #       # points( bivarsim[,1],  bivarsim[,2], pch = ".")
-  #       # persp(predict_den$fhat)
-  #
-  #       # ###############################
-  #       # Similar but slower
-  #       # bw <- c(diff(range(bivarsim[,1]))/7, diff(range(bivarsim[,2]))/7)
-  #       # predict_den <- MASS::kde2d(x = bivarsim[,1], y = bivarsim[,2], h = bw, n = 128)
-  #       # desi <- predict_den$z
-  #       # desi[desi < 0] <- .Machine$double.eps
-  #       # pred_bidens <- pracma::interp2(predict_den$x, predict_den$y, desi, y_obs_future[j,i], y_obs_future[j,k])
-  #       # contour(predict_den$x, predict_den$y, predict_den$z)
-  #       # points( bivarsim[,1],  bivarsim[,2], pch = ".")
-  #       # persp(predict_den$z)
-  #
-  #       #############################
-  #       # predict_den <- ash::ash2(ash::bin2(bivarsim),m = c(5,5))
-  #       # predict_den$z[predict_den$z <= 0 ] <- .Machine$double.eps
-  #       # pred_bidens <- pracma::interp2(predict_den$x, predict_den$y, log(predict_den$z), y_obs_future[j,i], y_obs_future[j,k])
-  #
-  #       # image(f$x,f$y,f$z)
-  #       # contour(f$x,f$y,f$z,add=TRUE)
-  #
-  #       if (is.na(pred_bidens)) pred_bidens <- log(.Machine$double.eps)
-  #       if ( pred_bidens <= 0) {
-  #         pred_bidens <- log(.Machine$double.eps)
-  #       }
-  #
-  #       bilog_pred[j,(i-1)*K + k-i*(i+1)*0.5] <- pred_bidens
-  #
-  #       # norm_appx <- list(colMeans(bivarsim), cov(bivarsim))
-  #       # bilog_pred[j,(i-1)*K + k-i*(i+1)*0.5] <- - 0.5 *( 2 * log(2*pi) + log(det(norm_appx[[2]])) + t(y_obs_future[j,k] - norm_appx[[1]]) %*% solve(norm_appx[[2]]) %*% (y_obs_future[j,k] - norm_appx[[1]]) )
-  #
-  #     }
-  #   }
-  # }
+
+  Sigma2 <- array(0, dim = c(K, K, Nfsample))
+  Sigma <- matrix(0, nrow = K, ncol = K)
+  for (j in c(1:t_pred)){
+    for (sample_id in c(1:Nfsample)){
+      Sigma[lower.tri(Sigma, diag = T)] <- predictive_samples$yvar_pred[j,,sample_id]
+      Sigma2[,,sample_id] <- Sigma %*% t(Sigma)
+    }
+
+    for (i in c(1: (K-1))){
+      for (k in c((i+1):K)){
+        pred_bidens <- rep(NA, Nfsample)
+        for (sample_id in c(1:Nfsample)){
+          pred_bidens[sample_id] <- dmvn(X = c(y_obs_future[j,i], y_obs_future[j,k]),
+                                          mu = predictive_samples$ymean_pred[j, c(i,k),sample_id],
+                                          sigma = Sigma2[c(i,k),c(i,k), sample_id], log = FALSE, isChol = FALSE)
+        }
+        bilog_pred[j,(i-1)*K + k-i*(i+1)*0.5] <- log(mean(pred_bidens))
+     }
+    }
+  }
   #############################################################
   # Cummulative
   #############################################################
@@ -309,62 +247,23 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
   cemp_CDF<- matrix(NA, nrow = t_pred, ncol = K)
   cy_pred <- apply(predictive_samples$y_pred, MARGIN = c(2,3), FUN = cumsum)
   cy_obs_future <- apply(y_obs_future, MARGIN = 2, FUN = cumsum)
-  for (i in c(1:K)){
-    for (j in c(1:t_pred)){
-      y_obs <- as.numeric(cy_obs_future[j,i])
-
-      predict_den <- stats::density(cy_pred[j,i,], adjust = 3)
-      id <- which(predict_den$y == 0);
-      if (length(id)>0) {
-        for (fix in id){
-          predict_den$y[fix] <- mean(predict_den$y[(fix-1):(fix+1)])
-        }
-      }
-      # #predict_den <- ash::ash1(bin1(cy_pred[j,i,],nbin=70),5)
-      # binbw <- KernSmooth::dpik(x = cy_pred[j,i,])
-      # predict_den <- KernSmooth::bkde(x = cy_pred[j,i,], bandwidth = binbw*3) # fast and accurate
-
-      appximate_density <- smooth.spline(x = predict_den$x, y = log(predict_den$y))
-      pred_dens <- predict(appximate_density, y_obs)$y
-      # if ( pred_dens <= 0) {
-      #   # pred_dens <- min(predict_den$y[predict_den$y > 0])
-      #   pred_dens <- .Machine$double.eps
-      # }
-      clog_pred[j,i] <- pred_dens
-
-      # norm_appx <- c(mean(cy_pred[j,i,]), var(cy_pred[j,i,]))
-      # clog_pred[j,i] <- - 0.5 *( log(2*pi) + log(norm_appx[2]) + (y_obs - norm_appx[1])^2/norm_appx[2])
-      cemp_CDF[j,i] <- ecdf(x = cy_pred[j,i,])(y_obs)
-    }
-  }
-  # for (i in c(1: (K-1))){
-  #   for (k in c((i+1):K)){
-  #     for (j in c(1:t_pred)){
-  #       bivarsim <- cbind(cy_pred[j,i,],
-  #                         cy_pred[j,k,])
-  #       #############################
-  #       bw <- c(diff(range(bivarsim[,1]))/25, diff(range(bivarsim[,2]))/25)
-  #       predict_den <- KernSmooth::bkde2D(x = bivarsim, bandwidth = bw, gridsize = c(128L, 128L),
-  #                                         range.x = list(range(bivarsim[,1]), range(bivarsim[,2])),
-  #                                         truncate = TRUE)
-  #       desi <- predict_den$fhat
-  #       desi[desi < 0] <- .Machine$double.eps
-  #       pred_bidens <- pracma::interp2(predict_den$x1, predict_den$x2, log(desi), cy_obs_future[j,i], cy_obs_future[j,k])
-  #
-  #       # predict_den <- ash::ash2(ash::bin2(bivarsim),m = c(5,5))
-  #       # predict_den$z[predict_den$z <= 0 ] <- .Machine$double.eps
-  #       # pred_bidens <- pracma::interp2(predict_den$x, predict_den$y, log(predict_den$z), cy_obs_future[j,i], cy_obs_future[j,k])
-  #
-  #
-  #       if (is.na(pred_bidens)) pred_bidens <- log(.Machine$double.eps)
-  #       if ( pred_bidens <= 0) {
-  #         pred_bidens <- log(.Machine$double.eps)
+  # for (i in c(1:K)){
+  #   for (j in c(1:t_pred)){
+  #     y_obs <- as.numeric(cy_obs_future[j,i])
+  #     predict_den <- stats::density(cy_pred[j,i,], adjust = 3)
+  #     id <- which(predict_den$y == 0);
+  #     if (length(id)>0) {
+  #       for (fix in id){
+  #         predict_den$y[fix] <- mean(predict_den$y[(fix-1):(fix+1)])
   #       }
-  #
-  #       cbilog_pred[j,(i-1)*K + k-i*(i+1)*0.5] <- pred_bidens
   #     }
+  #     appximate_density <- smooth.spline(x = predict_den$x, y = log(predict_den$y))
+  #     pred_dens <- predict(appximate_density, y_obs)$y
+  #     clog_pred[j,i] <- pred_dens
+  #     cemp_CDF[j,i] <- ecdf(x = cy_pred[j,i,])(y_obs)
   #   }
   # }
+
   CRPS <- matrix(NA, nrow = t_pred, ncol = K)
   SCRPS <- matrix(NA, nrow = t_pred, ncol = K)
 
@@ -378,14 +277,12 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
     }
   }
 
-
-
   return(list(log_pred = log_pred,
               bilog_pred = bilog_pred,
               emp_CDF = emp_CDF,
               MSFE = (apply(predictive_samples$y_pred, MARGIN = c(1,2), FUN = mean) - y_obs_future)^2,
               MAFE = abs(apply(predictive_samples$y_pred, MARGIN = c(1,2), FUN = mean) - y_obs_future),
-              predictive_samples = predictive_samples,
+              # predictive_samples = predictive_samples,
               t_current = t_current,
               clog_pred = clog_pred,
               cbilog_pred = cbilog_pred,
@@ -484,7 +381,6 @@ recursive_seperate <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hype
   } else {
     Chain <- BVAR.novol(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,
                         y0 = head(y_current, p), prior = prior, inits = inits)
-
   }
   y_obs_future <- y[c((time_current+1):(time_current+t_pred)), ]
   forecast_err <- forecast_density(Chain = Chain, y_obs_future = y_obs_future)

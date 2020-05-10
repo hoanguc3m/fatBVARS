@@ -72,7 +72,7 @@ sim.VAR.Gaussian.SV <- function(K = 5, p = 2, t_max = 1000,
   }
   # No skew
   # No tail
-  # Volatility logvol
+  # Volatility volatility
   if (is.null(sigma_h)){
     Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
@@ -81,30 +81,30 @@ sim.VAR.Gaussian.SV <- function(K = 5, p = 2, t_max = 1000,
 
   ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
-  y_var <- matrix(NA, nrow = t_max, ncol = K)
+  y_var <- matrix(NA, nrow = t_max, ncol = 0.5*K*(K+1))
   volatility <- matrix(NA, nrow = t_max, ncol = K)
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
-  logvol = NULL
+  volatility <- matrix(NA, nrow = t_max, ncol = K)
   inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(exp(0.5*h), nrow = K)
-    Sigma2 <- Sigma %*% t(Sigma)
-    y_var[i,] <- diag(Sigma2)
+    Sigma_t <-  inv_A0 %*% diag(exp(0.5*h), nrow = K)
+    Sigma2_t <- Sigma_t %*% t(Sigma_t)
+    y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
+    volatility[i,] <- diag(Sigma2_t)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
     y_mean[i,] <- B0 %*% xt
-    ysim <-  B0 %*% xt  + Sigma %*% eps[i,]
+    ysim <-  B0 %*% xt + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
-    logvol <- rbind(logvol, t(h))
   }
 
   t_max = t_max - burn_in
   list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
-       y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
+       y0 = y0, y_mean = y_mean, y_var = y_var, volatility = volatility,
        K = K, p = p, t_max = t_max,
-       A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
+       A0 = A0, B0 = matrix(B0, nrow = K),
        Vh = Vh,
        dist = "Gaussian", SV = TRUE)
 }
@@ -146,7 +146,7 @@ sim.VAR.Student.SV <- function(K = 5, p = 2, t_max = 1000,
   w_t <- rinvgamma(t_max, shape = nu/2, rate = nu/2)
   w_sqrt_t <- sqrt(w_t)
 
-  # Volatility logvol
+  # Volatility volatility
   if (is.null(sigma_h)){
     Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
@@ -155,30 +155,30 @@ sim.VAR.Student.SV <- function(K = 5, p = 2, t_max = 1000,
 
   ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
-  y_var <- matrix(NA, nrow = t_max, ncol = K)
+  y_var <- matrix(NA, nrow = t_max, ncol = 0.5*K*(K+1))
   volatility <- matrix(NA, nrow = t_max, ncol = K)
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
-  logvol = NULL
+  volatility <- matrix(NA, nrow = t_max, ncol = K)
   inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(exp(0.5*h), nrow = K)
-    Sigma2 <- Sigma %*% t(Sigma)
-    y_var[i,] <- diag(Sigma2)
+    Sigma_t <-  diag(w_sqrt_t[i], nrow = K) %*% inv_A0 %*% diag(exp(0.5*h), nrow = K)
+    Sigma2_t <- Sigma_t %*% t(Sigma_t)
+    y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
+    volatility[i,] <- diag(Sigma2_t)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
     y_mean[i,] <- B0 %*% xt
-    ysim <-  B0 %*% xt + w_sqrt_t[i] * (Sigma %*% eps[i,])
+    ysim <-  B0 %*% xt + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
-    logvol <- rbind(logvol, t(h))
   }
 
   t_max = t_max - burn_in
   list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
-       y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
+       y0 = y0, y_mean = y_mean, y_var = y_var, volatility = volatility,
        K = K, p = p, t_max = t_max,
-       A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
+       A0 = A0, B0 = matrix(B0, nrow = K),
        nu = nu, w = w_t[(burn_in+1):(burn_in+t_max)],
        Vh = Vh,
        dist = "Student", SV = TRUE)
@@ -226,7 +226,7 @@ sim.VAR.Hyper.Student.SV <- function(K = 5, p = 2, t_max = 1000,
   w_t <- rinvgamma(t_max, shape = nu/2, rate = nu/2)
   w_sqrt_t <- sqrt(w_t)
 
-  # Volatility logvol
+  # Volatility volatility
   if (is.null(sigma_h)){
     Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
@@ -235,30 +235,30 @@ sim.VAR.Hyper.Student.SV <- function(K = 5, p = 2, t_max = 1000,
 
   ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
-  y_var <- matrix(NA, nrow = t_max, ncol = K)
+  y_var <- matrix(NA, nrow = t_max, ncol = 0.5*K*(K+1))
   volatility <- matrix(NA, nrow = t_max, ncol = K)
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
-  logvol = NULL
+  volatility <- matrix(NA, nrow = t_max, ncol = K)
   inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(exp(0.5*h), nrow = K)
-    Sigma2 <- Sigma %*% t(Sigma)
-    y_var[i,] <- diag(Sigma2)
+    Sigma_t <-  diag(w_sqrt_t[i], nrow = K) %*% inv_A0 %*% diag(exp(0.5*h), nrow = K)
+    Sigma2_t <- Sigma_t %*% t(Sigma_t)
+    y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
+    volatility[i,] <- diag(Sigma2_t)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
     y_mean[i,] <- B0 %*% xt + gamma * w_t[i]
-    ysim <-  B0 %*% xt  + gamma * w_t[i] + w_sqrt_t[i] * (Sigma %*% eps[i,])
+    ysim <-  B0 %*% xt + gamma * w_t[i] + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
-    logvol <- rbind(logvol, t(h))
   }
 
   t_max = t_max - burn_in
   list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
-       y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
+       y0 = y0, y_mean = y_mean, y_var = y_var, volatility = volatility,
        K = K, p = p, t_max = t_max,
-       A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
+       A0 = A0, B0 = matrix(B0, nrow = K),
        nu = nu, gamma = gamma, w = w_t[(burn_in+1):(burn_in+t_max)],
        Vh = Vh,
        dist = "Hyper.Student", SV = TRUE)
@@ -302,7 +302,7 @@ sim.VAR.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
   w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
   w_sqrt_t <- sqrt(w_t)
 
-  # Volatility logvol
+  # Volatility volatility
   if (is.null(sigma_h)){
     Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
@@ -311,30 +311,30 @@ sim.VAR.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 
   ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
-  y_var <- matrix(NA, nrow = t_max, ncol = K)
+  y_var <- matrix(NA, nrow = t_max, ncol = 0.5*K*(K+1))
   volatility <- matrix(NA, nrow = t_max, ncol = K)
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
-  logvol = NULL
+  volatility <- matrix(NA, nrow = t_max, ncol = K)
   inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(exp(0.5*h), nrow = K)
-    Sigma2 <- Sigma %*% t(Sigma)
-    y_var[i,] <- diag(Sigma2)
+    Sigma_t <-  diag(w_sqrt_t[i,]) %*% inv_A0 %*% diag(exp(0.5*h), nrow = K)
+    Sigma2_t <- Sigma_t %*% t(Sigma_t)
+    y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
+    volatility[i,] <- diag(Sigma2_t)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
     y_mean[i,] <- B0 %*% xt
-    ysim <-  B0 %*% xt + w_sqrt_t[i,] * (Sigma %*% eps[i,])
+    ysim <-  B0 %*% xt + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
-    logvol <- rbind(logvol, t(h))
   }
 
   t_max = t_max - burn_in
   list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
-       y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
+       y0 = y0, y_mean = y_mean, y_var = y_var, volatility = volatility,
        K = K, p = p, t_max = t_max,
-       A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
+       A0 = A0, B0 = matrix(B0, nrow = K),
        nu = nu, w = w_t[(burn_in+1):(burn_in+t_max),],
        Vh = Vh,
        dist = "multiStudent", SV = TRUE)
@@ -382,7 +382,7 @@ sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
   w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
   w_sqrt_t <- sqrt(w_t)
 
-  # Volatility logvol
+  # Volatility volatility
   if (is.null(sigma_h)){
     Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
@@ -391,32 +391,30 @@ sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 
   ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
-  y_var <- matrix(NA, nrow = t_max, ncol = K)
+  y_var <- matrix(NA, nrow = t_max, ncol = 0.5*K*(K+1))
   volatility <- matrix(NA, nrow = t_max, ncol = K)
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
-  logvol = NULL
+  volatility <- matrix(NA, nrow = t_max, ncol = K)
   inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(exp(0.5*h), nrow = K)
-    Sigma2 <- Sigma %*% t(Sigma)
-    y_var[i,] <- diag(Sigma2)
+    Sigma_t <-  diag(w_sqrt_t[i,]) %*% inv_A0 %*% diag(exp(0.5*h), nrow = K)
+    Sigma2_t <- Sigma_t %*% t(Sigma_t)
+    y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
+    volatility[i,] <- diag(Sigma2_t)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
     y_mean[i,] <- B0 %*% xt + gamma * w_t[i,]
-    ysim <-  B0 %*% xt + gamma * w_t[i,] + w_sqrt_t[i,] * (Sigma %*% eps[i,])
+    ysim <-  B0 %*% xt + gamma * w_t[i,] + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
-    logvol <- rbind(logvol, t(h))
   }
-
-  # cat(" Hyper.multi.SV ", eps[1,1]," ", seednum, "\t")
 
   t_max = t_max - burn_in
   list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
-       y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
+       y0 = y0, y_mean = y_mean, y_var = y_var, volatility = volatility,
        K = K, p = p, t_max = t_max,
-       A0 = A0, B0 = matrix(B0, nrow = K), h = h, Sigma = Sigma,
+       A0 = A0, B0 = matrix(B0, nrow = K), h = h,
        nu = nu, gamma = gamma,
        w = w_t[(burn_in+1):(burn_in+t_max),],
        Vh = Vh,
@@ -462,7 +460,7 @@ sim.VAR.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
   w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
   w_sqrt_t <- sqrt(w_t)
 
-  # Volatility logvol
+  # Volatility volatility
   if (is.null(sigma_h)){
     Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
@@ -471,30 +469,30 @@ sim.VAR.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 
   ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
-  y_var <- matrix(NA, nrow = t_max, ncol = K)
+  y_var <- matrix(NA, nrow = t_max, ncol = 0.5*K*(K+1))
   volatility <- matrix(NA, nrow = t_max, ncol = K)
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
-  logvol = NULL
+  volatility <- matrix(NA, nrow = t_max, ncol = K)
   inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(w_sqrt_t[i,] * exp(0.5*h))
-    Sigma2 <- Sigma %*% t(Sigma)
-    y_var[i,] <- diag(Sigma2)
+    Sigma_t <-  inv_A0 %*% diag(w_sqrt_t[i,] * exp(0.5*h))
+    Sigma2_t <- Sigma_t %*% t(Sigma_t)
+    y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
+    volatility[i,] <- diag(Sigma2_t)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
     y_mean[i,] <- B0 %*% xt
-    ysim <-  B0 %*% xt + inv_A0 %*% (w_sqrt_t[i,] * exp(0.5*h) * eps[i,])
+    ysim <-  B0 %*% xt + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
-    logvol <- rbind(logvol, t(h))
   }
 
   t_max = t_max - burn_in
   list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
-       y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
+       y0 = y0, y_mean = y_mean, y_var = y_var, volatility = volatility,
        K = K, p = p, t_max = t_max,
-       A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
+       A0 = A0, B0 = matrix(B0, nrow = K),
        nu = nu, w = w_t[(burn_in+1):(burn_in+t_max),],
        Vh = Vh,
        dist = "multiOrthStudent", SV = TRUE)
@@ -542,7 +540,7 @@ sim.VAR.Hyper.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
   w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
   w_sqrt_t <- sqrt(w_t)
 
-  # Volatility logvol
+  # Volatility volatility
   if (is.null(sigma_h)){
     Vh <- seq(3e-2, 3e-2, length.out = K)
   } else {
@@ -551,30 +549,30 @@ sim.VAR.Hyper.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 
   ystar <- tail(y0, p)
   y_mean <- matrix(NA, nrow = t_max, ncol = K)
-  y_var <- matrix(NA, nrow = t_max, ncol = K)
+  y_var <- matrix(NA, nrow = t_max, ncol = 0.5*K*(K+1))
   volatility <- matrix(NA, nrow = t_max, ncol = K)
 
   eps <- matrix(rnorm(t_max*K), ncol = K)
-  logvol = NULL
+  volatility <- matrix(NA, nrow = t_max, ncol = K)
   inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
-    Sigma <-  inv_A0 %*% diag(w_sqrt_t[i,] * exp(0.5*h))
-    Sigma2 <- Sigma %*% t(Sigma)
-    y_var[i,] <- diag(Sigma2)
+    Sigma_t <-  inv_A0 %*% diag(w_sqrt_t[i,] * exp(0.5*h))
+    Sigma2_t <- Sigma_t %*% t(Sigma_t)
+    y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
+    volatility[i,] <- diag(Sigma2_t)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
     y_mean[i,] <- B0 %*% xt + inv_A0 %*% (gamma * w_t[i,])
-    ysim <-  B0 %*% xt + inv_A0 %*% (gamma * w_t[i,]  + w_sqrt_t[i,] * exp(0.5*h) * eps[i,])
+    ysim <-  as.numeric(y_mean[i,]) + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
-    logvol <- rbind(logvol, t(h))
   }
 
   t_max = t_max - burn_in
   list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
-       y0 = y0, y_mean = y_mean, y_var = y_var, logvol = logvol,
+       y0 = y0, y_mean = y_mean, y_var = y_var, volatility = volatility,
        K = K, p = p, t_max = t_max,
-       A0 = A0, B0 = matrix(B0, nrow = K), h = h, Sigma = Sigma,
+       A0 = A0, B0 = matrix(B0, nrow = K), h = h,
        nu = nu, gamma = gamma,
        w = w_t[(burn_in+1):(burn_in+t_max),],
        Vh = Vh,
@@ -615,9 +613,9 @@ sim.VAR.Hyper.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 #'   w_t <- rinvgamma(t_max, shape = nu/2, rate = nu/2)
 #'   w_sqrt_t <- sqrt(w_t)
 #'
-#'   # Volatility logvol
+#'   # Volatility volatility
 #'   ystar <- matrix(0, ncol = K, nrow = p)
-#'   logvol = NULL
+#'   volatility = NULL
 #'
 #'   for (i in c(1:t_max)){
 #'     h <- h +  Vh %*% rnorm(K)
@@ -626,13 +624,13 @@ sim.VAR.Hyper.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
 #'     xt <- rbind(1, vec( t(ystar)[,(p+i-1):i]))
 #'     ysim <-  B0 %*% xt  + D %*% z_t[i,] + w_sqrt_t[i] * (Sigma %*% rnorm(K))
 #'     ystar <- rbind(ystar, t(ysim))
-#'     logvol <- rbind(logvol, t(h))
+#'     volatility <- rbind(volatility, t(h))
 #'   }
 #'
 #'   t_max = t_max - burn_in
 #'   list(y = as.matrix(ystar[(p+burn_in+1):(p+burn_in+t_max),], nrow = t_max),
 #'        K = K, p = p, t_max = t_max,
-#'        A0 = A0, B0 = matrix(B0, nrow = K), Sigma = Sigma,
+#'        A0 = A0, B0 = matrix(B0, nrow = K),
 #'        nu = nu, gamma = gamma,
 #'        w = w_t[(burn_in+1):(burn_in+t_max)],
 #'        z = z_t,

@@ -20,7 +20,8 @@ Depends:
     mvnfast,
     fitdistrplus,
     KernSmooth,
-    ash
+    ash,
+    ghyp
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.0.2
 Suggests: knitr,

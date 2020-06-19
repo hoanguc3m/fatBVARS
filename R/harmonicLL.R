@@ -49,6 +49,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
     sum_log <- rep(0, ndraws)
 
     if (is.null(numCores)) numCores <- parallel::detectCores()*0.75
+
     if (SV){
       h_mean <- matrix(apply(H_gen, MARGIN = 2, mean), nrow = K)
 
@@ -91,9 +92,10 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           h0 <- H0_gen[j,]
                                           nu <- Nu_gen[j]
 
-                                          llw <- int_h_Student(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
-                                                               h_mean = h_mean, t_max = t_max, K = K, R = 100)
-
+                                          # llw <- int_h_Student(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                          #                      h_mean = h_mean, t_max = t_max, K = K, R = 100)
+                                          llw <- int_h_Student2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                                                h_mean = h_mean, t_max = t_max, K = K, R = 100)
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
@@ -119,11 +121,14 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
                                           sigma_h <- Sigma_gen[j,]
                                           h0 <- H0_gen[j,]
+
                                           nu <- Nu_gen[j]
 
-
-                                          llw <- int_h_Student(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                          llw <- int_h_Student3(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
                                                                gamma = gamma, h_mean = h_mean, t_max = t_max, K = K, R = 100)
+
+                                          # int_h_Student(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                          #               gamma = gamma, h_mean = h_mean, t_max = t_max, K = K, R = 100)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
@@ -151,8 +156,8 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           nu <- Nu_gen[j,]
 
 
-                                          llw <- int_h_MultiStudent(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
-                                                                    h_mean = h_mean, t_max = t_max, K = K, R = 100)
+                                          llw <- int_h_MultiStudent2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                                             h_mean = h_mean, t_max = t_max, K = K, R = 100)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
@@ -181,7 +186,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           h0 <- H0_gen[j,]
                                           nu <- Nu_gen[j,]
 
-                                          llw <- int_h_MultiStudent(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                          llw <- int_h_MultiStudent2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
                                                                     gamma = gamma, h_mean = h_mean, t_max = t_max, K = K, R = 100)
 
                                           llw +
@@ -210,7 +215,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           nu <- Nu_gen[j,]
 
 
-                                          llw <- int_h_OrthStudent(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                          llw <- int_h_OrthStudent2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
                                                                    h_mean = h_mean, t_max = t_max, K = K, R = 100)
 
                                           llw +
@@ -241,7 +246,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           nu <- Nu_gen[j,]
 
 
-                                          llw <- int_h_OrthStudent(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                          llw <- int_h_OrthStudent3(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
                                                                    gamma = gamma, h_mean = h_mean, t_max = t_max, K = K, R = 100)
 
                                           llw +
@@ -269,7 +274,17 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
         sum_log_prop <- Laplace_approx(param_trans) -
                         apply(Sigma_transform, MARGIN = 1, FUN = sum) # Jacob trans
         sum_log <- parallel::mclapply(1:ndraws,
-                                      FUN = function(j) { log_posterior(mcmc[j,], Chain) },
+                                      FUN = function(j) {
+                                        B <- matrix(B_gen[j,], nrow = K)
+                                        A <- a0toA(A_gen[j,], K)
+                                        sigma <- Sigma_gen[j,]
+                                        sum(mvnfast::dmvn(X = (y - t(xt) %*% t(B)),
+                                                          mu = rep(0,K),
+                                                          sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T)) +
+                                          mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+                                          mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+                                          sum(invgamma::dinvgamma(sigma^2, shape = prior$sigma_T0 * 0.5, rate = prior$sigma_S0 * 0.5, log = T))
+                                      },
                                       mc.cores = numCores)
       } else {
         # Fat tail
@@ -287,9 +302,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           sigma <- Sigma_gen[j,]
                                           nu <- Nu_gen[j]
 
-                                          llw <- int_w_Student(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu,
-                                                               t_max = t_max, K = K, R = 100)
-                                          # int_w_Student2(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu, t_max = t_max, K = K, R = 100)
+                                          llw <- int_w_Student2(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu, t_max = t_max, K = K, R = 100)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
@@ -316,8 +329,8 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           sigma <- Sigma_gen[j,]
                                           nu <- Nu_gen[j]
 
-                                          llw <- int_w_Student(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu, gamma = gamma,
-                                                               t_max = t_max, K = K, R = 100)
+                                          llw <- int_w_Skew(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu, gamma = gamma,
+                                                            t_max = t_max, K = K)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
@@ -343,8 +356,8 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           sigma <- Sigma_gen[j,]
                                           nu <- Nu_gen[j,]
 
-                                          llw <- int_w_MultiStudent(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu,
-                                                                    t_max = t_max, K = K, R = 500)
+                                          llw <- int_w_MultiStudent2(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu,
+                                                                    t_max = t_max, K = K, R = 100)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
@@ -370,8 +383,8 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           sigma <- Sigma_gen[j,]
                                           nu <- Nu_gen[j,]
 
-                                          llw <- int_w_MultiStudent(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu, gamma = gamma,
-                                                                    t_max = t_max, K = K, R = 500)
+                                          llw <- int_w_MultiStudent2(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu, gamma = gamma,
+                                                                    t_max = t_max, K = K, R = 100)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
@@ -397,8 +410,8 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           sigma <- Sigma_gen[j,]
                                           nu <- Nu_gen[j,]
 
-                                          llw <- int_w_MultiOrthStudent(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu,
-                                                                        t_max = t_max, K = K, R = 50)
+                                          llw <- int_w_MultiOrthStudent2(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu,
+                                                                         t_max = t_max, K = K)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
@@ -424,8 +437,8 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           sigma <- Sigma_gen[j,]
                                           nu <- Nu_gen[j,]
 
-                                          llw <- int_w_MultiOrthStudent(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu, gamma = gamma,
-                                                                        t_max = t_max, K = K, R = 500)
+                                          llw <- int_w_MultiOrthStudent2(y = y, xt = xt, A = A, B = B, sigma = sigma, nu = nu, gamma = gamma,
+                                                                 t_max = t_max, K = K)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
@@ -452,8 +465,6 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
     ml = - mean(bigml) # log hamonic mean
     mlstd = sd(bigml)/sqrt(20)
 
-    # return( list( LL = mean(sum_log),
-    #               std = sd(sum_log)/sqrt(ndraws)))
     return( list( LL = ml,
                   std = mlstd))
   } else {

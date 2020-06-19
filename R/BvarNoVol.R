@@ -22,27 +22,32 @@
 #' plot(Chain1)
 #' }
 BVAR.novol <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
-  Start = Sys.time()
-  if (dist == "Gaussian") Chain <- BVAR.Gaussian.novol(y, K, p, y0, prior, inits)
-  if (dist == "Student") Chain <- BVAR.Student.novol(y, K, p, y0, prior, inits)
-  # if (dist == "Skew.Student") Chain <- BVAR.Skew.Student.novol(y, K, p, y0, prior, inits)
-  if (dist == "Hyper.Student") Chain <- BVAR.Hyper.Student.novol(y, K, p, y0, prior, inits)
-  if (dist == "multiStudent") Chain <- BVAR.multiStudent.novol(y, K, p, y0, prior, inits)
-  if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.novol(y, K, p, y0, prior, inits)
-  if (dist == "multiOrthStudent") Chain <- BVAR.multiOrthStudent.novol(y, K, p, y0, prior, inits)
-  if (dist == "Hyper.multiOrthStudent") Chain <- BVAR.Hyper.multiOrthStudent.novol(y, K, p, y0, prior, inits)
-  elapsedTime = Sys.time() - Start
-  print(elapsedTime)
-  out <- list(mcmc = Chain,
-              y = y,
-              y0 = y0,
-              K = K,
-              p = p,
-              dist = dist,
-              prior = prior,
-              inits = inits,
-              esttime = elapsedTime)
-  class(out) <- c("fatBVARSV")
+  if (prior$SV == FALSE){
+    Start = Sys.time()
+    if (dist == "Gaussian") Chain <- BVAR.Gaussian.novol(y, K, p, y0, prior, inits)
+    if (dist == "Student") Chain <- BVAR.Student.novol(y, K, p, y0, prior, inits)
+    # if (dist == "Skew.Student") Chain <- BVAR.Skew.Student.novol(y, K, p, y0, prior, inits)
+    if (dist == "Hyper.Student") Chain <- BVAR.Hyper.Student.novol(y, K, p, y0, prior, inits)
+    if (dist == "multiStudent") Chain <- BVAR.multiStudent.novol(y, K, p, y0, prior, inits)
+    if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.novol(y, K, p, y0, prior, inits)
+    if (dist == "multiOrthStudent") Chain <- BVAR.multiOrthStudent.novol(y, K, p, y0, prior, inits)
+    if (dist == "Hyper.multiOrthStudent") Chain <- BVAR.Hyper.multiOrthStudent.novol(y, K, p, y0, prior, inits)
+    elapsedTime = Sys.time() - Start
+    print(elapsedTime)
+    out <- list(mcmc = Chain,
+                y = y,
+                y0 = y0,
+                K = K,
+                p = p,
+                dist = dist,
+                prior = prior,
+                inits = inits,
+                esttime = elapsedTime)
+    class(out) <- c("fatBVARSV")
+
+  } else {
+    warning("prior$SV is TRUE")
+  }
   return(out)
 }
 

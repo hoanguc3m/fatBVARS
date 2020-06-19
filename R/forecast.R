@@ -56,7 +56,12 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, t_current = NULL, Nfsamp
 
     if (SV) {
         sigma_h <- Sigma_H[i,]
-        h <- H_mat[i,]
+        if (K == 1) {
+          h <- H_mat[i]
+        } else {
+          h <- H_mat[i,]
+        }
+
         if (dist == "Gaussian") {
           pred_tmp <- sim.VAR.Gaussian.SV(K = K, p = p, t_max = t_pred,
                                              b0 = b0, a0 = a0, h = h, sigma_h = sigma_h,
@@ -218,27 +223,29 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current = 
       emp_CDF[j,i] <- ecdf(x = predictive_samples$y_pred[j,i,])(y_obs)
     }
   }
+  if (K > 1){
+    Sigma2 <- array(0, dim = c(K, K, Nfsample))
+    Sigma <- matrix(0, nrow = K, ncol = K)
+    for (j in c(1:t_pred)){
+      for (sample_id in c(1:Nfsample)){
+        Sigma[lower.tri(Sigma, diag = T)] <- predictive_samples$yvar_pred[j,,sample_id]
+        Sigma2[,,sample_id] <- Sigma %*% t(Sigma)
+      }
 
-  Sigma2 <- array(0, dim = c(K, K, Nfsample))
-  Sigma <- matrix(0, nrow = K, ncol = K)
-  for (j in c(1:t_pred)){
-    for (sample_id in c(1:Nfsample)){
-      Sigma[lower.tri(Sigma, diag = T)] <- predictive_samples$yvar_pred[j,,sample_id]
-      Sigma2[,,sample_id] <- Sigma %*% t(Sigma)
-    }
-
-    for (i in c(1: (K-1))){
-      for (k in c((i+1):K)){
-        pred_bidens <- rep(NA, Nfsample)
-        for (sample_id in c(1:Nfsample)){
-          pred_bidens[sample_id] <- dmvn(X = c(y_obs_future[j,i], y_obs_future[j,k]),
-                                          mu = predictive_samples$ymean_pred[j, c(i,k),sample_id],
-                                          sigma = Sigma2[c(i,k),c(i,k), sample_id], log = FALSE, isChol = FALSE)
+      for (i in c(1: (K-1))){
+        for (k in c((i+1):K)){
+          pred_bidens <- rep(NA, Nfsample)
+          for (sample_id in c(1:Nfsample)){
+            pred_bidens[sample_id] <- dmvn(X = c(y_obs_future[j,i], y_obs_future[j,k]),
+                                           mu = predictive_samples$ymean_pred[j, c(i,k),sample_id],
+                                           sigma = Sigma2[c(i,k),c(i,k), sample_id], log = FALSE, isChol = FALSE)
+          }
+          bilog_pred[j,(i-1)*K + k-i*(i+1)*0.5] <- log(mean(pred_bidens))
         }
-        bilog_pred[j,(i-1)*K + k-i*(i+1)*0.5] <- log(mean(pred_bidens))
-     }
+      }
     }
   }
+
   #############################################################
   # Cummulative
   #############################################################
@@ -372,7 +379,7 @@ recursive_seperate <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hype
   t_max = nrow(y)
   if (is.null(outname)) outname = paste("Recursive_", dist, "_", SV, "_", t_start+1, ".RData", sep = "")
   time_current <- t_start
-  y_current <- y[c(1:time_current), ]
+  y_current <- matrix(y[c(1:time_current), ], ncol = K)
   prior <- get_prior(tail(y_current, time_current - p), p = p, dist=dist, SV = SV)
   inits <- get_init(prior, samples = 15000, burnin = 5000, thin = 1)
   if (SV) {
@@ -382,7 +389,7 @@ recursive_seperate <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hype
     Chain <- BVAR.novol(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,
                         y0 = head(y_current, p), prior = prior, inits = inits)
   }
-  y_obs_future <- y[c((time_current+1):(time_current+t_pred)), ]
+  y_obs_future <- matrix(y[c((time_current+1):(time_current+t_pred)), ],ncol = K)
   forecast_err <- forecast_density(Chain = Chain, y_obs_future = y_obs_future)
   out_recursive <- list(time_id = time_current+1,
                         forecast_err = forecast_err,

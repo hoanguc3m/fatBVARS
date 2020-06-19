@@ -169,7 +169,7 @@ get_prior <- function(y, p, priorStyle = c("Minnesota"),
   # A mean and var
   a0 <- rep(0, numa) # A \sim N(0,1000I)
 
-  V_a_prior <- diag(x = rep(1000,numa), nrow = numa, ncol = numa)
+  V_a_prior <- diag(x = rep(1,numa), nrow = numa, ncol = numa)
 
   sigma <- prior_sub$sigma
 

@@ -230,10 +230,10 @@ BVAR.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
 
     # Sample vol
     ytilde <- A%*% (yt - B %*% xt)/w_sqrt
-    aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
-    h <- aux$Sigtdraw
-    sqrtvol <- aux$sigt
-    sigma_h <- aux$sigma_h
+    # aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
+    # h <- aux$Sigtdraw
+    # sqrtvol <- aux$sigt
+    # sigma_h <- aux$sigma_h
 
     for (i in c(1:K)){
       svdraw[[i]] <- Stochvol::svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
@@ -415,10 +415,10 @@ BVAR.Hyper.Student.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits 
 
     # Sample vol
     ytilde <- A%*% (yt - B %*% xt - D%*% w)/w_sqrt
-    aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
-    h <- aux$Sigtdraw
-    sqrtvol <- aux$sigt
-    sigma_h <- aux$sigma_h
+    # aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
+    # h <- aux$Sigtdraw
+    # sqrtvol <- aux$sigt
+    # sigma_h <- aux$sigma_h
 
     for (i in c(1:K)){
       svdraw[[i]] <- Stochvol::svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
@@ -604,10 +604,10 @@ BVAR.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
 
     # Sample vol
     ytilde <- A%*% ((yt - B %*%xt)/ w_sqrt)
-    aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
-    h <- aux$Sigtdraw
-    sqrtvol <- aux$sigt
-    sigma_h <- aux$sigma_h
+    # aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
+    # h <- aux$Sigtdraw
+    # sqrtvol <- aux$sigt
+    # sigma_h <- aux$sigma_h
 
     for (i in c(1:K)){
       svdraw[[i]] <- Stochvol::svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
@@ -817,10 +817,10 @@ BVAR.Hyper.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, i
 
     # Sample vol
     ytilde <- A%*% ((yt - B %*%xt - D%*% w)/ w_sqrt)
-    aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
-    h <- aux$Sigtdraw
-    sqrtvol <- aux$sigt
-    sigma_h <- aux$sigma_h
+    # aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
+    # h <- aux$Sigtdraw
+    # sqrtvol <- aux$sigt
+    # sigma_h <- aux$sigma_h
 
     for (i in c(1:K)){
       svdraw[[i]] <- Stochvol::svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
@@ -1040,11 +1040,6 @@ BVAR.Hyper.multiStudent.Stochvol <- function(y, K, p, y0 = NULL, prior = NULL, i
 
 #     # Sample vol
 #     ytilde <- A%*% (yt - B %*% xt- - D%*% z)/w_sqrt    # change from Gaussian
-#     aux <- sample_h_ele( ytilde, sigma_h,  h, K, t_max)
-#     h <- aux$Sigtdraw
-#     sqrtvol <- aux$sigt
-#     sigma_h <- aux$sigma_h
-
 #     for (i in c(1:K)){
 #       svdraw[[i]] <- Stochvol::svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
 #                                startlatent = latent(svdraw[[i]]), priormu = priormu,

@@ -71,7 +71,7 @@ sample_A_ele <- function(ysub, xsub, a_sub, V_a_sub){
 }
 
 #' @export
-sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K),
+sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
                          h = matrix(0, nrow = t_max, ncol = K), K, t_max){
   tmp <- getmix()
   q <- tmp$q
@@ -80,8 +80,8 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K),
   Zs <- matrix(1,t_max,1) %x% diag(K)
 
 
-  sigma_prmean <- rep(0,K) # mean h_0
-  sigma_prvar <- 10*diag(K)   # variance h_0
+  sigma_prmean <- h0_mean # mean h_0
+  sigma_prvar <- 1*diag(K)   # variance h_0
 
   aux <- sigmahelper4(t(ytilde^2), q, m_mean, u2, h, Zs, sigma_h, sigma_prmean, sigma_prvar)
   h <- aux$Sigtdraw

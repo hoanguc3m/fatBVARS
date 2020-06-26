@@ -381,7 +381,12 @@ recursive_seperate <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hype
   time_current <- t_start
   y_current <- matrix(y[c(1:time_current), ], ncol = K)
   prior <- get_prior(tail(y_current, time_current - p), p = p, dist=dist, SV = SV)
-  inits <- get_init(prior, samples = 15000, burnin = 5000, thin = 1)
+  if (nrow(y) < 300) {
+    inits <- get_init(prior, samples = 30000, burnin = 10000, thin = 1)
+    } else {
+    inits <- get_init(prior, samples = 15000, burnin = 5000, thin = 1)
+  }
+
   if (SV) {
     Chain <- BVAR.SV(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,
                      y0 = head(y_current, p), prior = prior, inits = inits)

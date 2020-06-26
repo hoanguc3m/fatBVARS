@@ -202,7 +202,7 @@ sim.VAR.Hyper.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   if (length(gamma) == 1){
     gamma <- seq(-gamma, gamma, length.out = K)
   }
-  D <- diag(gamma)
+  D <- diag(gamma, nrow = K)
   # Tail of student
   w_t <- rinvgamma(t_max, shape = nu/2, rate = nu/2)
   w_sqrt_t <- sqrt(w_t)
@@ -340,7 +340,7 @@ sim.VAR.Hyper.multiStudent.novol <- function(K = 5, p = 2, t_max = 1000,
   if (length(gamma) == 1){
     gamma <- seq(-gamma, gamma, length.out = K)
   }
-  D <- diag(gamma)
+  D <- diag(gamma, nrow = K)
   # Tail of student
   if (length(nu) == 1) nu = rep(nu,K)
   w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
@@ -478,7 +478,7 @@ sim.VAR.Hyper.multiOrthStudent.novol <- function(K = 5, p = 2, t_max = 1000,
   if (length(gamma) == 1){
     gamma <- seq(-gamma, gamma, length.out = K)
   }
-  D <- diag(gamma)
+  D <- diag(gamma, nrow = K)
   # Tail of student
   if (length(nu) == 1) nu = rep(nu,K)
   w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
@@ -540,7 +540,7 @@ sim.VAR.Hyper.multiOrthStudent.novol <- function(K = 5, p = 2, t_max = 1000,
 #   if (length(gamma) == 1){
 #     gamma <- seq(-gamma, gamma, length.out = K)
 #   }
-#   D <- diag(gamma)
+#   D <- diag(gamma, nrow = K)
 #   z_t <- matrix(abs(rnorm(K*t_max)), ncol = K)
 #   # Tail of student
 #   w_t <- rinvgamma(t_max, shape = nu/2, rate = nu/2)

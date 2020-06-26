@@ -241,7 +241,7 @@ BVAR.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     B <- Vec_to_Mat(b_sample, K,p)
 
     # Sample vol
-    ytilde <- A%*% (yt - B %*% xt)/w_sqrt
+    ytilde <- A%*% ((yt - B %*% xt)/w_sqrt)
     aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
@@ -423,10 +423,11 @@ BVAR.Hyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
     V_gamma_post <- solve(V_gamma_post_inv)
     gamma_post <- V_gamma_post %*% ( solve(V_gamma_prior) %*% gamma_prior + gamma_post)
     gamma <- as.numeric(gamma_post + t(chol(V_gamma_post)) %*% rnorm(K))
+    # gamma <- rep(0.00,K)
     D <- diag(gamma, nrow = K)
 
     # Sample vol
-    ytilde <- A%*% (yt - B %*% xt  - D%*% w)/w_sqrt
+    ytilde <- A%*% ((yt - B %*% xt  - D%*% w)/w_sqrt)
     aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
@@ -462,6 +463,38 @@ BVAR.Hyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
     A_post[upper.tri(A)] <- a_sample
     A <- t(A_post)
     diag(A) <- 1
+
+    # # Sample w
+    # u <- (yt - B %*%xt)
+    # for (i in c(1:t_max)){
+    #   w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A) %*% u[,i])
+    # }
+    # w <- reprow(w_sample, K)
+    # w_sqrt <- sqrt(w)
+
+    # # Sample w
+    # u <- (yt - B %*%xt)
+    # for (i in c(1:t_max)){
+    #   Sigma2_inv_t = (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A)
+    #   w_temp <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% Sigma2_inv_t %*% u[,i])
+    #   num_mh =  dinvgamma(w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
+    #     ( - 0.5 * K * log(w_temp) - 0.5 * t((u[,i] - gamma*w_temp)) %*% Sigma2_inv_t %*% (u[,i] - gamma*w_temp) / w_temp) - # posterior
+    #      dinvgamma(w_temp,  shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% Sigma2_inv_t %*% u[,i] ,log = T) # proposal
+    #   denum_mh = dinvgamma(w_sample[i], shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
+    #     ( - 0.5 * K * log(w_sample[i]) - 0.5 * t((u[,i] - gamma*w_sample[i])) %*% Sigma2_inv_t %*% (u[,i] - gamma*w_sample[i]) / w_sample[i]) - # posterior
+    #     dinvgamma(w_sample[i],  shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% Sigma2_inv_t %*% u[,i] ,log = T) # proposal
+    #   alpha = num_mh - denum_mh;
+    #   temp = log(runif(1))
+    #   if (alpha > temp){
+    #     w_sample[i] <- w_temp
+    #     w[,i] <- w_temp
+    #     w_sqrt[,i] <- sqrt(w_temp)
+    #     acount_w[i] <- acount_w[i] + 1
+    #   }
+    #
+    # }
+
+
 
     # Sample w
     u <- (yt - B %*%xt)
@@ -1024,7 +1057,7 @@ BVAR.multiOrthStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = N
     B <- Vec_to_Mat(b_sample, K,p)
 
     # Sample vol
-    ytilde <- A %*% (yt - B %*% xt) / w_sqrt
+    ytilde <- (A %*% (yt - B %*% xt)) / w_sqrt
     aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)

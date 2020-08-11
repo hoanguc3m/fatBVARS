@@ -44,6 +44,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
     if (ncol(Nu_gen) == 1) colnames(Nu_gen) <- "nu"
     Nu_transform <- log(Nu_gen)
 
+    W_mat <- get_post(mcmc, element = "w")
     W_gen <- get_post(mcmc, element = "w")
 
     sum_log <- rep(0, ndraws)
@@ -71,18 +72,20 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         int_h(ytilde = ytilde, h0 = h0, sigma_h = sigma_h, t_max = t_max, K = K) +
                                           mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                           mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                          sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
-                                          sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T))
+                                          sum(dnorm(sqrt(sigma_h), log = T)) +
+                                          sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T))
 
                                       },
                                       mc.cores = numCores)
       } else {
+        w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
 
         if (dist == "Student") {
           param_trans <- cbind(B_gen, A_gen, H0_gen, Sigma_transform, Nu_transform)
           sum_log_prop <- Laplace_approx(param_trans) -
             apply(Sigma_transform, MARGIN = 1, FUN = sum) -
             apply(Nu_transform, MARGIN = 1, FUN = sum) # Jacob trans
+
 
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
@@ -95,12 +98,12 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           # llw <- int_h_Student(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
                                           #                      h_mean = h_mean, t_max = t_max, K = K, R = 100)
                                           llw <- int_h_Student2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
-                                                                h_mean = h_mean, t_max = t_max, K = K, R = 100)
+                                                                h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
-                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
+                                            sum(dnorm(sqrt(sigma_h), log = T)) +
+                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
                                             dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)
                                         },
                                         mc.cores = numCores)
@@ -133,8 +136,8 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
-                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
+                                            sum(dnorm(sqrt(sigma_h), log = T)) +
+                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
                                             dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },
@@ -162,8 +165,8 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
-                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
+                                            sum(dnorm(sqrt(sigma_h), log = T)) +
+                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
                                         },
                                         mc.cores = numCores)
@@ -192,8 +195,8 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
-                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
+                                            sum(dnorm(sqrt(sigma_h), log = T)) +
+                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },
@@ -221,8 +224,8 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
-                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
+                                            sum(dnorm(sqrt(sigma_h), log = T)) +
+                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
                                         },
                                         mc.cores = numCores)
@@ -252,8 +255,8 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
-                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
+                                            sum(dnorm(sqrt(sigma_h), log = T)) +
+                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },

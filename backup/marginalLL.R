@@ -48,10 +48,8 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
     Sigma_mat <- get_post(mcmc, element = "sigma") # No SV is sigma / SV is sigma^2
     # Sigma_H <- sqrt(get_post(mcmc, element = "sigma_h")) # SV
     if (SV) {
-      # Sigma_gen_list <- InvGamma_approx(Sigma_mat, ndraws = ndraws)
-      # Sigma_gen <- Sigma_gen_list$new_samples
-      Sigma_gen_list <- Normal_approx(Sigma_mat^0.5, ndraws = ndraws) # Change to normal
-      Sigma_gen <- Sigma_gen_list$new_samples^2 # Change to normal
+      Sigma_gen_list <- InvGamma_approx(Sigma_mat, ndraws = ndraws)
+      Sigma_gen <- Sigma_gen_list$new_samples
     } else {
       Sigma_gen_list <- InvGamma_approx(Sigma_mat^2, ndraws = ndraws)
       Sigma_gen <- sqrt(Sigma_gen_list$new_samples)
@@ -74,7 +72,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
       H0_gen <- H0_gen_list$new_samples
       sum_log_prop <- sum_log_prop + H0_gen_list$sum_log_prop
 
-      #################### End prior ###########################
+      #################### prior ###########################
 
       if (dist == "Gaussian") {
         # param <- cbind(B_gen, A_gen, Sigma_gen)
@@ -85,35 +83,23 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         A <- a0toA(A_gen[j,], K)
                                         sigma_h <- Sigma_gen[j,]
                                         h0 <- H0_gen[j,]
-
                                         ytilde <- as.numeric(A %*% (yt - B %*% xt)) # from dim K * t_max to (Kt_max) * 1
-                                        int_h(ytilde = as.numeric(ytilde), h0 = h0, sigma_h = sigma_h, t_max = t_max, K = K) +
+
+                                        # int_h(ytilde = ytilde, h0 = h0, sigma_h = sigma_h, t_max = t_max, K = K)
+                                        # int_h2(ytilde = A %*% (yt - B %*% xt), h0 = h0, sigma_h = sigma_h, h = h_mean, t_max = t_max, K = K)
+
+                                        int_h(ytilde = ytilde, h0 = h0, sigma_h = sigma_h, t_max = t_max, K = K) +
                                           mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                           mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                          sum(dnorm(sqrt(sigma_h), log = T)) +
-                                          sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T))
-                                        # int_h(ytilde = ytilde, h0 = h0, sigma_h = sigma_h, t_max = t_max, K = K, R = 100)
-                                        # PF_GaussianSV(ytilde = ytilde, h0 = h0, sigma_h = sigma_h, noParticles = 1000)$logLikelihood
-
-                                        # ytilde <- A %*% (yt - B %*% xt) # dim K * t_max
-                                        # lluni <- rep(0,K)
-                                        # for (i in c(1:K)){
-                                        #   lluni[i] <- PF_GaussianSV(ytilde = ytilde[i,], h0 = h0[i], sigma_h = sigma_h[i], noParticles = 1000)$logLikelihood
-                                        # }
-                                        # sum(lluni) +
-                                        #   mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
-                                        #   mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                        #   sum(dnorm(sqrt(sigma_h), log = T)) +
-                                        #   sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T))
-
+                                          sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
+                                          sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T))
 
                                       },
                                       mc.cores = numCores)
       } else {
-        Nu_gen_list <- Nu_Gamma_approx(Nu_mat, ndraws = ndraws)
+        Nu_gen_list <- Gamma_approx(Nu_mat, ndraws = ndraws)
         Nu_gen <- Nu_gen_list$new_samples
         sum_log_prop <- sum_log_prop + Nu_gen_list$sum_log_prop
-        w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
 
         if (dist == "Student") {
           sum_log <- parallel::mclapply(1:ndraws,
@@ -125,13 +111,13 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           nu <- Nu_gen[j]
 
                                           llw <- int_h_Student2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
-                                                                h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+                                                                h_mean = h_mean, t_max = t_max, K = K, R = 100)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
+                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
                                             dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)
                                         },
                                         mc.cores = numCores)
@@ -151,13 +137,13 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
 
                                           llw <- int_h_Student3(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
-                                                               gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+                                                               gamma = gamma, h_mean = h_mean, t_max = t_max, K = K, R = 100)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
+                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
                                             dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },
@@ -174,14 +160,14 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           nu <- Nu_gen[j,]
 
 
-                                          llw <- int_h_MultiStudent2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
-                                                                    h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+                                          llw <- int_h_MultiStudent(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                                                    h_mean = h_mean, t_max = t_max, K = K, R = 100)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
+                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
                                         },
                                         mc.cores = numCores)
@@ -200,14 +186,14 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           h0 <- H0_gen[j,]
                                           nu <- Nu_gen[j,]
 
-                                          llw <- int_h_MultiStudent2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
-                                                                    gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+                                          llw <- int_h_MultiStudent(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                                                    gamma = gamma, h_mean = h_mean, t_max = t_max, K = K, R = 100)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
+                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },
@@ -226,19 +212,13 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
 
                                           llw <- int_h_OrthStudent2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
-                                                                    h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+                                                                    h_mean = h_mean, t_max = t_max, K = K, R = 100)
 
-                                          # ytilde <- A %*% (yt - B %*% xt) # dim K * t_max
-                                          # lluni <- rep(0,K)
-                                          # for (i in c(1:K)){
-                                          #   lluni[i] <- PF_StudentSV(ytilde = ytilde[i,], h0 = h0[i], sigma_h = sigma_h[i], nu = nu[i], noParticles = 1000)$logLikelihood
-                                          # }
-                                          # sum(lluni) +
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
+                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
                                         },
                                         mc.cores = numCores)
@@ -259,20 +239,13 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
 
                                           llw <- int_h_OrthStudent3(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
-                                                                    gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+                                                                    gamma = gamma, h_mean = h_mean, t_max = t_max, K = K, R = 100)
 
-                                          # ytilde <- A %*% (yt - B %*% xt) # dim K * t_max
-                                          # lluni <- rep(0,K)
-                                          # for (i in c(1:K)){
-                                          #   lluni[i] <- PF_uniSkewSV(ytilde = ytilde[i,], h0 = h0[i], sigma_h = sigma_h[i], nu = nu[i], gamma = gamma[i], noParticles = 1000)$logLikelihood
-                                          #   #PF_StudentSV(ytilde = ytilde[i,], h0 = h0[i], sigma_h = sigma_h[i], nu = nu[i], noParticles = 1000)$logLikelihood
-                                          # }
-                                          # sum(lluni) +
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                            sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(invgamma::dinvgamma(sigma_h, shape = 1* 0.5, rate = 0.0001 * 0.5, log = T)) +
+                                            sum(dnorm(h0, mean = 0, sd = sqrt(10), log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },
@@ -304,7 +277,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                        mc.cores = numCores)
       } else {
         # Fat tail
-        Nu_gen_list <- Nu_Gamma_approx(Nu_mat, ndraws = ndraws)
+        Nu_gen_list <- Gamma_approx(Nu_mat, ndraws = ndraws)
         Nu_gen <- Nu_gen_list$new_samples
         sum_log_prop <- sum_log_prop + Nu_gen_list$sum_log_prop
 
@@ -754,8 +727,8 @@ int_h_Student <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mea
 }
 
 #' @export
-int_h_Student2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100, burn_in = 100){
-  y_tilde = A %*% ( (yt - B %*% xt) / reprow(sqrt(w_mean),K))
+int_h_Student2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, t_max, K, R = 100, burn_in = 100){
+  y_tilde = A %*% (yt - B %*% xt)
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
   Hh = sparseMatrix(i = 1:(t_max*K),
@@ -774,36 +747,64 @@ int_h_Student2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_me
   count = 0
   while ( e_h> .01 & count < max_loop){
     einvhts2 = exp(-ht)*s2
-    gh = - HinvSH_h %*% (ht-alph) - 0.5 * (1-einvhts2)
-    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+    nueinvhts2 = nu + einvhts2
+    gh = - HinvSH_h %*% (ht-alph) - 0.5 + 0.5 * (nu+1) * einvhts2 / nueinvhts2
+    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = 0.5 * (nu+K) * nu * einvhts2 / nueinvhts2^2)
     newht = ht - Matrix::solve(Gh,gh)
     e_h = max(abs(newht-ht));
     ht = newht;
     count = count + 1;
+    # cat(e_h, "\t")
   }
-  if (count == max_loop){
-    ht = rep(h0,t_max)
-    einvhts2 = exp(-ht)*s2
-    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
-  }
+  # if (count == max_loop){
+  #   ht = rep(h0,t_max)
+  #   einvhts2 = exp(-ht)*s2
+  #   Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+  # }
 
   Kh = -Gh
+  #CovMat <- diag(solve(Kh))
   CKh = Matrix::t(Matrix::chol(Kh))
 
   c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
+  # hgenMat <- matrix(NA, nrow = K*t_max, ncol = R)
+  # w_sample <- rep(0, t_max)
+  # h <- h_mean
+  # for (r in c(1: (burn_in + R*10))){
+  #   u <- (yt - B %*%xt)
+  #   for (i in c(1:t_max)){
+  #     w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A) %*% u[,i])
+  #   }
+  #   w <- reprow(w_sample, K)
+  #   w_sqrt <- sqrt(w)
+  #
+  #   # Sample vol
+  #   ytilde <- A%*% (yt - B %*% xt)/w_sqrt
+  #   aux <- sample_h_ele( ytilde, diag(sigma_h),  h, K, t_max)
+  #   h <- aux$Sigtdraw
+  #
+  #   if (r > burn_in){
+  #     if (r %% 10 == 0){
+  #       hc <- as.numeric(h)
+  #       hgenMat[, (r-burn_in) %/% 10] <- hc
+  #     }
+  #   }
+  #
+  #
+  # }
+
   store_llike = rep(0,R)
-  y_tilde = A %*% ( (yt - B %*% xt) ) # is Student distribution
   for (i in c(1:R)){
     hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
     hnew <- matrix(hc, nrow = K)
 
     allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
-      mvnfast::dmvt(X = y_tilde[,t],
-                    mu = rep(0,K),
-                    sigma = diag(exp(hnew[,t]/2), nrow = K), df = nu, log = T, isChol = T)
-    })) )
+                            mvnfast::dmvt(X = y_tilde[,t],
+                                        mu = rep(0,K),
+                                        sigma = diag(exp(hnew[,t]/2), nrow = K), df = nu, log = T, isChol = T)
+                                  })) )
 
 
     store_llike[i] = as.numeric(allw + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
@@ -816,10 +817,9 @@ int_h_Student2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_me
   return(llk)
 }
 
-#' @export
-int_h_Student3 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100, burn_in = 100){
+int_h_Student3 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, t_max, K, R = 100, burn_in = 100){
   u <- yt - B %*% xt
-  y_tilde = A %*% (( u )  / reprow(sqrt(w_mean),K))
+  y_tilde = A %*% u
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
   Hh = sparseMatrix(i = 1:(t_max*K),
@@ -838,24 +838,52 @@ int_h_Student3 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_me
   count = 0
   while ( e_h> .01 & count < max_loop){
     einvhts2 = exp(-ht)*s2
-    gh = - HinvSH_h %*% (ht-alph) - 0.5 * (1-einvhts2)
-    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
-    newht = ht - Matrix::solve(Gh,gh)
+    nueinvhts2 = nu + einvhts2
+    gh = - HinvSH_h %*% (ht-alph) - 0.5 + 0.5 * (nu+1) * einvhts2 / nueinvhts2
+    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = 0.5 * (nu+K) * nu * einvhts2 / nueinvhts2^2)
+    newht = ht - 1 * Matrix::solve(Gh,gh)
     e_h = max(abs(newht-ht));
     ht = newht;
     count = count + 1;
+    # cat(e_h, "\t")
   }
-  if (count == max_loop){
-    ht = rep(h0,t_max)
-    einvhts2 = exp(-ht)*s2
-    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
-  }
+  # if (count == max_loop){
+  #   ht = rep(h0,t_max)
+  #   einvhts2 = exp(-ht)*s2
+  #   Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+  # }
 
   Kh = -Gh
+  #CovMat <- diag(solve(Kh))
   CKh = Matrix::t(Matrix::chol(Kh))
 
   c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
+
+  # hgenMat <- matrix(NA, nrow = K*t_max, ncol = R)
+  # w_sample <- rep(0, t_max)
+  # for (r in c(1: (burn_in + R*10))){
+  #   u <- (yt - B %*%xt)
+  #   for (i in c(1:t_max)){
+  #     w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A) %*% u[,i])
+  #   }
+  #   w <- reprow(w_sample, K)
+  #   w_sqrt <- sqrt(w)
+  #
+  #   # Sample vol
+  #   ytilde <- A%*% (yt - B %*% xt)/w_sqrt
+  #   aux <- sample_h_ele( ytilde, diag(sigma_h),  h, K, t_max)
+  #   h <- aux$Sigtdraw
+  #
+  #   if (r > burn_in){
+  #     if (r %% 10 == 0){
+  #       hc <- as.numeric(h)
+  #       hgenMat[, (r-burn_in) %/% 10] <- hc
+  #     }
+  #   }
+  #
+  #
+  # }
 
   store_llike = rep(0,R)
   for (i in c(1:R)){
@@ -864,8 +892,8 @@ int_h_Student3 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_me
 
     allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
       ghyp::dghyp(u[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
-                                             sigma = solve(A) %*% diag(exp(hnew[,t]), nrow = K) %*% t(solve(A)),
-                                             gamma = gamma), logvalue = T)
+                                                 sigma = solve(A) %*% diag(exp(hnew[,t])) %*% t(solve(A)),
+                                                 gamma = gamma), logvalue = T)
 
 
     })) )
@@ -880,7 +908,6 @@ int_h_Student3 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_me
   llk = log(mean(exp(store_llike-maxllike))) + maxllike
   return(llk)
 }
-
 
 
 int_h_MultiStudent <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, t_max, K, R = 10){
@@ -905,9 +932,9 @@ int_h_MultiStudent <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), 
 }
 
 #' @export
-int_h_MultiStudent2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100, burn_in = 100){
-  u <- (yt - B %*% xt - w_mean * gamma)
-  y_tilde <- (A %*% u) / sqrt(w_mean)
+int_h_MultiStudent2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, t_max, K, R = 100, burn_in = 100){
+  u <- (yt - B %*% xt)
+  y_tilde <- (A %*% u)
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
   Hh = sparseMatrix(i = 1:(t_max*K),
@@ -926,24 +953,79 @@ int_h_MultiStudent2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K),
   count = 0
   while ( e_h> .01 & count < max_loop){
     einvhts2 = exp(-ht)*s2
-    gh = - HinvSH_h %*% (ht-alph) - 0.5 * (1-einvhts2)
-    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+    nueinvhts2 = rep(nu,t_max) + einvhts2
+    gh = - HinvSH_h %*% (ht-alph) - 0.5 + 0.5 * rep((nu+1),t_max) * einvhts2 / nueinvhts2
+    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = 0.5 * rep((nu+K) * nu,t_max) * einvhts2 / nueinvhts2^2)
     newht = ht - Matrix::solve(Gh,gh)
     e_h = max(abs(newht-ht));
     ht = newht;
     count = count + 1;
-  }
-  if (count == max_loop){
-    ht = rep(h0,t_max)
-    einvhts2 = exp(-ht)*s2
-    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+    # cat(e_h, "\t")
   }
 
   Kh = -Gh
+  #CovMat = diag(solve(Kh))
   CKh = Matrix::t(Matrix::chol(Kh))
 
   c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
+
+  # hgenMat <- matrix(NA, nrow = K*t_max, ncol = R)
+  # w <- matrix(1, nrow = K, ncol = t_max)
+  # w_sqrt <- matrix(1, nrow = K, ncol = t_max)
+  # w_sqrt_inv <- matrix(1, nrow = K, ncol = t_max)
+  # h <- h_mean
+  # sqrtvol <- exp(h_mean/2)
+  # u <-  A %*% (yt - B %*%xt)
+  # u_proposal <- A %*% (yt - B %*%xt)
+  #
+  # for (r in c(1: (burn_in + R*10))){
+  #   # Sample w
+  #   for (i in c(1:t_max)){
+  #     a_target <- (nu*0.5 + 1*0.5) * 0.75 # adjust by 0.75
+  #     b_target <- (nu*0.5 + 0.5 * u_proposal[,i]^2 / sqrtvol[,i]^2) * 0.75 # adjust by 0.75
+  #     w_temp = w[,i]
+  #     for (k in c(1:K)){
+  #       w_temp[k] <- rinvgamma(1, shape = a_target[k], rate = b_target[k])
+  #     }
+  #     log_w_temp <- log(w_temp)
+  #     w_temp_sqrt_inv = 1 / sqrt(w_temp)
+  #
+  #     #total_log_dens <- (-0.5) * sum(log(w[,i])) - 0.5 * t(u[,i]) %*% diag(w_sqrt_inv[,i]) %*% Sigma2_inv %*% diag(w_sqrt_inv[,i]) %*% u[,i]  + sum(dinvgamma(w[,i], shape = nu*0.5, rate = nu*0.5, log = T))
+  #     Sigma2_inv_t = t(A)%*% diag(1/exp(h[,i])) %*% A
+  #     num_mh =  sum(dinvgamma(w_temp, shape = nu*0.5, rate = nu*0.5, log = T)) +  # prior
+  #       ( - 0.5 * sum(log_w_temp) - 0.5 * t(u[,i]) %*% diag(w_temp_sqrt_inv) %*% Sigma2_inv_t %*% diag(w_temp_sqrt_inv) %*% u[,i]) - # posterior
+  #       sum( dinvgamma(w_temp, shape = a_target, rate = b_target, log = T)) # proposal
+  #     denum_mh = sum(dinvgamma(w[,i], shape = nu*0.5, rate = nu*0.5, log = T)) + # prior
+  #       (-0.5) * sum(log(w[,i])) - 0.5 * t(u[,i]) %*% diag(w_sqrt_inv[,i]) %*% Sigma2_inv_t %*% diag(w_sqrt_inv[,i]) %*% u[,i]  - # posterior
+  #       sum( dinvgamma(w[,i], shape = a_target, rate = b_target, log = T))
+  #     alpha = num_mh - denum_mh;
+  #     temp = log(runif(1))
+  #     if (alpha > temp){
+  #       w[,i] <- w_temp
+  #       w_sqrt[,i] <- sqrt(w_temp)
+  #       w_sqrt_inv[,i] <- 1/sqrt(w_temp)
+  #     }
+  #   }
+  #
+  #   # Sample vol
+  #   ytilde <- A %*% (yt - B %*% xt) / w_sqrt
+  #   aux <- sample_h_ele( ytilde, diag(sigma_h),  h, K, t_max)
+  #   h <- aux$Sigtdraw
+  #   sqrtvol <- aux$sigt
+  #
+  #   if (r > burn_in){
+  #     if (r %% 10 == 0){
+  #       hc <- as.numeric(h)
+  #       hgenMat[, (r-burn_in) %/% 10] <- hc
+  #     }
+  #   }
+  #
+  #
+  # }
+  # plot(ht, apply(hgenMat, MARGIN = 1, FUN = mean))
+  # abline(a = 0, b = 1, col = "red")
+  # plot(CovMat, apply(hgenMat, MARGIN = 1, FUN = var))
 
   store_llw = rep(0,R)
   for (i in c(1:R)){
@@ -951,9 +1033,9 @@ int_h_MultiStudent2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K),
     hnew <- matrix(hc, nrow = K)
 
     allw <- int_w_MultiStudent2(y = y, xt = xt, A = A, B = B, sigma = exp(hnew/2), nu = nu, gamma = gamma,
-                                t_max = t_max, K = K, R = 100)
+                                t_max = t_max, K = K, R = 10)
     store_llw[i] = as.numeric(allw + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
-                                (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
+                                  (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
   }
 
   maxllike = max(store_llw)
@@ -984,10 +1066,9 @@ int_h_OrthStudent <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h
   return(llk)
 }
 
-#' @export
-int_h_OrthStudent2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100, burn_in = 100){
+int_h_OrthStudent2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, t_max, K, R = 100, burn_in = 100){
   u <- (yt - B %*% xt)
-  y_tilde <- (A %*% u) / sqrt(w_mean)
+  y_tilde <- (A %*% u)
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
   Hh = sparseMatrix(i = 1:(t_max*K),
@@ -1006,37 +1087,63 @@ int_h_OrthStudent2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), 
   count = 0
   while ( e_h> .01 & count < max_loop){
     einvhts2 = exp(-ht)*s2
-    gh = - HinvSH_h %*% (ht-alph) - 0.5 * (1-einvhts2)
-    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+    nueinvhts2 = rep(nu,t_max) + einvhts2
+    gh = - HinvSH_h %*% (ht-alph) - 0.5 + 0.5 * rep((nu+1),t_max) * einvhts2 / nueinvhts2
+    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = 0.5 * rep((nu+K) * nu,t_max) * einvhts2 / nueinvhts2^2)
     newht = ht - Matrix::solve(Gh,gh)
     e_h = max(abs(newht-ht));
     ht = newht;
     count = count + 1;
-  }
-  if (count == max_loop){
-    ht = rep(h0,t_max)
-    einvhts2 = exp(-ht)*s2
-    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+    # cat(e_h, "\t")
   }
 
   Kh = -Gh
+  #CovMat = diag(solve(Kh))
   CKh = Matrix::t(Matrix::chol(Kh))
 
   c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
+  # hgenMat <- matrix(NA, nrow = K*t_max, ncol = R)
+  # w <- matrix(NA, nrow = K, ncol = t_max)
+  # h <- h_mean
+  # u <-  A %*% (yt - B %*%xt)
+  #
+  # for (r in c(1: (burn_in + R*10))){
+  #   for (i in c(1:t_max)){
+  #     w[,i] <- mapply(rinvgamma, n = 1, shape = nu*0.5 + 1*0.5, rate = nu*0.5 + 0.5 * (u[,i]^2) / exp(h[,i]))
+  #   }
+  #   w_sqrt <- sqrt(w)
+  #
+  #   # Sample vol
+  #   ytilde <- A %*% (yt - B %*% xt) / w_sqrt
+  #   aux <- sample_h_ele( ytilde, diag(sigma_h),  h, K, t_max)
+  #   h <- aux$Sigtdraw
+  #
+  #   if (r > burn_in){
+  #     if (r %% 10 == 0){
+  #       hc <- as.numeric(h)
+  #       hgenMat[, (r-burn_in) %/% 10] <- hc
+  #     }
+  #   }
+  #
+  #
+  # }
+  # plot(ht, apply(hgenMat, MARGIN = 1, FUN = mean))
+  # abline(a = 0, b = 1, col = "red")
+  # plot(CovMat, apply(hgenMat, MARGIN = 1, FUN = var))
+
   store_llike = rep(0,R)
-  y_tilde = A %*% ( (yt - B %*% xt) ) # is ortho-Student distribution
   for (i in c(1:R)){
     hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
     hnew <- matrix(hc, nrow = K)
     allw <- rep(0,K)
     for (k in c(1:K)){
-      allw[k] <- sum(dt(y_tilde[k,]/exp(hnew[k,]/2), df = nu[k], log = T)) - 0.5 * sum(hnew[k,])
+        allw[k] <- sum(dt(y_tilde[k,]/exp(hnew[k,]/2), df = nu[k], log = T)) - 0.5 * sum(hnew[k,])
     }
 
     store_llike[i] = as.numeric( sum(allw) + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
-                                   (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
+                                  (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
 
   }
 
@@ -1046,10 +1153,9 @@ int_h_OrthStudent2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), 
   return(llk)
 }
 
-#' @export
-int_h_OrthStudent3 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100, burn_in = 100){
+int_h_OrthStudent3 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, t_max, K, R = 100, burn_in = 100){
   u <- (yt - B %*% xt)
-  y_tilde <- (A %*% u - w_mean * gamma) / sqrt(w_mean)
+  y_tilde <- (A %*% u)
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
   Hh = sparseMatrix(i = 1:(t_max*K),
@@ -1068,27 +1174,76 @@ int_h_OrthStudent3 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), 
   count = 0
   while ( e_h> .01 & count < max_loop){
     einvhts2 = exp(-ht)*s2
-    gh = - HinvSH_h %*% (ht-alph) - 0.5 * (1-einvhts2)
-    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+    nueinvhts2 = rep(nu,t_max) + einvhts2
+    gh = - HinvSH_h %*% (ht-alph) - 0.5 + 0.5 * rep((nu+1),t_max) * einvhts2 / nueinvhts2
+    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = 0.5 * rep((nu+K) * nu,t_max) * einvhts2 / nueinvhts2^2)
     newht = ht - Matrix::solve(Gh,gh)
     e_h = max(abs(newht-ht));
     ht = newht;
     count = count + 1;
-  }
-  if (count == max_loop){
-    ht = rep(h0,t_max)
-    einvhts2 = exp(-ht)*s2
-    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+    # cat(e_h, "\t")
   }
 
   Kh = -Gh
+  #CovMat = diag(solve(Kh))
   CKh = Matrix::t(Matrix::chol(Kh))
 
   c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
+  # hgenMat <- matrix(NA, nrow = K*t_max, ncol = R)
+  # w <- matrix(1, nrow = K, ncol = t_max)
+  # w_sqrt <- matrix(1, nrow = K, ncol = t_max)
+  # h <- h_mean
+  # u <-  A %*% (yt - B %*%xt)
+  # D <- diag(gamma)
+  # for (r in c(1: (burn_in + R*10))){
+  #
+  #   for (i in c(1:t_max)){
+  #     ran_stu = rt(K, df = 4)
+  #     Sigma2_inv_t = 1/exp(h[,i])
+  #     a_eq <- -0.5* (gamma^2 * Sigma2_inv_t)
+  #     b_eq <- -((0.5*1 + nu/2+1))
+  #     c_eq =  0.5 * (u[,i]^2 * Sigma2_inv_t) + nu/2
+  #     w_mode <- (- b_eq - sqrt(b_eq^2-4*a_eq*c_eq))/(2*a_eq)
+  #     mode_target <- log( w_mode )
+  #     cov_target <- 1/( c_eq / w_mode - a_eq * w_mode) * 1.2 # scale by 1.2
+  #
+  #     log_w_temp = mode_target + sqrt(cov_target)*ran_stu
+  #     w_temp = exp(log_w_temp)
+  #
+  #     num_mh =  mapply( dinvgamma, x = w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
+  #       ( - 0.5 * 1 * log_w_temp - 0.5 * (u[,i] - gamma*w_temp)^2 * Sigma2_inv_t / w_temp) - # posterior
+  #       dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
+  #     denum_mh = mapply( dinvgamma, x = w[,i], shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
+  #       ( - 0.5 * 1 * log(w[,i]) - 0.5 * (u[,i] - gamma*w[,i])^2 * Sigma2_inv_t / w[,i]) - # posterior
+  #       dt( (log(w[,i]) - mode_target)/sqrt(cov_target), df = 4, log = T) + log(w[,i]) # proposal
+  #     alpha = num_mh - denum_mh
+  #     temp = log(runif(K))
+  #     acre = alpha > temp
+  #     w[,i] <- ifelse(acre, w_temp, w[,i])
+  #     w_sqrt[,i] <- sqrt(w[,i])
+  #   }
+  #
+  #   # Sample vol
+  #   ytilde <- (A %*% (yt - B %*% xt) - D %*% w) / w_sqrt
+  #   aux <- sample_h_ele( ytilde, diag(sigma_h),  h, K, t_max)
+  #   h <- aux$Sigtdraw
+  #
+  #   if (r > burn_in){
+  #     if (r %% 10 == 0){
+  #       hc <- as.numeric(h)
+  #       hgenMat[, (r-burn_in) %/% 10] <- hc
+  #     }
+  #   }
+  #
+  #
+  # }
+  # plot(ht, apply(hgenMat, MARGIN = 1, FUN = mean))
+  # abline(a = 0, b = 1, col = "red")
+  # plot(CovMat, apply(hgenMat, MARGIN = 1, FUN = var))
+
   store_llike = rep(0,R)
-  y_tilde = A %*% ( (yt - B %*% xt) ) # is ortho-Skew Student distribution
   for (i in c(1:R)){
     hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
     hnew <- matrix(hc, nrow = K)
@@ -1096,8 +1251,8 @@ int_h_OrthStudent3 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), 
     for (k in c(1:K)){
       for (t in c(1:t_max)){
         allw[k,t] <- ghyp::dghyp(y_tilde[k,t], object = ghyp::ghyp(lambda = -0.5*nu[k], chi = nu[k], psi = 0, mu = 0,
-                                                                   gamma = gamma[k], sigma = exp(hnew[k,t]/2)),
-                                 logvalue = T)
+                                                               gamma = gamma[k], sigma = exp(hnew[k,t]/2)),
+                              logvalue = T)
       }
     }
 
@@ -1168,7 +1323,7 @@ InvGamma_approx <- function(mcmc_sample, ndraws){
 }
 
 #' @export
-Nu_Gamma_approx <- function(mcmc_sample, ndraws){
+Gamma_approx <- function(mcmc_sample, ndraws){
   nElements <- ncol(mcmc_sample)
   new_samples <- matrix(NA, ncol = nElements, nrow = ndraws, dimnames = list(c(), colnames(mcmc_sample)))
   Density_prop <-  matrix(NA, ncol = nElements, nrow = ndraws)
@@ -1178,10 +1333,7 @@ Nu_Gamma_approx <- function(mcmc_sample, ndraws){
     fit.gamma <- fitdistrplus::fitdist(as.numeric(mcmc_sample[,i]), distr = "gamma", method = "mle")
     shape_param[i] <- fit.gamma$estimate[1]
     rate_param[i] <- fit.gamma$estimate[2]
-    tmp <- rgamma(ndraws*2, shape = shape_param[i], rate_param[i])
-    tmp <- tmp[tmp > 2]
-    tmp <- tmp[tmp < 100]
-    new_samples[,i] <- head(tmp,ndraws)
+    new_samples[,i] <- rgamma(ndraws, shape = shape_param[i], rate_param[i])
     Density_prop[,i] <- dgamma(new_samples[,i], shape = shape_param[i], rate = rate_param[i], log = T)
   }
   return(list(new_samples = new_samples,

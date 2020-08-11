@@ -92,6 +92,8 @@ BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   # Output
   mcmc <- matrix(NA, nrow = m*K + 0.5*K*(K-1) + K + K + K*t_max,
                      ncol = (samples - inits$burnin)%/% inits$thin)
+  logBF <- rep(0, (samples - inits$burnin)%/% inits$thin)
+  logBF1 <- rep(0, (samples - inits$burnin)%/% inits$thin)
   for (j in c(1:samples)){
     # Sample B, use reduce sum here
     # b_post = rep(0, m*K)
@@ -122,6 +124,7 @@ BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     sqrtvol <- aux$sigt
     sigma_h <- aux$sigma_h
 
+
     # for (i in c(1:K)){
     #   svdraw[[i]] <- svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
     #                            startlatent = latent(svdraw[[i]]), priormu = priormu,
@@ -151,8 +154,12 @@ BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     A_post[upper.tri(A)] <- a_sample
     A <- t(A_post)
     diag(A) <- 1
-    if ((j > inits$burnin) & (j %% inits$thin == 0))
+    if ((j > inits$burnin) & (j %% inits$thin == 0)){
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, diag(sigma_h), h0, as.numeric(h))
+      logBF[(j - inits$burnin) %/% inits$thin] <- sum(aux$log_zero_omega_den)
+      logBF1[(j - inits$burnin) %/% inits$thin] <- sum(aux$log_post_omega_den)
+    }
+
     if (j %% 100 == 0) { cat(" Iteration ", j, " \n")}
   }
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)

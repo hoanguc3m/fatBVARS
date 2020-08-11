@@ -4,8 +4,7 @@
 \alias{forecast_density}
 \title{Forecast density of future observations of BVAR model}
 \usage{
-forecast_density(Chain, y_current = NULL, y_obs_future,
-  t_current = NULL)
+forecast_density(Chain, y_current = NULL, y_obs_future, t_current)
 }
 \arguments{
 \item{Chain}{The fatBVARSV object from command BVAR.}
@@ -24,7 +23,7 @@ This function returns a forecast density of future observations of BVAR-SV-fatTa
 }
 \examples{
 \dontrun{
-forecast_dens1 <- forecast_density(Chain1, y_obs_future)
+forecast_dens1 <- forecast_density(Chain1, y_current, y_obs_future, t_current)
 }
 
 }

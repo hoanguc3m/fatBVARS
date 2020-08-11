@@ -61,6 +61,7 @@ for (int i = 1; i < (t+1); i++) {
 }
 
 arma::mat bdraw = arma::zeros(t,m);
+//Rcpp::Rcout << Vtt << " Add small eigen value to be decomposible " << std::endl;
 bdraw.row(t-1) = mvndrawC(btt,Vtt).t();
 arma::rowvec b0draw = arma::zeros(1,m);
 
@@ -72,7 +73,8 @@ for (int i = 1; i < t; i++) {	// Backward recursions
     invf = f.i();
     cfe = bf - btt;
     arma::colvec bmean = btt + Vtt*invf*cfe;
-    arma::mat bvar = Vtt - Vtt*invf*Vtt;
+    arma::mat bvar = Vtt - Vtt*invf*Vtt + 1e-16*arma::eye(m,m);
+    //Rcpp::Rcout << bvar << " Add small eigen value to be decomposible " << std::endl;
     bdraw.row(t-i-1) = mvndrawC(bmean, bvar).t();
 }
     // Sample H0
@@ -83,7 +85,8 @@ for (int i = 1; i < t; i++) {	// Backward recursions
     invf = f.i();
     cfe = bf - btt;
     arma::colvec bmean = btt + Vtt*invf*cfe;
-    arma::mat bvar = Vtt - Vtt*invf*Vtt;
+    arma::mat bvar = Vtt - Vtt*invf*Vtt + 1e-16*arma::eye(m,m);
+    //Rcpp::Rcout << bvar << " Add small eigen value to be decomposible " << std::endl;
     b0draw = mvndrawC(bmean, bvar).t();
 
 return List::create(Named("loglik") = loglik,
@@ -245,13 +248,17 @@ List sigmahelper4(arma::mat y2, arma::colvec qs, arma::colvec ms, arma::colvec u
   List H_new = carterkohn(yss1.t(),Zs,vart,Wdraw,M,M,t,sigma_prmean,sigma_prvar);
   arma::mat Sigtdraw_new = H_new["bdraws"];
   arma::rowvec H0_new = H_new["b0draws"];
+
+
   // arma::mat Sigtdraw_new = carterkohn(yss1.t(),Zs,vart,Wdraw,M,M,t,sigma_prmean,sigma_prvar)["bdraws"];
 
   arma::mat sigt = exp(0.5*Sigtdraw_new);
 
   return List::create(Named("Sigtdraw") = Sigtdraw_new,
                       Named("sigt") = sigt,
-                      Named("h0") = H0_new);
+                      Named("h0") = H0_new,
+                      Named("vart") = vart,
+                      Named("yss1") = yss1);
 }
 
 

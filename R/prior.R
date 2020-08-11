@@ -1,7 +1,7 @@
 # Minnesota prior from bvars Package
 # URL: https://github.com/joergrieger/bvars
 
-get_prior_minnesota <- function(y, p, intercept=TRUE, lambda1=0.2, lambda2=0.5, lambda3=1, lambda4=2){
+get_prior_minnesota <- function(y, p, intercept=TRUE, lambda1=0.2, lambda2=0.5, lambda3=1, lambda4=2, ...){
 
   t_max <- nrow(y)
   K   <- ncol(y)
@@ -31,8 +31,8 @@ get_prior_minnesota <- function(y, p, intercept=TRUE, lambda1=0.2, lambda2=0.5, 
   for(ii in 1:K){
     Ylagi         <- stats::embed(y[,ii],dimension = p + 1)[,-1]
     Yi            <- y[(p + 1):t_max,ii]
-    arest         <- stats::lm(Yi~Ylagi-1)
-    sigmasq[ii] <- summary(arest)$sigma
+    arest         <- stats::lm(Yi~Ylagi)
+    sigmasq[ii] <- summary(arest)$sigma # the square root of the estimated variance of the random error sigma^2 = 1/(n-p) Sum(w[i] R[i]^2)
   }
 
   #print(sigmasq)
@@ -67,7 +67,7 @@ get_prior_minnesota <- function(y, p, intercept=TRUE, lambda1=0.2, lambda2=0.5, 
         if(ii==kk){
           Vi[indx] <- lambda1/(jj^lambda4)
         } else{
-          Vi[indx] <- (lambda2)/(jj ^ lambda4) *(sigmasq[ii] / sigmasq[kk])^2
+          Vi[indx] <- (lambda1 * lambda2)/(jj ^ lambda4) *(sigmasq[ii] / sigmasq[kk])
         }
       }
     }
@@ -147,7 +147,7 @@ get_prior_OLS <- function(y, p, tau = nrow(y) - p, scale_factor = 4 ){
 get_prior <- function(y, p, priorStyle = c("Minnesota"),
                       dist = c("Gaussian","Student","Skew.Student","Hyper.Student",
                                "multiStudent","Skew.multiStudent","Hyper.multiStudent"),
-                      SV = FALSE){
+                      SV = FALSE, ...){
 
   K <- ncol(y)
   M <- K + p*(K^2) # nr of beta parameters
@@ -155,7 +155,7 @@ get_prior <- function(y, p, priorStyle = c("Minnesota"),
 
   # return b0, V_b_prior, sigma
   if (priorStyle == "Minnesota"){
-    prior_sub <- get_prior_minnesota(y, p, intercept = TRUE, lambda1=0.2, lambda2=0.5, lambda3=1, lambda4=2)
+    prior_sub <- get_prior_minnesota(y, p, intercept = TRUE, ...)
   }
   if (priorStyle == "OLS"){
 
@@ -249,7 +249,7 @@ get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
   }
   #Stochastic vol
   if(SV){
-    h <- matrix(0, ncol = prior$t_max, nrow = K)
+    h <- matrix(log(prior$sigma^2), ncol = prior$t_max, nrow = K)
     inits$h <- h
     inits$sigma_h <- 0.0001*diag(K)
   }

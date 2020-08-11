@@ -77,15 +77,36 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
   q <- tmp$q
   m_mean <- tmp$m
   u2 <- tmp$u2
-  Zs <- matrix(1,t_max,1) %x% diag(K)
+  # {
+  #   Zs <- matrix(1,t_max,1) %x% diag(K)
+  #   sigma_prmean <- h0_mean # mean h_0
+  #   sigma_prvar <- 4*diag(K)   # variance h_0
+  #
+  #
+  #   aux <- sigmahelper4(t(ytilde^2), q, m_mean, u2, h, Zs, sigma_h, sigma_prmean, sigma_prvar)
+  #   h <- aux$Sigtdraw
+  #   h0 <- as.numeric(aux$h0)
+  # }
 
+  {
+    h0 <- rep(0,K)
+    cond_var_sigma <- rep(0,K)
+    cond_mean_sigma <- rep(0,K)
+    Zs <- matrix(1,t_max,1) %x% diag(1)
+    for (i in c(1:K)){
+      sigma_prmean <- h0_mean[i] # mean h_0
+      sigma_prvar <- matrix(4)   # variance h_0
+      aux <- sigmahelper4(t(ytilde[ i,, drop =FALSE]^2), q, m_mean, u2, h[ i,, drop =FALSE], Zs, matrix(sigma_h[i,i]), sigma_prmean, sigma_prvar)
+      h[i,] <- aux$Sigtdraw
+      h0[i] <- as.numeric(aux$h0)
+      vart <- aux$vart # Variance of components
+      yss1 <- aux$yss1 # demean of components
+      h_tilde <- (h[i,1:t_max] - h0[i])/sqrt(sigma_h[i,i])
+      cond_var_sigma[i] <- 1/( 1 + sum(h_tilde^2/vart))
+      cond_mean_sigma[i] <- cond_var_sigma[i] * ( 0 + sum(h_tilde * yss1 / vart))
+    }
+  }
 
-  sigma_prmean <- h0_mean # mean h_0
-  sigma_prvar <- 1*diag(K)   # variance h_0
-
-  aux <- sigmahelper4(t(ytilde^2), q, m_mean, u2, h, Zs, sigma_h, sigma_prmean, sigma_prvar)
-  h <- aux$Sigtdraw
-  h0 <- as.numeric(aux$h0)
   # sqrtvol <- aux$sigt
   # [TODO] fix this
   # sse_2 <- apply( (h[,2:t_max] - h[,1:(t_max-1)])^2, MARGIN = 1, FUN = sum)
@@ -95,14 +116,36 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
     sse_2 <- sum( (h[,1:t_max] - c(h0,h[,1:(t_max-1)]) )^2)
   }
 
-  sigma_post_a <- 1 + rep(t_max,K) # prior of sigma_h Gamma(1,0.0001)
-  sigma_post_b <- 0.0001 + sse_2 # prior of sigma_h
+  # Normal prior
+  # Equation 9 in https://doi.org/10.1016/j.csda.2013.01.002
+  sigma_post_a <- rep(t_max,K) # prior of sigma_h Gamma(1,0.0001)
+  sigma_post_b <- sse_2 # prior of sigma_h
 
   for (i in c(1:K)){
-    sigma_h[i,i] <- rinvgamma(1, shape = sigma_post_a[i] * 0.5, rate = sigma_post_b[i] * 0.5)
+    sigma_new <- rinvgamma(1, shape = sigma_post_a[i] * 0.5, rate = sigma_post_b[i] * 0.5)
+    alpha = (sigma_h[i,i] - sigma_new) / 2 + 0.5 * (log(sigma_new) - log(sigma_h[i,i])) # B_sigma = 1
+    temp = log(runif(1))
+    if (alpha > temp){
+      sigma_h[i,i] <- sigma_new
+    }
+    #log_sigma_den[]
   }
 
-  aux$sigma_h <- sigma_h
+  # # Invgamma conjugate prior
+  # sigma_post_a <- 1 + rep(t_max,K) # prior of sigma_h Gamma(1,0.0001)
+  # sigma_post_b <- 0.01 + sse_2 # prior of sigma_h
+  #
+  #   for (i in c(1:K)){
+  #     sigma_h[i,i] <- rinvgamma(1, shape = sigma_post_a[i] * 0.5, rate = sigma_post_b[i] * 0.5)
+  #   }
+
+  aux <- list(sigma_h = sigma_h,
+              h0 = h0,
+              Sigtdraw = h,
+              sigt = exp(0.5*h),
+              log_zero_omega_den = dnorm(0, mean = cond_mean_sigma, sd = sqrt(cond_var_sigma), log = TRUE),
+              log_post_omega_den = dnorm(diag(sigma_h), mean = cond_mean_sigma, sd = sqrt(cond_var_sigma), log = TRUE)
+              )
   return(aux)
 }
 
@@ -360,4 +403,212 @@ kde2D <- function(data, n = 2 ^ 8, limits = NULL) {
     "bandwidth" = bw, "density" = density,
     "X" = grid[[1]], "Y" = grid[[2]]
   ))
+}
+
+#' @export
+PF_GaussianSV <- function(ytilde, h0, sigma_h, noParticles = 1000) {
+
+  t_len <- length(ytilde) - 1
+
+  particles <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  ancestorIndices <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  weights <- matrix(1, nrow = noParticles, ncol = t_len + 1)
+  normalisedWeights <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  xHatFiltered <- matrix(0, nrow = t_len, ncol = 1)
+  logLikelihood <- 0
+
+  ancestorIndices[, 1] <- 1:noParticles
+  normalisedWeights[, 1] = 1 / noParticles
+
+  # Generate initial state
+  particles[, 1] <- h0 + rnorm(noParticles, mean = 0, sd = sigma_h^0.5)
+
+  for (t in 2:(t_len + 1)) {
+    # Resample ( multinomial )
+    newAncestors <- sample(noParticles, replace = TRUE, prob = normalisedWeights[, t - 1])
+    ancestorIndices[, 1:(t - 1)] <- ancestorIndices[newAncestors, 1:(t - 1)]
+    ancestorIndices[, t] <- newAncestors
+
+    # Propagate
+    part1 <- particles[newAncestors, t - 1]
+    particles[, t] <- part1 + rnorm(noParticles, mean = 0, sd = sigma_h^0.5)
+
+    # Compute weights
+    yhatMean <- 0
+    yhatVariance <- exp(particles[, t] / 2)
+    weights[, t] <- dnorm(ytilde[t - 1], yhatMean, yhatVariance, log = TRUE)
+
+    maxWeight <- max(weights[, t])
+    weights[, t] <- exp(weights[, t] - maxWeight)
+
+    sumWeights <- sum(weights[, t])
+    normalisedWeights[, t] <- weights[, t] / sumWeights
+
+    # Estimate the log-likelihood
+    logLikelihood <- logLikelihood + maxWeight + log(sumWeights) - log(noParticles)
+
+  }
+
+  # Sample the state estimate using the weights at t=t_len
+  ancestorIndex  <- sample(noParticles, 1, prob = normalisedWeights[, t_len])
+  xHatFiltered <- particles[cbind(ancestorIndices[ancestorIndex, ], 1:(t_len + 1))]
+
+  list(xHatFiltered = xHatFiltered, logLikelihood = logLikelihood)
+}
+
+#' @export
+PF_uniStudentSV <- function(ytilde, h0, sigma_h, nu, noParticles = 1000) {
+
+  t_len <- length(ytilde) - 1
+
+  particles <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  ancestorIndices <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  weights <- matrix(1, nrow = noParticles, ncol = t_len + 1)
+  normalisedWeights <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  xHatFiltered <- matrix(0, nrow = t_len, ncol = 1)
+  logLikelihood <- 0
+
+  ancestorIndices[, 1] <- 1:noParticles
+  normalisedWeights[, 1] = 1 / noParticles
+
+  # Generate initial state
+  particles[, 1] <- h0 + rnorm(noParticles, mean = 0, sd = sigma_h^0.5)
+
+  for (t in 2:(t_len + 1)) {
+    # Resample ( multinomial )
+    newAncestors <- sample(noParticles, replace = TRUE, prob = normalisedWeights[, t - 1])
+    ancestorIndices[, 1:(t - 1)] <- ancestorIndices[newAncestors, 1:(t - 1)]
+    ancestorIndices[, t] <- newAncestors
+
+    # Propagate
+    part1 <- particles[newAncestors, t - 1]
+    particles[, t] <- part1 + rnorm(noParticles, mean = 0, sd = sigma_h^0.5)
+
+    # Compute weights
+    yhatMean <- 0
+    yhatVariance <- exp(particles[, t] / 2)
+    #weights[, t] <- LaplacesDemon::dst(ytilde[t - 1], mu = yhatMean, sigma = yhatVariance, nu = nu, log = TRUE)
+    weights[, t] <- dt(ytilde[t - 1]/yhatVariance, df = nu, log = T) - log(yhatVariance)
+
+    maxWeight <- max(weights[, t])
+    weights[, t] <- exp(weights[, t] - maxWeight)
+
+    sumWeights <- sum(weights[, t])
+    normalisedWeights[, t] <- weights[, t] / sumWeights
+
+    # Estimate the log-likelihood
+    logLikelihood <- logLikelihood + maxWeight + log(sumWeights) - log(noParticles)
+
+  }
+
+  # Sample the state estimate using the weights at t=t_len
+  ancestorIndex  <- sample(noParticles, 1, prob = normalisedWeights[, t_len])
+  xHatFiltered <- particles[cbind(ancestorIndices[ancestorIndex, ], 1:(t_len + 1))]
+
+  list(xHatFiltered = xHatFiltered, logLikelihood = logLikelihood)
+}
+
+#' @export
+PF_uniSkewSV <- function(ytilde, h0, sigma_h, nu, gamma, noParticles = 1000) {
+
+  t_len <- length(ytilde) - 1
+
+  particles <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  ancestorIndices <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  weights <- matrix(1, nrow = noParticles, ncol = t_len + 1)
+  normalisedWeights <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  xHatFiltered <- matrix(0, nrow = t_len, ncol = 1)
+  logLikelihood <- 0
+
+  ancestorIndices[, 1] <- 1:noParticles
+  normalisedWeights[, 1] = 1 / noParticles
+
+  # Generate initial state
+  particles[, 1] <- h0 +  rnorm(noParticles, mean = 0, sd = sigma_h^0.5)
+  for (t in 2:(t_len + 1)) {
+    # Resample ( multinomial )
+    newAncestors <- sample(noParticles, replace = TRUE, prob = normalisedWeights[, t - 1])
+    ancestorIndices[, 1:(t - 1)] <- ancestorIndices[newAncestors, 1:(t - 1)]
+    ancestorIndices[, t] <- newAncestors
+
+    # Propagate
+    part1 <- particles[newAncestors, t - 1]
+    particles[, t] <- part1 + rnorm(noParticles, mean = 0, sd = sigma_h^0.5)
+
+    # Compute weights
+    yhatMean <- 0
+    yhatVariance <- exp(particles[, t] / 2)
+    weights[, t] <- mapply(FUN = SkewHyperbolic::dskewhyp, x = ytilde[t - 1],
+                           mu = yhatMean, delta = sqrt(nu) * yhatVariance, beta = gamma, nu = nu, log = TRUE)
+
+    #SkewHyperbolic::dskewhyp(x = ytilde[t - 1], mu = yhatMean, delta = sqrt(nu) * yhatVariance, beta = gamma, nu = nu, log = TRUE)
+
+    maxWeight <- max(weights[, t])
+    weights[, t] <- exp(weights[, t] - maxWeight)
+
+    sumWeights <- sum(weights[, t])
+    normalisedWeights[, t] <- weights[, t] / sumWeights
+
+    # Estimate the log-likelihood
+    logLikelihood <- logLikelihood + maxWeight + log(sumWeights) - log(noParticles)
+
+  }
+
+  # Sample the state estimate using the weights at t=t_len
+  ancestorIndex  <- sample(noParticles, 1, prob = normalisedWeights[, t_len])
+  xHatFiltered <- particles[cbind(ancestorIndices[ancestorIndex, ], 1:(t_len + 1))]
+
+  list(xHatFiltered = xHatFiltered, logLikelihood = logLikelihood)
+}
+
+#' @export
+PF_StudentSV <- function(ytilde, h0, sigma_h, nu, noParticles = 1000) {
+
+  t_len <- length(ytilde) - 1
+
+  particles <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  ancestorIndices <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  weights <- matrix(1, nrow = noParticles, ncol = t_len + 1)
+  normalisedWeights <- matrix(0, nrow = noParticles, ncol = t_len + 1)
+  xHatFiltered <- matrix(0, nrow = t_len, ncol = 1)
+  logLikelihood <- 0
+
+  ancestorIndices[, 1] <- 1:noParticles
+  normalisedWeights[, 1] = 1 / noParticles
+
+  # Generate initial state
+  particles[, 1] <- h0 + rnorm(noParticles, mean = 0, sd = sigma_h^0.5)
+
+  for (t in 2:(t_len + 1)) {
+    # Resample ( multinomial )
+    newAncestors <- sample(noParticles, replace = TRUE, prob = normalisedWeights[, t - 1])
+    ancestorIndices[, 1:(t - 1)] <- ancestorIndices[newAncestors, 1:(t - 1)]
+    ancestorIndices[, t] <- newAncestors
+
+    # Propagate
+    part1 <- particles[newAncestors, t - 1]
+    particles[, t] <- part1 + rnorm(noParticles, mean = 0, sd = sigma_h^0.5)
+
+    # Compute weights
+    yhatMean <- 0
+    yhatVariance <- exp(particles[, t] / 2)
+    #weights[, t] <- LaplacesDemon::dst(ytilde[t - 1], mu = yhatMean, sigma = yhatVariance, nu = nu, log = TRUE)
+    weights[, t] <- dt(ytilde[t - 1]/yhatVariance, df = nu, log = T) - log(yhatVariance)
+
+    maxWeight <- max(weights[, t])
+    weights[, t] <- exp(weights[, t] - maxWeight)
+
+    sumWeights <- sum(weights[, t])
+    normalisedWeights[, t] <- weights[, t] / sumWeights
+
+    # Estimate the log-likelihood
+    logLikelihood <- logLikelihood + maxWeight + log(sumWeights) - log(noParticles)
+
+  }
+
+  # Sample the state estimate using the weights at t=t_len
+  ancestorIndex  <- sample(noParticles, 1, prob = normalisedWeights[, t_len])
+  xHatFiltered <- particles[cbind(ancestorIndices[ancestorIndex, ], 1:(t_len + 1))]
+
+  list(xHatFiltered = xHatFiltered, logLikelihood = logLikelihood)
 }

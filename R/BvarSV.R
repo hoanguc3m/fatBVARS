@@ -25,7 +25,6 @@ BVAR.SV <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
   Start = Sys.time()
   if (dist == "Gaussian") Chain <- BVAR.Gaussian.SV(y, K, p, y0, prior, inits)
   if (dist == "Student") Chain <- BVAR.Student.SV(y, K, p, y0, prior, inits)
-  # if (dist == "Skew.Student") Chain <- BVAR.Skew.Student.SV(y, K, p, y0, prior, inits)
   if (dist == "Hyper.Student") Chain <- BVAR.Hyper.Student.SV(y, K, p, y0, prior, inits)
   if (dist == "multiStudent") Chain <- BVAR.multiStudent.SV(y, K, p, y0, prior, inits)
   if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.SV(y, K, p, y0, prior, inits)
@@ -92,8 +91,6 @@ BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   # Output
   mcmc <- matrix(NA, nrow = m*K + 0.5*K*(K-1) + K + K + K*t_max,
                      ncol = (samples - inits$burnin)%/% inits$thin)
-  logBF <- rep(0, (samples - inits$burnin)%/% inits$thin)
-  logBF1 <- rep(0, (samples - inits$burnin)%/% inits$thin)
   for (j in c(1:samples)){
     # Sample B, use reduce sum here
     # b_post = rep(0, m*K)
@@ -156,8 +153,6 @@ BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     diag(A) <- 1
     if ((j > inits$burnin) & (j %% inits$thin == 0)){
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, diag(sigma_h), h0, as.numeric(h))
-      logBF[(j - inits$burnin) %/% inits$thin] <- sum(aux$log_zero_omega_den)
-      logBF1[(j - inits$burnin) %/% inits$thin] <- sum(aux$log_post_omega_den)
     }
 
     if (j %% 100 == 0) { cat(" Iteration ", j, " \n")}
@@ -261,6 +256,7 @@ BVAR.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     #                            priorphi = priorphi, priorsigma = priorsigma)
     #   paravol[i,] <- para(svdraw[[i]])
     #   h[i,] <- as.numeric(latent(svdraw[[i]]))
+    #   h0[i,] <- as.numeric(latent0(svdraw[[i]]))
     # }
     # sqrtvol <- exp(h/2)
 
@@ -430,7 +426,6 @@ BVAR.Hyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
     V_gamma_post <- solve(V_gamma_post_inv)
     gamma_post <- V_gamma_post %*% ( solve(V_gamma_prior) %*% gamma_prior + gamma_post)
     gamma <- as.numeric(gamma_post + t(chol(V_gamma_post)) %*% rnorm(K))
-    # gamma <- rep(0.00,K)
     D <- diag(gamma, nrow = K)
 
     # Sample vol
@@ -1289,6 +1284,7 @@ BVAR.Hyper.multiOrthStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, ini
       b_eq <- -((0.5*1 + nu/2+1))
       c_eq =  0.5 * (u[,i]^2 * Sigma2_inv_t) + nu/2
       w_mode <- (- b_eq - sqrt(b_eq^2-4*a_eq*c_eq))/(2*a_eq)
+      w_mode <- ifelse(abs(w_mode)<1e-5, - c_eq/b_eq, w_mode)
       mode_target <- log( w_mode )
       cov_target <- 1/( c_eq / w_mode - a_eq * w_mode) * 1.2 # scale by 1.2
 

@@ -5,6 +5,7 @@ mvndrawC <- function(mu, sig) {
     .Call('_fatBVARS_mvndrawC', PACKAGE = 'fatBVARS', mu, sig)
 }
 
+#' @export
 carterkohn <- function(y, Z, Ht, Qt, m, p, t, B0, V0) {
     .Call('_fatBVARS_carterkohn', PACKAGE = 'fatBVARS', y, Z, Ht, Qt, m, p, t, B0, V0)
 }

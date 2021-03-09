@@ -1,7 +1,7 @@
 Package: fatBVARS
 Type: Package
 Title: Bayesian VAR with Stochastic volatility and fat tails
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: person("Nguyen", "Hoang", role = c("aut", "cre"), email = "hoang.nguyen@oru.se")
 Maintainer: Hoang Nguyen <hoang.nguyen@oru.se>
 Description: Bayesian VAR with Stochastic volatility and fat tails
@@ -21,7 +21,8 @@ Depends:
     fitdistrplus,
     KernSmooth,
     ash,
-    ghyp
+    ghyp,
+    stochvol
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.1.1
 Suggests: knitr,

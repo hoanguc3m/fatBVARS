@@ -4,9 +4,14 @@
 \alias{get_prior}
 \title{Prior distribution of BVAR model}
 \usage{
-get_prior(y, p, priorStyle = c("Minnesota"), dist = c("Gaussian",
-  "Student", "Skew.Student", "Hyper.Student", "multiStudent",
-  "Skew.multiStudent", "Hyper.multiStudent"), SV = FALSE, ...)
+get_prior(
+  y,
+  p,
+  priorStyle = c("Minnesota"),
+  dist = c("Gaussian"),
+  SV = FALSE,
+  ...
+)
 }
 \arguments{
 \item{y}{The input data as matrix T x K where T is the number of observations and K is the number of variables}
@@ -16,7 +21,7 @@ get_prior(y, p, priorStyle = c("Minnesota"), dist = c("Gaussian",
 \item{priorStyle}{The prior style in BVAR model should be c("Minnesota", "OLS")}
 
 \item{dist}{The variable specifies the BVAR error distribution. It should be one of
-c("Gaussian","Student","Skew.Student","Hyper.Student", "multiStudent","Skew.multiStudent","Hyper.multiStudent").}
+c("Gaussian","Student", "Hyper.Student", "multiStudent","Hyper.multiStudent","orthoStudent").}
 
 \item{SV}{The indicator if this BVAR model has a Stochastic volatility part.}
 }

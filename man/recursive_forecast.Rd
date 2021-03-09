@@ -4,8 +4,16 @@
 \alias{recursive_forecast}
 \title{Recursive forecast of BVAR model}
 \usage{
-recursive_forecast(y, t_start = 100, t_pred = 12, K, p,
-  dist = "Hyper.multiStudent", SV = T, numCores = NULL)
+recursive_forecast(
+  y,
+  t_start = 100,
+  t_pred = 12,
+  K,
+  p,
+  dist = "Hyper.multiStudent",
+  SV = T,
+  numCores = NULL
+)
 }
 \arguments{
 \item{y}{the whole data matrix T x k.}

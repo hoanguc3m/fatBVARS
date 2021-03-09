@@ -99,11 +99,11 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
       aux <- sigmahelper4(t(ytilde[ i,, drop =FALSE]^2), q, m_mean, u2, h[ i,, drop =FALSE], Zs, matrix(sigma_h[i,i]), sigma_prmean, sigma_prvar)
       h[i,] <- aux$Sigtdraw
       h0[i] <- as.numeric(aux$h0)
-      vart <- aux$vart # Variance of components
-      yss1 <- aux$yss1 # demean of components
-      h_tilde <- (h[i,1:t_max] - h0[i])/sqrt(sigma_h[i,i])
-      cond_var_sigma[i] <- 1/( 1 + sum(h_tilde^2/vart))
-      cond_mean_sigma[i] <- cond_var_sigma[i] * ( 0 + sum(h_tilde * yss1 / vart))
+      # vart <- aux$vart # Variance of components
+      # yss1 <- aux$yss1 # demean of components
+      # h_tilde <- (h[i,1:t_max] - h0[i])/sqrt(sigma_h[i,i])
+      # cond_var_sigma[i] <- 1/( 1 + sum(h_tilde^2/vart))
+      # cond_mean_sigma[i] <- cond_var_sigma[i] * ( 0 + sum(h_tilde * yss1 / vart))
     }
   }
 
@@ -142,9 +142,9 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
   aux <- list(sigma_h = sigma_h,
               h0 = h0,
               Sigtdraw = h,
-              sigt = exp(0.5*h),
-              log_zero_omega_den = dnorm(0, mean = cond_mean_sigma, sd = sqrt(cond_var_sigma), log = TRUE),
-              log_post_omega_den = dnorm(diag(sigma_h), mean = cond_mean_sigma, sd = sqrt(cond_var_sigma), log = TRUE)
+              sigt = exp(0.5*h)
+              # log_zero_omega_den = dnorm(0, mean = cond_mean_sigma, sd = sqrt(cond_var_sigma), log = TRUE),
+              # log_post_omega_den = dnorm(diag(sigma_h), mean = cond_mean_sigma, sd = sqrt(cond_var_sigma), log = TRUE)
               )
   return(aux)
 }

@@ -152,6 +152,10 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
                                           llw <- int_h_Student3(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
                                                                gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+                                          # int_h_Student3(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                          #                gamma = rep(0,K), h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+                                          # int_h_Student2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                          #                gamma = rep(0,K), h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
@@ -498,9 +502,15 @@ int_w_Student2 <- function(y, xt, A, B, sigma, nu, t_max, K, R = 100){
 #' @export
 int_w_Skew <- function(y, xt, A, B, sigma, nu, gamma, t_max, K, R = 100){
   u <- (y - t(xt) %*% t(B))
-  allw <- ghyp::dghyp(u, object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
+  if (K == 1){
+    allw <- ghyp::dghyp(u, object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
+                                               sigma = diag(sigma, nrow = K),
+                                               gamma = gamma), logvalue = T)
+  } else {
+    allw <- ghyp::dghyp(u, object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
                                              sigma = solve(A) %*% diag(sigma^2, nrow = K) %*% t(solve(A)),
                                              gamma = gamma), logvalue = T)
+  }
   return(sum(allw))
 }
 
@@ -858,17 +868,33 @@ int_h_Student3 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_me
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
   store_llike = rep(0,R)
+  y_til = A %*% ( (yt - B %*% xt) ) # is Student distribution
+
   for (i in c(1:R)){
     hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
     hnew <- matrix(hc, nrow = K)
+    if (K == 1){
+      allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
+        ghyp::dghyp(y_til[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
+                                                   sigma = diag(exp(hnew[,t]/2), nrow = K),
+                                                   gamma = gamma), logvalue = T) # use sigma for univariable
 
-    allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
-      ghyp::dghyp(u[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
-                                             sigma = solve(A) %*% diag(exp(hnew[,t]), nrow = K) %*% t(solve(A)),
-                                             gamma = gamma), logvalue = T)
 
+      })) )
 
-    })) )
+    } else {
+      allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
+        ghyp::dghyp(u[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
+                                               sigma = solve(A) %*% diag(exp(hnew[,t]), nrow = K) %*% t(solve(A)),
+                                               gamma = gamma), logvalue = T) # use Sigma = AA' for multivariable
+      })) )
+    }
+
+    #
+    # mvnfast::dmvt(X = u[,t],
+    #               mu = rep(0,K),
+    #               sigma = diag(exp(hnew[,t]/2), nrow = K), df = nu, log = T, isChol = T)
+    # dt(x = u[,t]/diag(exp(hnew[,t]/2), nrow = K), df = nu, log = T) - hnew[,t]/2
 
 
     store_llike[i] = as.numeric(allw + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
@@ -950,7 +976,7 @@ int_h_MultiStudent2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K),
     hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
     hnew <- matrix(hc, nrow = K)
 
-    allw <- int_w_MultiStudent2(y = y, xt = xt, A = A, B = B, sigma = exp(hnew/2), nu = nu, gamma = gamma,
+    allw <- int_w_MultiStudent2(y = t(yt), xt = xt, A = A, B = B, sigma = exp(hnew/2), nu = nu, gamma = gamma,
                                 t_max = t_max, K = K, R = 100)
     store_llw[i] = as.numeric(allw + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
                                 (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))

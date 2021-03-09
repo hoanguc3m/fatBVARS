@@ -1,5 +1,5 @@
 library(fatBVARS)
-library(bridgesampling)
+
 K = 5; p = 2
 ###########################################################################
 # Default values for simulation
@@ -125,3 +125,20 @@ prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = T)
 inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
 Chain14 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.multiOrthStudent", y0 = NULL, prior = prior, inits = inits)
 ML_chain14 <- marginalLL(Chain14)
+
+###########################################################################
+K = 3; p = 2
+datagen <- sim.VAR.novol(dist="dynHyper.Student", K = K, p = p, sigma_G = rep(0,K))
+y <- datagen$y
+prior <- get_prior(y, p = p, dist="dynHyper.Student", SV = F)
+inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
+Chain15 <- BVAR.novol(y, K = K, p = p, dist = "dynHyper.Student", y0 = NULL, prior = prior, inits = inits)
+
+###########################################################################
+K = 3; p = 2
+datagen <- sim.VAR.SV(dist="dynHyper.Student", K = K, p = p, sigma_G = rep(0,K))
+y <- datagen$y
+prior <- get_prior(y, p = p, dist="dynHyper.Student", SV = T)
+inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
+Chain16 <- BVAR.SV(y, K = K, p = p, dist = "dynHyper.Student", y0 = NULL, prior = prior, inits = inits)
+

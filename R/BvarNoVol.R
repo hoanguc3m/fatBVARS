@@ -22,6 +22,12 @@
 #' plot(Chain1)
 #' }
 BVAR.novol <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
+  if (!(dist %in% c("Gaussian","Student","Hyper.Student",
+                    "multiStudent","Hyper.multiStudent",
+                    "multiOrthStudent","Hyper.multiOrthStudent",
+                    "dynHyper.Student", "dynHyper.multiStudent", "dynHyper.multiOrthStudent") ))
+    stop("dist is not implemented.")
+
   if (prior$SV == FALSE){
     Start = Sys.time()
     if (dist == "Gaussian") Chain <- BVAR.Gaussian.novol(y, K, p, y0, prior, inits)
@@ -32,6 +38,10 @@ BVAR.novol <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
     if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.novol(y, K, p, y0, prior, inits)
     if (dist == "multiOrthStudent") Chain <- BVAR.multiOrthStudent.novol(y, K, p, y0, prior, inits)
     if (dist == "Hyper.multiOrthStudent") Chain <- BVAR.Hyper.multiOrthStudent.novol(y, K, p, y0, prior, inits)
+
+    if (dist == "dynHyper.Student") Chain <- BVAR.dynHyper.Student.novol(y, K, p, y0, prior, inits)
+    if (dist == "dynHyper.multiStudent") Chain <- BVAR.dynHyper.multiStudent.novol(y, K, p, y0, prior, inits)
+    if (dist == "dynHyper.multiOrthStudent") Chain <- BVAR.dynHyper.multiOrthStudent.novol(y, K, p, y0, prior, inits)
     elapsedTime = Sys.time() - Start
     print(elapsedTime)
     out <- list(mcmc = Chain,
@@ -183,7 +193,7 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   A <- inits$A0
   B <- Vec_to_Mat(inits$B0, K, p)
   sigma <- inits$sigma
-  Sigma <- solve(inits$A0) %*% diag(inits$sigma)
+  Sigma <- solve(inits$A0) %*% diag(inits$sigma, nrow = K)
   Sigma2 <- Sigma %*% t(Sigma)
   Sigma2_inv <- solve(Sigma2)
   V_b_prior_inv <- solve(V_b_prior)
@@ -307,7 +317,6 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
 
 #############################################################################################
-
 #' @export
 BVAR.Hyper.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   # Init regressors in the right hand side
@@ -343,7 +352,7 @@ BVAR.Hyper.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = N
   A <- inits$A0
   B <- Vec_to_Mat(inits$B0, K, p)
   sigma <- inits$sigma
-  Sigma <- solve(inits$A0) %*% diag(inits$sigma)
+  Sigma <- solve(inits$A0) %*% diag(inits$sigma, nrow = K)
   Sigma2 <- Sigma %*% t(Sigma)
   Sigma2_inv <- solve(Sigma2)
   V_b_prior_inv <- solve(V_b_prior)
@@ -1135,7 +1144,7 @@ BVAR.Hyper.multiOrthStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, 
         id_start <- id_end - i + 2
         a_sub <- a_prior[id_start:id_end]
         V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
-        a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - w_sqrt[i,] * gamma[i]) / sigma[i]/ w_sqrt[i,],
+        a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - w[i,] * gamma[i]) / sigma[i]/ w_sqrt[i,],
                                                      xsub = matrix(u_neg[1:(i-1),] / sigma[i] / reprow(w_sqrt[i,], i-1), nrow = i-1),
                                                      a_sub = a_sub,
                                                      V_a_sub = V_a_sub)
@@ -1227,6 +1236,225 @@ BVAR.Hyper.multiOrthStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, 
   return(as.mcmc(t(mcmc)))
 }
 
+#############################################################################################
+#' @export
+BVAR.dynHyper.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
+  # Init regressors in the right hand side
+  t_max <- nrow(y)
+  yt = t(y)
+  xt <- makeRegressor(y, y0, t_max, K, p)
+
+  # Init prior and initial values
+  m = K * p + 1
+  if (is.null(prior)){
+    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "dynHyper.Student", SV = FALSE)
+  }
+  # prior B
+  b_prior = prior$b_prior
+  V_b_prior = prior$V_b_prior
+  # prior sigma
+  sigma0_T0 <- prior$sigma_T0
+  sigma0_S0 <- prior$sigma_S0
+  # prior A
+  a_prior = prior$a_prior
+  V_a_prior = prior$V_a_prior
+  # prior nu
+  nu_gam_a = prior$nu_gam_a
+  nu_gam_b = prior$nu_gam_b
+  # prior gamma
+  gamma_prior = prior$gamma_prior
+  V_gamma_prior = prior$V_gamma_prior
+  # Initial values
+  if (is.null(inits)){
+    inits <- get_init(prior)
+  }
+  samples <- inits$samples
+  A <- inits$A0
+  B <- Vec_to_Mat(inits$B0, K, p)
+  sigma <- inits$sigma
+  Sigma <- solve(inits$A0) %*% diag(inits$sigma, nrow = K)
+  Sigma2 <- Sigma %*% t(Sigma)
+  Sigma2_inv <- solve(Sigma2)
+  V_b_prior_inv <- solve(V_b_prior)
+
+  nu <- inits$nu
+  logsigma_nu <- 0
+  acount_nu <- 0
+  acount_w <- rep(0, t_max)
+  Gamma_T <- inits$gamma
+  if (length(Gamma_T) <= K){
+    Gamma_T = repcol(Gamma_T, t_max)
+  }
+  gamma0 = Gamma_T[,1]
+  sigma_G = diag(1e-4, nrow = K)
+  #D <- diag(gamma, nrow = K)
+
+  # Init w as Gaussian
+  w_sample <- rep(1, t_max)
+  w <- reprow(w_sample, K)
+  w_sqrt <- sqrt(w)
+
+  # Output
+  mcmc <- matrix(NA, nrow = m*K + 0.5*K*(K-1) + K + K + 1 + K + K * t_max + t_max,
+                 ncol = (samples - inits$burnin)%/% inits$thin)
+  for (j in c(1:samples)){
+    # Sample B
+    xt_G <- xt / reprow(sqrt(w_sample), m)
+    yt_G <- (yt - Gamma_T * w)  / w_sqrt
+    V_b_post_inv <- V_b_prior_inv + kronecker(xt_G %*% t(xt_G),Sigma2_inv)
+    b_post <- kronecker(xt_G, Sigma2_inv) %*% vec(yt_G)
+
+    V_b_post <- solve(V_b_post_inv)
+    b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
+    b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
+    B <- Vec_to_Mat(b_sample, K,p)
+
+    # Sample gamma : carterkohn(y,Z,Ht)
+    # y: n*T
+    # Z: (nT)*(n_max*K)
+    # Ht: (nT)*n
+    # ysim <-  Z %*% B_t + t(chol(Hsim)) %*% rnorm(M)
+    Sigma_T <- matrix(0, nrow = K * t_max, ncol = K)
+    A_inv <- solve(A)
+    for (i in c(1:t_max)){
+      Sigma_T[ ((i-1)*K + 1):(i*K) , ] <- A_inv %*% diag(sigma^2, nrow = K) %*% t(A_inv) * w_sample[i]
+    }
+    Gamma_filter <- fatBVARS::carterkohn(yt - B %*% xt, w_sample %x% diag(K),
+                                         Sigma_T, sigma_G, K, K, t_max,
+                                         gamma_prior,V_gamma_prior)
+
+    Gamma_T <- Gamma_filter$bdraws
+    gamma0 <- Gamma_filter$b0draws
+
+    # Draw sigma_G, the covariance of B(t)
+    if (K>1) {
+      sse_2 <- apply( (Gamma_T[,1:t_max] - cbind(gamma0,Gamma_T[,1:(t_max-1)]) )^2, MARGIN = 1, FUN = sum)
+    } else {
+      sse_2 <- sum( (Gamma_T[,1:t_max] - c(gamma0,Gamma_T[,1:(t_max-1)]) )^2)
+    }
+    sigma_G_a <- rep(t_max,K) # prior of sigma_G
+    sigma_G_b <- sse_2 # prior of sigma_G
+
+    for (i in c(1:K)){
+      sigma_new <- rinvgamma(1, shape = sigma_G_a[i] * 0.5, rate = sigma_G_b[i] * 0.5)
+      alpha = (sigma_G[i,i] - sigma_new) / 2 + 0.5 * (log(sigma_new) - log(sigma_G[i,i])) # B_sigma = 1
+      temp = log(runif(1))
+      if (alpha > temp){
+        sigma_G[i,i] <- sigma_new
+      }
+    }
+
+
+    # Sample sigma
+    sigma2 <- rep(0,K)
+    u_ort <- A %*% ((yt - B %*% xt - Gamma_T * w)/ w_sqrt)    # change from Gaussian
+    sigma_post_a <- sigma0_T0 + rep(t_max,K)
+    sigma_post_b <- sigma0_S0 + apply(u_ort^2, 1, sum)
+    for (i in c(1:K)){
+      sigma2[i] <- rinvgamma(1, shape = sigma_post_a[i] * 0.5, rate = sigma_post_b[i] * 0.5)
+    }
+    sigma <- sqrt(sigma2)
+
+    # Sample A0
+    u_std <- (yt - B %*% xt - Gamma_T * w)/ w_sqrt # change from Gaussian
+    u_neg <- - u_std
+    a_sample <- rep(0, K * (K - 1) /2)
+    if (K > 1) {
+      for (i in c(2:K)){
+        id_end <- i*(i-1)/2
+        id_start <- id_end - i + 2
+        a_sub <- a_prior[id_start:id_end]
+        V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
+        a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = u_std[i,] / sigma[i],
+                                                     xsub = matrix(u_neg[1:(i-1),] / sigma[i], nrow = i-1),
+                                                     a_sub = a_sub,
+                                                     V_a_sub = V_a_sub)
+      }
+    }
+    A_post <- matrix(0, nrow = K, ncol = K)
+    A_post[upper.tri(A)] <- a_sample
+    A <- t(A_post)
+    diag(A) <- 1
+
+    Sigma <- solve(A) %*% diag(sigma, nrow = length(sigma))
+    Sigma2 <- Sigma %*% t(Sigma)
+    Sigma2_inv <- solve(Sigma2)
+    Sigma2_inv <- (Sigma2_inv + t(Sigma2_inv))*0.5
+
+    # Sample w
+    u <- (yt - B %*%xt)
+    ran_stu = rt(t_max, df = 4)
+    a_eq <- as.numeric(-0.5* sapply(1:t_max, FUN = function(i) (t(Gamma_T[,i]) %*% Sigma2_inv %*% Gamma_T[,i]) ))
+    b_eq <- -((0.5*K + nu/2+1))
+    c_eq =  as.numeric(nu*0.5 + 0.5 * apply((A %*% u / sigma)^2, MARGIN = 2, FUN = sum))
+    w_mode <- (- b_eq - sqrt(b_eq^2-4*a_eq*c_eq))/(2*a_eq)
+    w_mode <- ifelse(abs(w_mode)<1e-5, - c_eq/b_eq, w_mode)
+    mode_target <- log( w_mode )
+    cov_target <- 1/( c_eq / w_mode - a_eq * w_mode)
+    log_w_temp = mode_target + sqrt(cov_target)*ran_stu
+    w_temp = exp(log_w_temp)
+
+    num_mh =  dinvgamma(w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
+      ( - 0.5 * K * log_w_temp - 0.5 * apply((A %*% (u - Gamma_T * reprow(w_temp,K)) / sigma)^2, MARGIN = 2, FUN = sum) / w_temp) - # posterior
+      dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
+
+    denum_mh = dinvgamma(w_sample, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
+      ( - 0.5 * K * log(w_sample) - 0.5 * apply((A %*% (u - Gamma_T * w) / sigma)^2, MARGIN = 2, FUN = sum) / w_sample) - # posterior
+      dt( (log(w_sample) - mode_target)/sqrt(cov_target), df = 4, log = T) + log(w_sample) # proposal
+    alpha = as.numeric(num_mh - denum_mh)
+    temp = log(runif(t_max))
+    acre = alpha > temp
+    w_sample <- ifelse(acre, w_temp, w_sample)
+    w <- reprow(w_sample, K)
+    w_sqrt <- reprow(sqrt(w_sample), K)
+    acount_w <- acount_w + acre
+
+    # Sample nu
+    nu_temp = nu + exp(logsigma_nu)*rnorm(1)
+    if (nu_temp > 2 && nu_temp < 100){
+      num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
+        sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
+      denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
+        sum(dinvgamma(w_sample, shape = nu*0.5, rate = nu*0.5, log = T))
+      alpha = num_mh - denum_mh;
+      temp = log(runif(1));
+      if (alpha > temp){
+        nu = nu_temp
+        acount_nu = acount_nu + 1
+      }
+
+    }
+
+    if(j %% batchlength == 0 ){
+      if (acount_nu > batchlength * TARGACCEPT){
+        logsigma_nu = logsigma_nu + adaptamount(j %/% batchlength);
+      }
+      if (acount_nu < batchlength * TARGACCEPT){
+        logsigma_nu = logsigma_nu - adaptamount(j %/% batchlength);
+      }
+      acount_nu = 0
+    }
+    if ((j > inits$burnin) & (j %% inits$thin == 0))
+      mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, sigma, nu, diag(sigma_G), gamma0, as.numeric(Gamma_T), as.numeric(w_sample))
+    if (j %% 100 == 0) {
+      cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2), " ", round(apply(Gamma_T,MARGIN = 1,FUN = mean),2), " \n")
+      acount_w <- rep(0,t_max)
+    }
+  }
+  nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
+  nameA <- nameA[upper.tri(nameA, diag = F)]
+  row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        nameA,
+                        paste("sigma",c(1:K), sep = ""),
+                        paste("nu"),
+                        paste("sigma_G",c(1:K), sep = ""),
+                        paste("G0",c(1:K), sep = ""),
+                        sprintf("gamma_%d_%d", repcol(c(1:K),t_max), reprow(c(1:t_max),K)),
+                        paste("w",c(1:t_max), sep = ""))
+
+  return(as.mcmc(t(mcmc)))
+}
 
 #############################################################################################
 #' # library(Matrix)

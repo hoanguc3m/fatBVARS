@@ -5,9 +5,6 @@
 \alias{fatBVARS-package}
 \alias{fatBVARS}
 \title{Bayesian VAR with Stochastic volatility and fat tails}
-\description{
-Bayesian VAR with Stochastic volatility and fat tails
-}
 \details{
 \tabular{ll}{
 Package: \tab fatBVARS\cr
@@ -19,6 +16,9 @@ Depends: \tab R (\eqn{\geq 3.5.0}{>= 3.5.0})\cr
 Imports: \tab Rcpp \cr
 Suggests: \tab  \cr
 LazyLoad: \tab yes }
+}
+\references{
+
 }
 \author{
 Hoang Nguyen

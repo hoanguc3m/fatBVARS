@@ -4,8 +4,15 @@
 \alias{get_irf}
 \title{Impulse response function of BVAR model}
 \usage{
-get_irf(Chain, impulse.variable = 1, response.variable = 2,
-  atT = NULL, n.ahead = 20, scenario = 2, draw.plot = TRUE)
+get_irf(
+  Chain,
+  impulse.variable = 1,
+  response.variable = 2,
+  atT = NULL,
+  n.ahead = 20,
+  scenario = 2,
+  draw.plot = TRUE
+)
 }
 \arguments{
 \item{Chain}{The fatBVARSV object from command BVAR.}

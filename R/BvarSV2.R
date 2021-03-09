@@ -22,27 +22,36 @@
 #' plot(Chain1)
 #' }
 BVAR.stochvol <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
-  Start = Sys.time()
-  if (dist == "Gaussian") Chain <- BVAR.Gaussian.stochvol(y, K, p, y0, prior, inits)
-  if (dist == "Student") Chain <- BVAR.Student.stochvol(y, K, p, y0, prior, inits)
-  if (dist == "Hyper.Student") Chain <- BVAR.Hyper.Student.stochvol(y, K, p, y0, prior, inits)
-  if (dist == "multiStudent") Chain <- BVAR.multiStudent.stochvol(y, K, p, y0, prior, inits)
-  if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.stochvol(y, K, p, y0, prior, inits)
-  if (dist == "multiOrthStudent") Chain <- BVAR.multiOrthStudent.stochvol(y, K, p, y0, prior, inits)
-  if (dist == "Hyper.multiOrthStudent") Chain <- BVAR.Hyper.multiOrthStudent.stochvol(y, K, p, y0, prior, inits)
-  elapsedTime = Sys.time() - Start
-  print(elapsedTime)
-  out <- list(mcmc = Chain,
-              y = y,
-              y0 = y0,
-              K = K,
-              p = p,
-              dist = dist,
-              prior = prior,
-              inits = inits,
-              esttime = elapsedTime)
-  class(out) <- c("fatBVARSV")
-  return(out)
+  if (!(dist %in% c("Gaussian","Student","Hyper.Student",
+                    "multiStudent","Hyper.multiStudent",
+                    "multiOrthStudent","Hyper.multiOrthStudent",
+                    "dynHyper.Student", "dynHyper.multiStudent", "dynHyper.multiOrthStudent") ))
+    stop("dist is not implemented.")
+  if (prior$SV == TRUE){
+    Start = Sys.time()
+    if (dist == "Gaussian") Chain <- BVAR.Gaussian.stochvol(y, K, p, y0, prior, inits)
+    if (dist == "Student") Chain <- BVAR.Student.stochvol(y, K, p, y0, prior, inits)
+    if (dist == "Hyper.Student") Chain <- BVAR.Hyper.Student.stochvol(y, K, p, y0, prior, inits)
+    if (dist == "multiStudent") Chain <- BVAR.multiStudent.stochvol(y, K, p, y0, prior, inits)
+    if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.stochvol(y, K, p, y0, prior, inits)
+    if (dist == "multiOrthStudent") Chain <- BVAR.multiOrthStudent.stochvol(y, K, p, y0, prior, inits)
+    if (dist == "Hyper.multiOrthStudent") Chain <- BVAR.Hyper.multiOrthStudent.stochvol(y, K, p, y0, prior, inits)
+    elapsedTime = Sys.time() - Start
+    print(elapsedTime)
+    out <- list(mcmc = Chain,
+                y = y,
+                y0 = y0,
+                K = K,
+                p = p,
+                dist = dist,
+                prior = prior,
+                inits = inits,
+                esttime = elapsedTime)
+    class(out) <- c("fatBVARSV")
+    return(out)
+  } else {
+    warning("prior$SV is TRUE")
+  }
 }
 #' @export
 BVAR.Gaussian.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
@@ -1278,7 +1287,7 @@ BVAR.Hyper.multiOrthStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NUL
       id_start <- id_end - i + 2
       a_sub <- a_prior[id_start:id_end]
       V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
-      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - w_sqrt[i,] * gamma[i]) / sqrtvol[i,] / w_sqrt[i,],
+      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - w[i,] * gamma[i]) / sqrtvol[i,] / w_sqrt[i,],
                                                    xsub = matrix(u_neg[1:(i-1),] / reprow(sqrtvol[i,],i-1) / reprow(w_sqrt[i,], i-1), nrow = i-1),
                                                    a_sub = a_sub,
                                                    V_a_sub = V_a_sub)

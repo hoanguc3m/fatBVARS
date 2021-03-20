@@ -6,28 +6,30 @@
 #' @param Chain The fatBVARSV object from command BVAR.
 #' @param impulse.variable The position of impulse variable
 #' @param response.variable The position of reponse variable
-#' @param time The time at which impulse response function is calculated
+#' @param atT The time at which impulse response function is calculated
 #' @param n.ahead Maximal time between impulse and response (defaults to 20).
-#' @param scenario If 1, there is no orthogonalizaton, and the shock size corresponds to one unit of the impulse variable.
-#' If scenario is either 2 (the default) or 3, the error term variance-covariance matrix is orthogonalized via Cholesky decomposition.
-#' For scenario = 2, the Cholesky decomposition of the error term VCV matrix at time point t is used.
-#' scenario = 3 is the variant used in Del Negro and Primiceri (2015).
-#' Here, the diagonal elements are set to their averages over time, whereas the off-diagonal elements are specific to time t.
-#' See the bvars package.
 #' @param draw.plot Show plot
 #' @return A list of two elements: Contemporaneous impulse responses and Matrix of simulated impulse responses
 #' @export
 #' @examples
 #' \dontrun{
 #' irf_obj <- get_irf(Chain = Chain, impulse.variable = 1, response.variable = 2,
-#'                    t = NULL, n.ahead = 20, scenario = 2, draw.plot = TRUE)
+#'                    t = NULL, n.ahead = 20, draw.plot = FALSE)
 #' }
 #' @references bvars package https://cran.r-project.org/web/packages/bvarsv
 get_irf <- function(Chain, impulse.variable = 1, response.variable = 2,
-                    atT = NULL, n.ahead = 20, scenario = 2, draw.plot = TRUE){
+                    atT = NULL, n.ahead = 20, draw.plot = FALSE){
   # TODO: Check IRF in case of fat tail.
   K <- Chain$K
   p <- Chain$p
+
+  if (is.null(atT)){
+    atT = t_max
+  }
+
+  if (atT < n.ahead){
+    stop("atT < n.ahead.")
+  }
 
   ndraws <- nrow(Chain$mcmc)
   t_max <- nrow(Chain$y)
@@ -35,53 +37,64 @@ get_irf <- function(Chain, impulse.variable = 1, response.variable = 2,
   dist <- Chain$dist
   SV <- Chain$prior$SV
 
-  if (is.null(atT)){
-    atT = t_max
-  }
 
   if (SV) {
     sig <- exp(get_post(Chain$mcmc, element = "h")*0.5)
-    if (scenario == 3){
-      sig <- matrix(apply( sig , 2, mean), nrow = K)
-      sig <- apply(sig, MARGIN = 1, mean)
-      sig <- diag(sig)
-    } else {
-      sig <- sig[, c( ((atT-1) * K+1) : (atT * K))]
-    }
+    sig <- sig[, c( ((atT-1-n.ahead) * K+1) : (atT * K))]
   } else {
     sig <- get_post(Chain$mcmc, element = "sigma")
-    if (scenario == 3){
-      sig <- apply( get_post(Chain$mcmc, element = "sigma") , 2, mean)
-      sig <- diag(sig)
-    }
   }
-  H.chol <- NULL
+  if (!(dist == "Gaussian")){
+    W <- sqrt(get_post(Chain$mcmc, element = "w")[, c( ((atT-1-n.ahead) * K+1) : (atT * K))])
+  }
+
+
+  H.chol <- array(diag(K), dim = c(K,K, n.ahead+1))
   beta <- get_post(Chain$mcmc, element = "B")[,-c(1:K)] # Remove constant
   out <- matrix(0, ndraws, n.ahead + 1)
+  out_all <- array(0, c(K,K,ndraws, n.ahead + 1))
 
   # Compute IR for each MC iteration
   for (j in c(1:ndraws)){
 
     # Cholesky of VCV matrix, depending on specification
-    if (scenario > 1){
-      A0 <- matrix(0, nrow = K, ncol = K)
-      A0[upper.tri(A0)] <- get_post(Chain$mcmc[j,], element = "a")
-      A0 <- t(A0)
-      diag(A0) <- 1
 
-      if (scenario == 2){ # Standard orthogonalization
-        H.chol <- A0 %*% diag(sig[j,])
-      } else { # Orthogonalization as in Primiceri
-        H.chol <- A0 %*% sig
+    A0 <- matrix(0, nrow = K, ncol = K)
+    A0[upper.tri(A0)] <- get_post(Chain$mcmc[j,], element = "a")
+    A0 <- t(A0)
+    diag(A0) <- 1
+    A_inv <- solve(A0)
+
+    for (s in c(1:(n.ahead+1))){
+      sigtemp <- sig[j,c(((n.ahead - s+1) * K+1) : ((n.ahead - s + 2) * K)) ]
+      if (dist == "Gaussian"){
+        H.chol[,,s] <- A_inv %*% diag(sigtemp)
+      }
+      if (dist == "multiStudent"){
+        wtemp <- W[j,c(((n.ahead - s+1) * K+1) : ((n.ahead - s + 2) * K)) ]
+        H.chol[,,s] <- diag(wtemp) %*% A_inv %*% diag(sigtemp)
+      }
+      if (dist == "Hyper.multiStudent"){
+        wtemp <- W[j,c(((n.ahead - s+1) * K+1) : ((n.ahead - s + 2) * K)) ]
+        H.chol[,,s] <- diag(wtemp) %*% A_inv %*% diag(sigtemp)
+      }
+      if (dist == "multiOrthStudent"){
+        wtemp <- W[j,c(((n.ahead - s+1) * K+1) : ((n.ahead - s + 2) * K)) ]
+        H.chol[,,s] <- A_inv %*% diag(wtemp) %*% diag(sigtemp)
+      }
+      if (dist == "Hyper.multiOrthStudent"){
+        wtemp <- W[j,c(((n.ahead - s+1) * K+1) : ((n.ahead - s + 2) * K)) ]
+        H.chol[,,s] <- A_inv %*% diag(wtemp) %*% diag(sigtemp)
       }
     }
 
+
     # Compute Impulse Responses
     aux <- IRFmats(B = matrix(beta[j,], nrow = K),
-                   H.chol = H.chol, n.ahead = n.ahead)
-    aux <- aux[response.variable, seq(from = impulse.variable, by = K, length = n.ahead + 1)]
+                   H.chol = H.chol)
 
-    out[j,] <- aux
+    out[j,] <- aux[response.variable, impulse.variable, ]
+    out_all[,,j,] <- aux
   }
 
   # Make plot
@@ -96,11 +109,14 @@ get_irf <- function(Chain, impulse.variable = 1, response.variable = 2,
     lines(x = xax, y = pdat[,3], type = "l", col = 1, lwd = 2.5)
     abline(h = 0, lty = 2)
   }
-  return(list(contemporaneous = out[,1], irf = out[,-1])  )
+  return(list(irf_all = out,
+              mean_irf = apply(out, MARGIN = 2, FUN = mean),
+              mean_all = apply(out_all, MARGIN = c(1,2,4), FUN = mean) )  )
 }
 
 #' @export
-IRFmats <- function(B, H.chol = NULL, n.ahead = 20){
+IRFmats <- function(B, H.chol){
+  n.ahead = dim(H.chol)[3] - 1
   # Dimensions
   K <- nrow(B) # nr of variables
 
@@ -120,11 +136,11 @@ IRFmats <- function(B, H.chol = NULL, n.ahead = 20){
   }
 
   # Matrix with impulse responses
-  Phi <- matrix(0, K, K*(n.ahead+1))
-  for (s in 0:n.ahead){
-    aux <- matrixcalc::matrix.power(Bc, s)[1:K, 1:K]
-    if (!is.null(H.chol)) aux <- aux %*% H.chol
-    Phi[,(s*K+1):((s+1)*K)] <- aux
+  Phi <- array(NA, dim = c(K, K, (n.ahead+1)) )
+  for (s in 1:(n.ahead+1)){
+    aux <- matrixcalc::matrix.power(Bc, s-1)[1:K, 1:K]
+    aux <- aux %*% H.chol[,,s]
+    Phi[,,s] <- aux
   }
   return(Phi)
 }

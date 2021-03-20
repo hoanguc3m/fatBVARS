@@ -10,8 +10,7 @@ get_irf(
   response.variable = 2,
   atT = NULL,
   n.ahead = 20,
-  scenario = 2,
-  draw.plot = TRUE
+  draw.plot = FALSE
 )
 }
 \arguments{
@@ -21,18 +20,11 @@ get_irf(
 
 \item{response.variable}{The position of reponse variable}
 
+\item{atT}{The time at which impulse response function is calculated}
+
 \item{n.ahead}{Maximal time between impulse and response (defaults to 20).}
 
-\item{scenario}{If 1, there is no orthogonalizaton, and the shock size corresponds to one unit of the impulse variable.
-If scenario is either 2 (the default) or 3, the error term variance-covariance matrix is orthogonalized via Cholesky decomposition.
-For scenario = 2, the Cholesky decomposition of the error term VCV matrix at time point t is used.
-scenario = 3 is the variant used in Del Negro and Primiceri (2015).
-Here, the diagonal elements are set to their averages over time, whereas the off-diagonal elements are specific to time t.
-See the bvars package.}
-
 \item{draw.plot}{Show plot}
-
-\item{time}{The time at which impulse response function is calculated}
 }
 \value{
 A list of two elements: Contemporaneous impulse responses and Matrix of simulated impulse responses
@@ -43,7 +35,7 @@ This function returns a impulse response function of BVAR-SV-fatTail model.
 \examples{
 \dontrun{
 irf_obj <- get_irf(Chain = Chain, impulse.variable = 1, response.variable = 2,
-                   t = NULL, n.ahead = 20, scenario = 2, draw.plot = TRUE)
+                   t = NULL, n.ahead = 20, draw.plot = FALSE)
 }
 }
 \references{

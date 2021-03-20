@@ -1,7 +1,15 @@
 # Minnesota prior from bvars Package
 # URL: https://github.com/joergrieger/bvars
 
-get_prior_minnesota <- function(y, p, intercept=TRUE, lambda1=0.2, lambda2=0.5, lambda3=1, lambda4=2, ...){
+#' @export
+get_prior_minnesota <- function(y, p, intercept=TRUE, ...){
+  # lambda1=0.2, lambda2=0.5, lambda3=1, lambda4=2
+  arguments <- eval(substitute(alist(...)))
+  lambda1 <- ifelse(is.null(arguments$lambda1), 0.2, arguments$lambda1)
+  lambda2 <- ifelse(is.null(arguments$lambda2), 0.5, arguments$lambda2)
+  lambda3 <- ifelse(is.null(arguments$lambda3), 1, arguments$lambda3)
+  lambda4 <- ifelse(is.null(arguments$lambda4), 2, arguments$lambda4)
+
 
   t_max <- nrow(y)
   K   <- ncol(y)
@@ -153,6 +161,8 @@ get_prior <- function(y, p, priorStyle = c("Minnesota"),
                     "dynHyper.Student", "dynHyper.multiStudent", "dynHyper.multiOrthStudent") ))
     stop("dist is not implemented.")
 
+  arguments <- eval(substitute(alist(...)))
+
   K <- ncol(y)
   M <- K + p*(K^2) # nr of beta parameters
   numa <- 0.5*K*(K-1) # nr of VCV elements
@@ -171,9 +181,9 @@ get_prior <- function(y, p, priorStyle = c("Minnesota"),
   V_b_prior = prior_sub$V_b_prior
 
   # A mean and var
-  a0 <- rep(0, numa) # A \sim N(0,I)
-
-  V_a_prior <- diag(x = rep(1,numa), nrow = numa, ncol = numa)
+  a0 <- rep(0, numa) # A \sim N(0,10I)
+  a_Vprior <- ifelse(is.null(arguments$a_Vprior), 10, arguments$a_Vprior)
+  V_a_prior <- diag(x = rep(a_Vprior,numa), nrow = numa, ncol = numa)
 
   sigma <- prior_sub$sigma
 

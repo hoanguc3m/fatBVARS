@@ -128,7 +128,7 @@ BVAR.Gaussian.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
     # Sample vol
     ytilde <- A%*% (yt - B %*% xt)
-    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
+    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
@@ -257,7 +257,7 @@ BVAR.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
     # Sample vol
     ytilde <- A%*% ((yt - B %*% xt)/w_sqrt)
-    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
+    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
@@ -443,7 +443,7 @@ BVAR.Hyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
 
     # Sample vol
     ytilde <- A%*% ((yt - B %*% xt  - D%*% w)/w_sqrt)
-    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
+    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
@@ -666,7 +666,7 @@ BVAR.multiStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
 
     # Sample vol
     ytilde <- A%*% ((yt - B %*%xt)/ w_sqrt)
-    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
+    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
@@ -879,7 +879,7 @@ BVAR.Hyper.multiStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits =
 
     # Sample vol
     ytilde <- A%*% ((yt - B %*%xt - D %*% w)/ w_sqrt)
-    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
+    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
@@ -1073,7 +1073,7 @@ BVAR.multiOrthStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = N
 
     # Sample vol
     ytilde <- (A %*% (yt - B %*% xt)) / w_sqrt
-    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
+    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
@@ -1263,7 +1263,7 @@ BVAR.Hyper.multiOrthStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, ini
 
     # Sample vol
     ytilde <- (A %*% (yt - B %*% xt) - D %*% w) / w_sqrt
-    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
+    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
@@ -1491,7 +1491,7 @@ BVAR.dynHyper.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = N
 
     # Sample vol
     ytilde <- A%*% ((yt - B %*% xt  - Gamma_T * w)/w_sqrt)
-    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
+    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
@@ -1738,7 +1738,7 @@ BVAR.dynHyper.multiStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, init
 
     # Sample vol
     ytilde <- A%*% ((yt - B %*%xt - Gamma_T * w)/ w_sqrt)
-    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
+    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
@@ -1984,7 +1984,7 @@ BVAR.dynHyper.multiOrthStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, 
 
     # Sample vol
     ytilde <- (A %*% (yt - B %*% xt) - Gamma_T * w) / w_sqrt
-    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max)
+    aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt

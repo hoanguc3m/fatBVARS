@@ -72,7 +72,7 @@ sample_A_ele <- function(ysub, xsub, a_sub, V_a_sub){
 
 #' @export
 sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
-                         h = matrix(0, nrow = t_max, ncol = K), K, t_max){
+                         h = matrix(0, nrow = t_max, ncol = K), K, t_max, prior){
   tmp <- getmix()
   q <- tmp$q
   m_mean <- tmp$m
@@ -123,7 +123,7 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
 
   for (i in c(1:K)){
     sigma_new <- rinvgamma(1, shape = sigma_post_a[i] * 0.5, rate = sigma_post_b[i] * 0.5)
-    alpha = (sigma_h[i,i] - sigma_new) / 2 + 0.5 * (log(sigma_new) - log(sigma_h[i,i])) # B_sigma = 1
+    alpha = (sigma_h[i,i] - sigma_new) / 2 / prior$sigma_S0 + 0.5 * (log(sigma_new) - log(sigma_h[i,i])) # B_sigma = 1
     temp = log(runif(1))
     if (alpha > temp){
       sigma_h[i,i] <- sigma_new

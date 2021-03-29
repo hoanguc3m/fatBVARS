@@ -23,16 +23,14 @@ get_irf <- function(Chain, impulse.variable = 1, response.variable = 2,
   K <- Chain$K
   p <- Chain$p
 
-  if (is.null(atT)){
-    atT = t_max - n.ahead
-  }
-
-  if (atT > t_max - n.ahead){
-    stop("atT > t_max - n.ahead")
-  }
 
   ndraws <- nrow(Chain$mcmc)
   t_max <- nrow(Chain$y)
+
+  if (is.null(atT)){
+    atT = t_max
+  }
+
 
   dist <- Chain$dist
   SV <- Chain$prior$SV
@@ -40,12 +38,12 @@ get_irf <- function(Chain, impulse.variable = 1, response.variable = 2,
 
   if (SV) {
     sig <- exp(get_post(Chain$mcmc, element = "h")*0.5)
-    sig <- sig[, c( ((atT-1) * K+1) : ((atT + n.ahead) * K))]
+    sig <- sig[, c( ((atT-1) * K+1) : ((atT) * K))]
   } else {
     sig <- get_post(Chain$mcmc, element = "sigma")
   }
   if (!(dist == "Gaussian")){
-    W <- sqrt(get_post(Chain$mcmc, element = "w")[, c( ((atT-1) * K+1) : ((atT + n.ahead) * K))])
+    W <- sqrt(get_post(Chain$mcmc, element = "w")[, c( ((atT-1) * K+1) : ((atT) * K))])
   }
 
 
@@ -65,27 +63,29 @@ get_irf <- function(Chain, impulse.variable = 1, response.variable = 2,
     diag(A0) <- 1
     A_inv <- solve(A0)
 
-    for (s in c(1:(n.ahead+1))){
-      sigtemp <- sig[j,c(((s-1) * K+1) : ((s) * K)) ]
-      if (dist == "Gaussian"){
-        H.chol[,,s] <- A_inv %*% diag(sigtemp)
-      }
-      if (dist == "multiStudent"){
-        wtemp <- W[j,c(((s-1) * K+1) : ((s) * K)) ]
-        H.chol[,,s] <- diag(wtemp) %*% A_inv %*% diag(sigtemp)
-      }
-      if (dist == "Hyper.multiStudent"){
-        wtemp <- W[j,c(((s-1) * K+1) : ((s) * K)) ]
-        H.chol[,,s] <- diag(wtemp) %*% A_inv %*% diag(sigtemp)
-      }
-      if (dist == "multiOrthStudent"){
-        wtemp <- W[j,c(((s-1) * K+1) : ((s) * K)) ]
-        H.chol[,,s] <- A_inv %*% diag(wtemp) %*% diag(sigtemp)
-      }
-      if (dist == "Hyper.multiOrthStudent"){
-        wtemp <- W[j,c(((s-1) * K+1) : ((s) * K)) ]
-        H.chol[,,s] <- A_inv %*% diag(wtemp) %*% diag(sigtemp)
-      }
+    s = n.ahead+1
+    sigtemp <- sig[j,c(1:K)]
+    if (dist == "Gaussian"){
+      H.chol[,,s] <- A_inv %*% diag(sigtemp)
+    }
+    if (dist == "multiStudent"){
+      wtemp <- W[j,c(1:K)]
+      H.chol[,,s] <- diag(wtemp) %*% A_inv %*% diag(sigtemp)
+    }
+    if (dist == "Hyper.multiStudent"){
+      wtemp <- W[j,c(1:K)]
+      H.chol[,,s] <- diag(wtemp) %*% A_inv %*% diag(sigtemp)
+    }
+    if (dist == "multiOrthStudent"){
+      wtemp <- W[j,c(1:K)]
+      H.chol[,,s] <- A_inv %*% diag(wtemp) %*% diag(sigtemp)
+    }
+    if (dist == "Hyper.multiOrthStudent"){
+      wtemp <- W[j,c(1:K)]
+      H.chol[,,s] <- A_inv %*% diag(wtemp) %*% diag(sigtemp)
+    }
+    for (s in c(1:(n.ahead))){
+      H.chol[,,s] <- H.chol[,,n.ahead+1]
     }
 
 

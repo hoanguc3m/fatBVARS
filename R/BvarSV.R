@@ -1,6 +1,6 @@
-#' Bayesian inference of VAR model with SV
+#' Bayesian inference of VAR model with RW-SV
 #'
-#' Bayesian inference of VAR model with SV
+#' Bayesian inference of VAR model with RW-SV
 #' \deqn{y_t = B x_t + SQRT(w_t) A^(-1) Sigma eps_t}
 #' @param y The input data as matrix T x K where T is the number of observations and K is the number of variables
 #' @param K The number of variables in BVAR model.

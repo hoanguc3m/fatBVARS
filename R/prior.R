@@ -158,7 +158,7 @@ get_prior <- function(y, p, priorStyle = c("Minnesota"),
   if (!(dist %in% c("Gaussian","Student","Hyper.Student",
                     "multiStudent","Hyper.multiStudent",
                     "multiOrthStudent","Hyper.multiOrthStudent",
-                    "dynHyper.Student", "dynHyper.multiStudent", "dynHyper.multiOrthStudent") ))
+                    "dynHyper.Student", "OrthSkewNorm", "dynHyper.multiOrthStudent") ))
     stop("dist is not implemented.")
 
   arguments <- eval(substitute(alist(...)))
@@ -200,7 +200,7 @@ get_prior <- function(y, p, priorStyle = c("Minnesota"),
   #Skew.Student
   if (dist =="Hyper.Student" |
       dist =="Hyper.multiStudent" | dist =="Hyper.multiOrthStudent"|
-      dist =="dynHyper.Student" | dist =="dynHyper.multiStudent"| dist =="dynHyper.multiOrthStudent"){
+      dist =="dynHyper.Student" | dist =="OrthSkewNorm"| dist =="dynHyper.multiOrthStudent"){
     prior_collect$gamma_prior = rep(0, K)
     prior_collect$V_gamma_prior = diag(K)
   }
@@ -229,7 +229,7 @@ get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
   if (!(dist %in% c("Gaussian","Student","Hyper.Student",
                     "multiStudent","Hyper.multiStudent",
                     "multiOrthStudent","Hyper.multiOrthStudent",
-                    "dynHyper.Student", "dynHyper.multiStudent", "dynHyper.multiOrthStudent") ))
+                    "dynHyper.Student", "OrthSkewNorm", "dynHyper.multiOrthStudent") ))
     stop("dist is not implemented.")
 
   SV = prior$SV
@@ -260,7 +260,7 @@ get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
   #Skew.Student
   if (dist =="Hyper.Student" |
       dist =="Hyper.multiStudent" | dist =="Hyper.multiOrthStudent"|
-      dist =="dynHyper.Student" | dist =="dynHyper.multiStudent"| dist =="dynHyper.multiOrthStudent"){
+      dist =="dynHyper.Student" | dist =="OrthSkewNorm"| dist =="dynHyper.multiOrthStudent"){
     inits$gamma = rep(0.001,K)
   }
   #multiStudent

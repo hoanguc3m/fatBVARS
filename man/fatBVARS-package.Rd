@@ -4,13 +4,16 @@
 \name{fatBVARS-package}
 \alias{fatBVARS-package}
 \alias{fatBVARS}
-\title{Bayesian VAR with Stochastic volatility and fat tails}
+\title{Bayesian VAR with Stochastic volatility, asymmetry and fat tails}
+\description{
+Bayesian VAR with Stochastic volatility, asymmetry and fat tails
+}
 \details{
 \tabular{ll}{
 Package: \tab fatBVARS\cr
 Type: \tab Package\cr
-Version: \tab 0.1.0 \cr
-Date: \tab 2019-12-07\cr
+Version: \tab 0.2.0 \cr
+Date: \tab 2021-03-29\cr
 License: \tab GPL (>=2)\cr
 Depends: \tab R (\eqn{\geq 3.5.0}{>= 3.5.0})\cr
 Imports: \tab Rcpp \cr

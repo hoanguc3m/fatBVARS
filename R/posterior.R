@@ -486,39 +486,39 @@ log_likelihood <- function(param, data, aggregate = TRUE){
 }
 
 
-#' WAIC of BVAR model
+#' #' WAIC of BVAR model
+#' #'
+#' #' This function returns a WAIC of BVAR-SV-fatTail model.
+#' #' @param data The fatBVARSV object from command BVAR.
+#' #' @return The WAIC of the fatBVARSVobj at param.
+#' #' @export
+#' #' @examples
+#' #' \dontrun{
+#' #' WAIC_chain <- WAIC(Chain)
+#' #' }
+#' WAIC <- function(Chain){
+#'   ndraws <- nrow(Chain$mcmc)
+#'   t_max <- nrow(Chain$y)
 #'
-#' This function returns a WAIC of BVAR-SV-fatTail model.
-#' @param data The fatBVARSV object from command BVAR.
-#' @return The WAIC of the fatBVARSVobj at param.
-#' @export
-#' @examples
-#' \dontrun{
-#' WAIC_chain <- WAIC(Chain)
+#'   if(.Platform$OS.type == "unix") {
+#'     log_ll <- parallel::mclapply(1:ndraws,
+#'                                  FUN = function(j) log_likelihood(param = Chain$mcmc[j,], data = Chain, aggregate = F),
+#'                                  mc.cores = parallel::detectCores()*0.5  )
+#'     log_ll <- t(matrix(unlist(log_ll), nrow = t_max))
+#'   } else {
+#'     log_ll <- matrix(NA, nrow = ndraws, ncol = t_max)
+#'     for (j in c(1:ndraws)){
+#'       log_ll[j,] <- log_likelihood(param = Chain$mcmc[j,], data = Chain, aggregate = F)
+#'       if(anyNA(log_ll[j,])) { cat("Error ", j, " \t")}
+#'     }
+#'   }
+#'
+#'   lpd = sum(log(apply(exp(log_ll), MARGIN = 2, mean))) # log predicted density
+#'   p_waic = sum(apply(log_ll, MARGIN = 2, FUN = var)) # Effective parameters
+#'   waic_deviance <- -2 * ( lpd - p_waic )
+#'   return(list(waic = waic_deviance,
+#'               lpd = lpd,
+#'               p_waic = p_waic))
 #' }
-WAIC <- function(Chain){
-  ndraws <- nrow(Chain$mcmc)
-  t_max <- nrow(Chain$y)
-
-  if(.Platform$OS.type == "unix") {
-    log_ll <- parallel::mclapply(1:ndraws,
-                                 FUN = function(j) log_likelihood(param = Chain$mcmc[j,], data = Chain, aggregate = F),
-                                 mc.cores = parallel::detectCores()*0.5  )
-    log_ll <- t(matrix(unlist(log_ll), nrow = t_max))
-  } else {
-    log_ll <- matrix(NA, nrow = ndraws, ncol = t_max)
-    for (j in c(1:ndraws)){
-      log_ll[j,] <- log_likelihood(param = Chain$mcmc[j,], data = Chain, aggregate = F)
-      if(anyNA(log_ll[j,])) { cat("Error ", j, " \t")}
-    }
-  }
-
-  lpd = sum(log(apply(exp(log_ll), MARGIN = 2, mean))) # log predicted density
-  p_waic = sum(apply(log_ll, MARGIN = 2, FUN = var)) # Effective parameters
-  waic_deviance <- -2 * ( lpd - p_waic )
-  return(list(waic = waic_deviance,
-              lpd = lpd,
-              p_waic = p_waic))
-}
-
+#'
 

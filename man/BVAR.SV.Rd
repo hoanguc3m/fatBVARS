@@ -2,7 +2,7 @@
 % Please edit documentation in R/BvarSV.R
 \name{BVAR.SV}
 \alias{BVAR.SV}
-\title{Bayesian inference of VAR model with SV}
+\title{Bayesian inference of VAR model with RW-SV}
 \usage{
 BVAR.SV(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL)
 }
@@ -26,7 +26,7 @@ c("Gaussian","Student","Skew.Student","Hyper.Student", "multiStudent","Skew.mult
 A coda object of the posterior samples.
 }
 \description{
-Bayesian inference of VAR model with SV
+Bayesian inference of VAR model with RW-SV
 \deqn{y_t = B x_t + SQRT(w_t) A^(-1) Sigma eps_t}
 }
 \examples{

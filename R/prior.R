@@ -209,6 +209,9 @@ get_prior <- function(y, p, priorStyle = c("Minnesota"),
   prior_collect$SV <- SV
   prior_collect$priorStyle <- priorStyle
 
+  if (SV) {
+    prior_collect$sigma_h <- 1;
+  }
   return(prior_collect)
 }
 

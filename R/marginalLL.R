@@ -12,6 +12,8 @@
 #' @export
 marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
   if(.Platform$OS.type == "unix") {
+    RhpcBLASctl::blas_set_num_threads(1)
+
     K <- Chain$K
     p <- Chain$p
 
@@ -48,13 +50,21 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
     Sigma_mat <- get_post(mcmc, element = "sigma") # No SV is sigma / SV is sigma^2
     # Sigma_H <- sqrt(get_post(mcmc, element = "sigma_h")) # SV
     if (SV) {
-      # Sigma_gen_list <- InvGamma_approx(Sigma_mat, ndraws = ndraws)
-      # Sigma_gen <- Sigma_gen_list$new_samples
-      Sigma_gen_list <- Normal_approx(Sigma_mat^0.5, ndraws = ndraws) # Change to normal
-      Sigma_gen <- Sigma_gen_list$new_samples^2 # Change to normal
+      Sigma_gen_list <- InvGamma_approx(Sigma_mat, ndraws = ndraws)
+      Sigma_gen <- Sigma_gen_list$new_samples
+
+      # Sigma_gen_list <- Normal_approx(log(Sigma_mat), ndraws = ndraws) # Change to normal
+      # Sigma_gen <- exp(Sigma_gen_list$new_samples) # Change to square
+      # Sigma_gen_list$sum_log_prop <- Sigma_gen_list$sum_log_prop - apply(Sigma_gen_list$new_samples, MARGIN = 1, FUN = sum) # Jacobian
+
+
     } else {
       Sigma_gen_list <- InvGamma_approx(Sigma_mat^2, ndraws = ndraws)
       Sigma_gen <- sqrt(Sigma_gen_list$new_samples)
+
+      # Sigma_gen_list <- Normal_approx(2*log(Sigma_mat), ndraws = ndraws) # Change to normal
+      # Sigma_gen <- exp(0.5*Sigma_gen_list$new_samples)
+      # Sigma_gen_list$sum_log_prop <- Sigma_gen_list$sum_log_prop - apply(Sigma_gen_list$new_samples, MARGIN = 1, FUN = sum) # Jacobian
     }
     sum_log_prop <- sum_log_prop + Sigma_gen_list$sum_log_prop
 
@@ -458,9 +468,13 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
     bigml = log( apply(exp(short_sumlog-reprow(max_sumlog,ndraws/20)), MARGIN = 2, FUN = mean )) + max_sumlog
     ml = mean(bigml)
     mlstd = sd(bigml)/sqrt(20)
+    impt <- NULL
+    # impt <- importance_check(sum_log)
 
   return( list( LL = ml,
-                std = mlstd))
+                std = mlstd,
+                sum_log = sum_log,
+                imptcheck = impt))
   } else {
     return( marginalLLSing(Chain, ndraws) )
   }
@@ -1215,6 +1229,32 @@ Nu_Gamma_approx <- function(mcmc_sample, ndraws){
 }
 
 #' @export
+LL_tnorm <- function(par, data){
+  - sum(log(dtruncnorm(x = data, a=0, b=Inf, mean = par[1], sd = par[2])))
+}
+
+#' @export
+Normal_trunc_approx <- function(mcmc_sample, ndraws){
+
+  nElements <- ncol(mcmc_sample)
+  mcmc_mean <- rep(0, nElements)
+  mcmc_Sigma <- rep(0, nElements)
+  new_samples <- matrix(NA, ncol = nElements, nrow = ndraws)
+  sum_log_prop <- rep(0, ndraws)
+
+  for (i in c(1:nElements)){
+    result <- optim(par = c(0, 1), fn = LL_tnorm, data = mcmc_sample[,i])
+    new_samples[,i] <- rtruncnorm(ndraws, mean = result$par[1], sd = result$par[2], a = 0)
+    sum_log_prop <- sum_log_prop +
+      log(dtruncnorm(x = new_samples[,i], a=0, b=Inf, mean = result$par[1], sd = result$par[2])) - log(2) - log(new_samples[,i]) #Jacobian trans
+  }
+
+  colnames(new_samples) <- colnames(mcmc_sample)
+  return(list(new_samples = new_samples,
+              sum_log_prop = sum_log_prop))
+}
+
+#' @export
 a0toA <- function(a0, K){
   A <- matrix(0, nrow = K, ncol = K)
   A[upper.tri(A)] <- a0
@@ -1222,3 +1262,4 @@ a0toA <- function(a0, K){
   diag(A) <- 1
   return(A)
 }
+

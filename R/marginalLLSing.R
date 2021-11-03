@@ -307,5 +307,6 @@ marginalLLSing <- function(Chain, ndraws = NULL){
   # return( list( LL = mean(sum_log),
   #               std = sd(sum_log)/sqrt(ndraws)))
   return( list( LL = ml,
-                std = mlstd))
+                std = mlstd,
+                sum_log = sum_log))
 }

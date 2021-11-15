@@ -50,18 +50,30 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
     Sigma_mat <- get_post(mcmc, element = "sigma") # No SV is sigma / SV is sigma^2
     # Sigma_H <- sqrt(get_post(mcmc, element = "sigma_h")) # SV
     if (SV) {
-      Sigma_gen_list <- InvGamma_approx(Sigma_mat, ndraws = ndraws)
+
+      # Gamma proposal
+      Sigma_gen_list <- Gamma_approx(mcmc_sample = Sigma_mat, ndraws = ndraws)
       Sigma_gen <- Sigma_gen_list$new_samples
 
+      # InvGamma proposal
+      # Sigma_gen_list_inv <- InvGamma_approx(Sigma_mat, ndraws = ndraws)
+      # Sigma_gen_inv <- Sigma_gen_list_inv$new_samples
+
+      # Normal proposal
       # Sigma_gen_list <- Normal_approx(log(Sigma_mat), ndraws = ndraws) # Change to normal
       # Sigma_gen <- exp(Sigma_gen_list$new_samples) # Change to square
       # Sigma_gen_list$sum_log_prop <- Sigma_gen_list$sum_log_prop - apply(Sigma_gen_list$new_samples, MARGIN = 1, FUN = sum) # Jacobian
 
 
     } else {
-      Sigma_gen_list <- InvGamma_approx(Sigma_mat^2, ndraws = ndraws)
+      Sigma_gen_list <- Gamma_approx(mcmc_sample = Sigma_mat^2, ndraws = ndraws)
       Sigma_gen <- sqrt(Sigma_gen_list$new_samples)
 
+      # InvGamma proposal
+      # Sigma_gen_list <- InvGamma_approx(mcmc_sample = Sigma_mat^2, ndraws = ndraws)
+      # Sigma_gen <- sqrt(Sigma_gen_list$new_samples)
+
+      # Normal proposal
       # Sigma_gen_list <- Normal_approx(2*log(Sigma_mat), ndraws = ndraws) # Change to normal
       # Sigma_gen <- exp(0.5*Sigma_gen_list$new_samples)
       # Sigma_gen_list$sum_log_prop <- Sigma_gen_list$sum_log_prop - apply(Sigma_gen_list$new_samples, MARGIN = 1, FUN = sum) # Jacobian
@@ -123,9 +135,10 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
         Nu_gen_list <- Nu_Gamma_approx(Nu_mat, ndraws = ndraws)
         Nu_gen <- Nu_gen_list$new_samples
         sum_log_prop <- sum_log_prop + Nu_gen_list$sum_log_prop
-        w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
+        # w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
 
         if (dist == "Student") {
+          w_mean <- apply(W_mat, MARGIN = 2, mean)
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -149,6 +162,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
 
         if (dist == "Hyper.Student") {
+          w_mean <- apply(W_mat, MARGIN = 2, mean)
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -179,6 +193,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
           }
 
         if (dist == "multiStudent") {
+          w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -204,6 +219,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
           }
 
         if (dist == "Hyper.multiStudent") {
+          w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -230,6 +246,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
         }
 
         if (dist == "multiOrthStudent") {
+          w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -261,6 +278,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
         }
 
         if (dist == "Hyper.multiOrthStudent") {
+          w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -316,6 +334,20 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                                      sum(invgamma::dinvgamma(sigma^2, shape = prior$sigma_T0 * 0.5, rate = prior$sigma_S0 * 0.5, log = T))
                                        },
                                        mc.cores = numCores)
+
+        # sum_log_inv <- parallel::mclapply(1:ndraws,
+        #                               FUN = function(j) {
+        #                                 B <- matrix(B_gen[j,], nrow = K)
+        #                                 A <- a0toA(A_gen[j,], K)
+        #                                 sigma <- Sigma_gen_inv[j,]
+        #                                 sum(mvnfast::dmvn(X = (y - t(xt) %*% t(B)),
+        #                                                   mu = rep(0,K),
+        #                                                   sigma = t(solve(A) %*% diag(sigma, nrow = K)), log = T, isChol = T)) +
+        #                                   mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+        #                                   mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+        #                                   sum(invgamma::dinvgamma(sigma^2, shape = prior$sigma_T0 * 0.5, rate = prior$sigma_S0 * 0.5, log = T))
+        #                               },
+        #                               mc.cores = numCores)
       } else {
         # Fat tail
         Nu_gen_list <- Nu_Gamma_approx(Nu_mat, ndraws = ndraws)
@@ -468,17 +500,85 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
     bigml = log( apply(exp(short_sumlog-reprow(max_sumlog,ndraws/20)), MARGIN = 2, FUN = mean )) + max_sumlog
     ml = mean(bigml)
     mlstd = sd(bigml)/sqrt(20)
-    impt <- NULL
     # impt <- importance_check(sum_log)
-
+    # ml_est <- TrimmedML_est(sum_log)
   return( list( LL = ml,
                 std = mlstd,
-                sum_log = sum_log,
-                imptcheck = impt))
+                sum_log = sum_log))
   } else {
     return( marginalLLSing(Chain, ndraws) )
   }
 }
+
+#' @export
+TrimmedML_est <- function(sum_log, turnk = 50, nbatch = 10){
+  # nbatch <- 1
+  # turnk <- 50
+  ml_batch <- rep(NA, nbatch)
+  ml_mean <- rep(NA, nbatch)
+  msum_log <- matrix(sum_log, ncol = nbatch)
+  for (i in c(1:nbatch)){
+    log_w <- msum_log[,i]
+    maxlogw <- max(log_w)
+    log_w <- log_w - maxlogw
+    impt_w <- exp(log_w)
+
+    N <- length(impt_w)
+    m_n <- round((N)^(turnk/100) * log(N), digits = 0)
+    if (m_n > N) cat("Error m_n > N")
+    k_n <- round((N)^(turnk/100), digits = 0)
+    sort_weights <- sort(impt_w, decreasing = TRUE)
+    l_n <- sort_weights[k_n]
+    impt_w_star <- impt_w * (impt_w <= l_n)
+    phi_star <- mean(impt_w_star)
+    log_weight_s <- log(sort_weights[c(1:m_n)])
+    alpha_inv <- 1/ m_n * sum(log_weight_s - log(sort_weights[m_n]))
+    if (alpha_inv > 1) {
+      alpha_inv <- min(sapply(10:5000, FUN = function(k) gPdtest::gpd.fit(sort_weights[c(1:k)],"amle")[1] ))
+      B_n <- 1 / (1 - alpha_inv) * k_n / N * l_n
+    } else {
+      B_n <- 1 / (1 - alpha_inv) * k_n / N * l_n
+    }
+
+    phi_ubias <- phi_star + B_n
+    ml_batch[i] <- maxlogw + log(phi_ubias)
+    ml_mean[i] <- maxlogw + log(mean(impt_w))
+
+  }
+  ml_batch <- ml_batch[!is.na(ml_batch)]
+  if (length(ml_batch) > 1){
+    ml = mean(ml_batch)
+    mlstd = sd(ml_batch)/sqrt(length(ml_batch))
+    mlm = mean(ml_mean)
+    mlmstd = sd(ml_mean)/sqrt(length(ml_mean))
+  } else {
+    ml = mean(ml_batch)
+    T_n = matrix(c(1, - 1/(1/alpha_inv -1) * sqrt(k_n) / sqrt(N) * l_n ), ncol = 1)
+    Yta_n = cbind(impt_w_star - mean(impt_w_star), sqrt(N)/ sqrt(k_n) * ((impt_w > l_n) - k_n / N)  )
+    Omega_n <- t(Yta_n) %*% Yta_n # / N # ???
+    mlstd = as.numeric( sqrt(t(T_n) %*% Omega_n %*% T_n) ) # / sqrt(N) # ???
+    mlm = mean(ml_mean)
+    mlmstd = NULL
+  }
+  return(list(ml = ml, mlstd = mlstd, mlm = mlm, mlmstd = mlmstd))
+}
+
+# L <- 1000
+# grid_u <- seq(0,1, length.out = L)
+# grid_n <- round(N^grid_u,digits = 0)
+# grid_alpha_inv <- rep(0, L)
+#
+# for (j in c(1:L)){
+#   l_n <- sort_weights[grid_n[j]]
+#   log_weight_s <- log(sort_weights[c(1:round(grid_n[j], digits = 0) )])
+#   grid_alpha_inv[j] <- 1/ m_n * sum(log_weight_s - log(sort_weights[grid_n[j]]))
+# }
+# grid_alpha <- 1/ grid_alpha_inv
+# plot(grid_u, grid_alpha)
+# id_na <- 0.2 * L
+# sd_alpha <- sapply(id_na:(L - round(sqrt(0.2 * N), digits = 0)), function(j) sd(grid_alpha[j:(j + sqrt(0.2 * N))]) )
+#
+# m_n <- id_na + which(min(sd_alpha) == sd_alpha)
 
 # No use
 int_w_Student <- function(y, xt, A, B, sigma, nu, gamma = rep(0,K), t_max, K, R = 100){
@@ -864,12 +964,14 @@ int_h_Student3 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_me
     einvhts2 = exp(-ht)*s2
     gh = - HinvSH_h %*% (ht-alph) - 0.5 * (1-einvhts2)
     Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+    Gh = 0.5 * (Gh + Matrix::t(Gh))
     newht = ht - Matrix::solve(Gh,gh)
     e_h = max(abs(newht-ht));
+    if (is.na(e_h)) break
     ht = newht;
     count = count + 1;
   }
-  if (count == max_loop){
+  if (count == max_loop || is.na(e_h) ){
     ht = rep(h0,t_max)
     einvhts2 = exp(-ht)*s2
     Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
@@ -1168,6 +1270,54 @@ Normal_approx <- function(mcmc_sample, ndraws){
 
 
 #' @export
+Gamma_approx <- function(mcmc_sample, ndraws){
+
+  # MASS::fitdistr(1/Sigma_mat[,1], "gamma")
+  # MASS::fitdistr(1/Sigma_mat[,3]/1000, "gamma")
+  # MASS::fitdistr(Sigma_mat[,3], "exponential")
+
+  nElements <- ncol(mcmc_sample)
+  new_samples <- matrix(NA, ncol = nElements, nrow = ndraws, dimnames = list(c(), colnames(mcmc_sample)))
+  Density_prop <-  matrix(NA, ncol = nElements, nrow = ndraws)
+  shape_param <- rep(0, nElements)
+  rate_param <- rep(0, nElements)
+  mcmc_mean <- apply(mcmc_sample, 2, mean)
+  mcmc_sd <- apply(mcmc_sample, 2, sd)
+
+  for (i in c(1:nElements)){
+    if (mcmc_sd[i] > 0){
+        fit.gamma <- tryCatch({
+          fitdistrplus::fitdist(as.numeric(mcmc_sample[,i]), distr = "gamma", method = "mle")
+        }, error = function(e) {
+          fitdistrplus::fitdist(as.numeric(mcmc_sample[,i]), distr = "exp", method = "mle")
+        })
+      if (fit.gamma$distname == "gamma"){
+        shape_param[i] <- fit.gamma$estimate[1]
+        rate_param[i] <- fit.gamma$estimate[2]
+        new_samples[,i] <- rgamma(ndraws, shape = shape_param[i], rate_param[i])
+        Density_prop[,i] <- dgamma(new_samples[,i],
+                                                shape = shape_param[i],
+                                                rate = rate_param[i], log = T)
+      }
+      if (fit.gamma$distname == "exp"){
+        rate_param[i] <- fit.gamma$estimate[1]
+        new_samples[,i] <- rexp(ndraws, rate =  rate_param[i])
+        Density_prop[,i] <- dexp(new_samples[,i], rate = rate_param[i], log = T)
+
+      }
+
+    } else {
+      new_samples[,i] <- as.numeric(mcmc_sample[,i])
+      Density_prop[,i] <- 0
+    }
+
+  }
+
+  return(list(new_samples = new_samples,
+              sum_log_prop = apply(Density_prop, 1, sum)))
+}
+
+#' @export
 InvGamma_approx <- function(mcmc_sample, ndraws){
   nElements <- ncol(mcmc_sample)
   new_samples <- matrix(NA, ncol = nElements, nrow = ndraws, dimnames = list(c(), colnames(mcmc_sample)))
@@ -1176,32 +1326,20 @@ InvGamma_approx <- function(mcmc_sample, ndraws){
   rate_param <- rep(0, nElements)
   mcmc_mean <- apply(mcmc_sample, 2, mean)
   mcmc_sd <- apply(mcmc_sample, 2, sd)
-  for (i in c(1:nElements)){
-    if (mcmc_mean[i] < 0.05)  mcmc_sample[,i] <- mcmc_sample[,i] * 100
-  }
 
   for (i in c(1:nElements)){
-    if (mcmc_sd[i] > 0){
-        fit.gamma <- tryCatch({
-          fitdistrplus::fitdist(1/as.numeric(mcmc_sample[,i]), distr = "gamma", method = "mle")
-        }, error = function(e) {
-          fitdistrplus::fitdist(1/as.numeric(mcmc_sample[,i]), distr = "gamma", method = "qme", probs = c(1/3, 2/3))
-        })
-
+      fit.gamma <- tryCatch({
+        fitdistrplus::fitdist(1/as.numeric(mcmc_sample[,i]), distr = "gamma", method = "mle")
+      }, error = function(e) {
+        fitdistrplus::fitdist(1/as.numeric(mcmc_sample[,i]), distr = "gamma", method = "qme", probs = c(1/3, 2/3))
+      })
+      # cat(i, " = Invgamma ")
       shape_param[i] <- fit.gamma$estimate[1]
       rate_param[i] <- fit.gamma$estimate[2]
       new_samples[,i] <- rinvgamma(ndraws, shape = shape_param[i], rate_param[i])
       Density_prop[,i] <- invgamma::dinvgamma(new_samples[,i],
                                               shape = shape_param[i],
                                               rate = rate_param[i], log = T)
-    } else {
-      new_samples[,i] <- as.numeric(mcmc_sample[,i])
-      Density_prop[,i] <- 0
-    }
-
-  }
-  for (i in c(1:nElements)){
-    if (mcmc_mean[i] < 0.05)  new_samples[,i] <- new_samples[,i] / 100
   }
   return(list(new_samples = new_samples,
               sum_log_prop = apply(Density_prop, 1, sum)))

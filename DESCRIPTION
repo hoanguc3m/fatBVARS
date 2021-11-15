@@ -23,7 +23,10 @@ Depends:
     ash,
     ghyp,
     stochvol,
-    truncnorm
+    truncnorm,
+    magic,
+    tmvnsim,
+    gPdtest
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.1.1
 Suggests: knitr,

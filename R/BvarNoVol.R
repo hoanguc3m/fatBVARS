@@ -554,14 +554,22 @@ BVAR.multiStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
                  ncol = (samples - inits$burnin)%/% inits$thin)
   for (j in c(1:samples)){
     # Sample B
-    V_b_post_inv <- V_b_prior_inv +
-      Reduce( f = "+",
-              x = lapply(1:t_max, function(i) kronecker(xt[,i] %*% t(xt[,i]), (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i]))) ),
-              accumulate = FALSE) * (kronecker(matrix(1,m,m), Sigma2_inv))
+    b_post = rep(0, m*K)
+    V_b_post_inv = V_b_prior_inv
 
-    b_post <- Reduce(f = "+",
-                      x = lapply(1:t_max, function(i) kronecker(xt[,i], ( (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv ) %*% yt[,i])),
-                      accumulate = FALSE)
+    for (i in c(1:t_max)){
+      V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv )
+      b_post <- b_post + kronecker(xt[,i], ((w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv ) %*% yt[,i])
+    }
+
+    # V_b_post_inv <- V_b_prior_inv +
+    #   Reduce( f = "+",
+    #           x = lapply(1:t_max, function(i) kronecker(xt[,i] %*% t(xt[,i]), (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i]))) ),
+    #           accumulate = FALSE) * (kronecker(matrix(1,m,m), Sigma2_inv))
+    #
+    # b_post <- Reduce(f = "+",
+    #                   x = lapply(1:t_max, function(i) kronecker(xt[,i], ( (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv ) %*% yt[,i])),
+    #                   accumulate = FALSE)
 
     V_b_post <- solve(V_b_post_inv)
     b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
@@ -746,14 +754,22 @@ BVAR.Hyper.multiStudent.novol <- function(y, K, p, y0 = NULL, prior = NULL, init
     #   Reduce( f = "+",
     #           x = lapply(1:t_max, function(i) kronecker(xt[,i] %*% t(xt[,i]), diag(w_sqrt_inv[,i]) %*% Sigma2_inv %*% diag(w_sqrt_inv[,i]) )),
     #           accumulate = FALSE)
-    V_b_post_inv <- V_b_prior_inv +
-      Reduce( f = "+",
-              x = lapply(1:t_max, function(i) kronecker(xt[,i] %*% t(xt[,i]), (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i]))) ),
-              accumulate = FALSE) * (kronecker(matrix(1,m,m), Sigma2_inv))
+    b_post = rep(0, m*K)
+    V_b_post_inv = V_b_prior_inv
 
-    b_post <- Reduce(f = "+",
-                     x = lapply(1:t_max, function(i) kronecker(xt[,i], ((w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv) %*% (yt[,i] - gamma * w[,i]))),
-                     accumulate = FALSE)
+    for (i in c(1:t_max)){
+      V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv )
+      b_post <- b_post + kronecker(xt[,i], ((w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv ) %*% (yt[,i] - gamma * w[,i]) )
+    }
+
+    # V_b_post_inv <- V_b_prior_inv +
+    #   Reduce( f = "+",
+    #           x = lapply(1:t_max, function(i) kronecker(xt[,i] %*% t(xt[,i]), (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i]))) ),
+    #           accumulate = FALSE) * (kronecker(matrix(1,m,m), Sigma2_inv))
+    #
+    # b_post <- Reduce(f = "+",
+    #                  x = lapply(1:t_max, function(i) kronecker(xt[,i], ((w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv) %*% (yt[,i] - gamma * w[,i]))),
+    #                  accumulate = FALSE)
 
 
     V_b_post <- solve(V_b_post_inv)

@@ -1,7 +1,7 @@
 #' Bayesian inference of VAR model with RW-SV
 #'
 #' Bayesian inference of VAR model with RW-SV
-#' \deqn{y_t = B x_t + SQRT(w_t) A^(-1) Sigma eps_t}
+#' \deqn{y_t = B x_t + SQRT(w_t) A^(-1) H_t eps_t}
 #' @param y The input data as matrix T x K where T is the number of observations and K is the number of variables
 #' @param K The number of variables in BVAR model.
 #' @param p The number of lags in BVAR model.
@@ -1222,36 +1222,64 @@ BVAR.Hyper.multiOrthStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, ini
   #                       latent = h[i,])
   # }
 
+  # new precompute
+  i <- K*m
+  theta.prior.prec = matrix(0,i+K,i+K)
+  theta.prior.prec[1:i,1:i] <- V_b_prior_inv
+  theta.prior.prec[i+(1:K),i+(1:K)] <- solve( V_gamma_prior )
+  theta.prior.precmean <- theta.prior.prec %*% c( b_prior, gamma_prior )
+
   # Output
   mcmc <-  matrix(NA, nrow = m*K + 0.5*K*(K-1) + K + K + K + K + K*t_max + K*t_max,
                   ncol = (samples - inits$burnin)%/% inits$thin)
+
   for (j in c(1:samples)){
-    # Sample B
-    b_post = rep(0, m*K)
-    V_b_post_inv = V_b_prior_inv
-    inv_A <- solve(A)
-    for (i in c(1:t_max)){
-      V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i]) / w[,i] ) %*% A )
-      b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i])/ w[,i] ) %*% A) %*% (yt[,i] - inv_A %*% (gamma * w[,i])) )
+    # Sample B and gamma
+    wt <- as.vector( 1/sqrt(w*exp(h)) )
+    y.tilde <- as.vector( A %*% yt ) * wt
+    # make and stack diagonal W matrices
+    W.mat <- matrix(0,K*t_max,K)
+    idx <- (0:(t_max-1))*K
+    for ( i in 1:K ) {
+      W.mat[idx + (i-1)*t_max*K + i] <- w[i,]
     }
-
-    V_b_post <- solve(V_b_post_inv)
-    b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
-    b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
-    B <- Vec_to_Mat(b_sample, K,p)
-
-    # Sample gamma
-    gamma_post = rep(0, K)
-    V_gamma_post_inv = solve(V_gamma_prior)
-    u <- A %*% (yt - B %*%xt)
-
-    V_gamma_post_inv <- solve(V_gamma_prior) + diag(apply(w / exp(h), MARGIN = 1, FUN = sum))
-    gamma_post <- apply(u / exp(h), MARGIN = 1, FUN = sum)
-
-    V_gamma_post <- solve(V_gamma_post_inv)
-    gamma_post <- V_gamma_post %*% ( solve(V_gamma_prior) %*% gamma_prior + gamma_post)
-    gamma <- as.numeric(gamma_post + t(chol(V_gamma_post)) %*% rnorm(K))
+    x.tilde <- cbind( kronecker( t(xt), A ), W.mat ) * wt
+    theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
+    theta <- backsolve( theta.prec.chol,
+                        backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
+                                   upper.tri = T, transpose = T )
+                        + rnorm(K*(m+1)) )
+    B <- matrix(theta[1:(m*K)],K,m)
+    b_sample <- as.vector(B)
+    gamma <- theta[(m*K+1):((m+1)*K)]
     D <- diag(gamma)
+
+    # # Sample B
+    # b_post = rep(0, m*K)
+    # V_b_post_inv = V_b_prior_inv
+    # inv_A <- solve(A)
+    # for (i in c(1:t_max)){
+    #   V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/exp(h[,i]) / w[,i] ) %*% A )
+    #   b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/exp(h[,i])/ w[,i] ) %*% A) %*% (yt[,i] - inv_A %*% (gamma * w[,i])) )
+    # }
+    #
+    # V_b_post <- solve(V_b_post_inv)
+    # b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
+    # b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
+    # B <- Vec_to_Mat(b_sample, K,p)
+    #
+    # # Sample gamma
+    # gamma_post = rep(0, K)
+    # V_gamma_post_inv = solve(V_gamma_prior)
+    # u <- A %*% (yt - B %*%xt)
+    #
+    # V_gamma_post_inv <- solve(V_gamma_prior) + diag(apply(w / exp(h), MARGIN = 1, FUN = sum))
+    # gamma_post <- apply(u / exp(h), MARGIN = 1, FUN = sum)
+    #
+    # V_gamma_post <- solve(V_gamma_post_inv)
+    # gamma_post <- V_gamma_post %*% ( solve(V_gamma_prior) %*% gamma_prior + gamma_post)
+    # gamma <- as.numeric(gamma_post + t(chol(V_gamma_post)) %*% rnorm(K))
+    # D <- diag(gamma)
 
     # Sample vol
     ytilde <- (A %*% (yt - B %*% xt) - D %*% w) / w_sqrt

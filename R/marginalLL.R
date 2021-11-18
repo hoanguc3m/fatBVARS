@@ -534,7 +534,7 @@ TrimmedML_est <- function(sum_log, turnk = 50, nbatch = 10){
     log_weight_s <- log(sort_weights[c(1:m_n)])
     alpha_inv <- 1/ m_n * sum(log_weight_s - log(sort_weights[m_n]))
     if (alpha_inv > 1) {
-      alpha_inv <- min(sapply(10:5000, FUN = function(k) gPdtest::gpd.fit(sort_weights[c(1:k)],"amle")[1] ))
+      alpha_inv <- min(sapply(10:(min(5000,m_n*0.5)), FUN = function(k) gPdtest::gpd.fit(sort_weights[c(1:k)],"amle")[1] ))
       B_n <- 1 / (1 - alpha_inv) * k_n / N * l_n
     } else {
       B_n <- 1 / (1 - alpha_inv) * k_n / N * l_n
@@ -558,7 +558,11 @@ TrimmedML_est <- function(sum_log, turnk = 50, nbatch = 10){
     Omega_n <- t(Yta_n) %*% Yta_n # / N # ???
     mlstd = as.numeric( sqrt(t(T_n) %*% Omega_n %*% T_n) ) # / sqrt(N) # ???
     mlm = mean(ml_mean)
-    mlmstd = NULL
+    if (length(ml_mean) > 1) {
+      mlmstd = sd(ml_mean)
+    } else {
+      mlmstd = NULL
+    }
   }
   return(list(ml = ml, mlstd = mlstd, mlm = mlm, mlmstd = mlmstd))
 }

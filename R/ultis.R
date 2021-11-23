@@ -116,20 +116,25 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
     sse_2 <- sum( (h[,1:t_max] - c(h0,h[,1:(t_max-1)]) )^2)
   }
 
-  # Normal prior
-  # Equation 9 in https://doi.org/10.1016/j.csda.2013.01.002
-  sigma_post_a <- rep(t_max,K) # prior of sigma_h Gamma(1,0.0001)
-  sigma_post_b <- sse_2 # prior of sigma_h
+  # # Normal prior
+  # # Equation 9 in https://doi.org/10.1016/j.csda.2013.01.002
+  # sigma_post_a <- rep(t_max,K) # prior of sigma_h Gamma(1,0.0001)
+  # sigma_post_b <- sse_2 # prior of sigma_h
+  #
+  # for (i in c(1:K)){
+  #   sigma_new <- rinvgamma(1, shape = sigma_post_a[i] * 0.5, rate = sigma_post_b[i] * 0.5)
+  #   alpha = (sigma_h[i,i] - sigma_new) / 2 / prior$sigma_S0 + 0.5 * (log(sigma_new) - log(sigma_h[i,i])) # B_sigma = 1
+  #   temp = log(runif(1))
+  #   if (alpha > temp){
+  #     sigma_h[i,i] <- sigma_new
+  #   }
+  #   #log_sigma_den[]
+  # }
 
-  for (i in c(1:K)){
-    sigma_new <- rinvgamma(1, shape = sigma_post_a[i] * 0.5, rate = sigma_post_b[i] * 0.5)
-    alpha = (sigma_h[i,i] - sigma_new) / 2 / prior$sigma_S0 + 0.5 * (log(sigma_new) - log(sigma_h[i,i])) # B_sigma = 1
-    temp = log(runif(1))
-    if (alpha > temp){
-      sigma_h[i,i] <- sigma_new
-    }
-    #log_sigma_den[]
-  }
+  sigma_h <- diag(mapply( GIGrvg::rgig, n = 1, lambda = - (t_max - 1)*0.5, chi = sse_2,
+                       psi = 1/prior$sigma_S0 ) )
+
+
 
   # # Invgamma conjugate prior
   # sigma_post_a <- 1 + rep(t_max,K) # prior of sigma_h Gamma(1,0.0001)

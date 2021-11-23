@@ -27,7 +27,7 @@ A coda object of the posterior samples.
 }
 \description{
 Bayesian inference of VAR model with RW-SV
-\deqn{y_t = B x_t + SQRT(w_t) A^(-1) Sigma eps_t}
+\deqn{y_t = B x_t + SQRT(w_t) A^(-1) H_t eps_t}
 }
 \examples{
 \dontrun{

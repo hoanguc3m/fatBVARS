@@ -238,10 +238,35 @@ BVAR.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   #                       latent = h[i,])
   # }
 
+  # new precompute
+  i <- K*m
+  theta.prior.prec = matrix(0,i,i)
+  theta.prior.prec[1:i,1:i] <- V_b_prior_inv
+  theta.prior.precmean <- theta.prior.prec %*% b_prior
+
   # Output
   mcmc <-  matrix(NA, nrow = m*K + 0.5*K*(K-1) + 1 + K + K + K*t_max + t_max,
                   ncol = (samples - inits$burnin)%/% inits$thin)
   for (j in c(1:samples)){
+
+    # # Sample B and gamma
+    # wt <- as.vector( 1/sqrt(w*exp(h)) )
+    # y.tilde <- as.vector( A %*% (yt /w_sqrt) ) * wt
+    # # make and stack diagonal W matrices
+    # W.mat <- matrix(0,K*t_max,K)
+    # idx <- (0:(t_max-1))*K
+    # for ( i in 1:K ) {
+    #   W.mat[idx + (i-1)*t_max*K + i] <- w[i,]
+    # }
+    # x.tilde <- cbind( kronecker( t(xt), A ), W.mat ) * wt
+    # theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
+    # theta <- backsolve( theta.prec.chol,
+    #                     backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
+    #                                upper.tri = T, transpose = T )
+    #                     + rnorm(K*(m+1)) )
+    # B <- matrix(theta,K,m)
+    # b_sample <- as.vector(B)
+
     # Sample B
     b_post = rep(0, m*K)
     V_b_post_inv = V_b_prior_inv
@@ -1309,34 +1334,41 @@ BVAR.Hyper.multiOrthStudent.SV <- function(y, K, p, y0 = NULL, prior = NULL, ini
     diag(A) <- 1
 
     # Sample w
-    u <- A %*% (yt - B %*%xt)
-    for (i in c(1:t_max)){
-      ran_stu = rt(K, df = 4)
-      Sigma2_inv_t = 1/exp(h[,i])
-      a_eq <- -0.5* (gamma^2 * Sigma2_inv_t)
-      b_eq <- -((0.5*1 + nu/2+1))
-      c_eq =  0.5 * (u[,i]^2 * Sigma2_inv_t) + nu/2
-      w_mode <- (- b_eq - sqrt(b_eq^2-4*a_eq*c_eq))/(2*a_eq)
-      w_mode <- ifelse(abs(w_mode)<1e-5, - c_eq/b_eq, w_mode)
-      mode_target <- log( w_mode )
-      cov_target <- 1/( c_eq / w_mode - a_eq * w_mode) * 1.2 # scale by 1.2
 
-      log_w_temp = mode_target + sqrt(cov_target)*ran_stu
-      w_temp = exp(log_w_temp)
+    # From GIG distribution
+    u <-  A %*% (yt - B %*%xt)
+    w <- matrix( mapply( GIGrvg::rgig, n = 1, lambda = -(nu+1)*0.5, chi = nu + (u^2)/exp(h),
+                         psi = gamma^2/exp(h) ), K, t_max )
+    w_sqrt <- sqrt(w)
 
-      num_mh =  mapply( dinvgamma, x = w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-        ( - 0.5 * 1 * log_w_temp - 0.5 * (u[,i] - gamma*w_temp)^2 * Sigma2_inv_t / w_temp) - # posterior
-        dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
-      denum_mh = mapply( dinvgamma, x = w[,i], shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-        ( - 0.5 * 1 * log(w[,i]) - 0.5 * (u[,i] - gamma*w[,i])^2 * Sigma2_inv_t / w[,i]) - # posterior
-        dt( (log(w[,i]) - mode_target)/sqrt(cov_target), df = 4, log = T) + log(w[,i]) # proposal
-      alpha = num_mh - denum_mh
-      temp = log(runif(K))
-      acre = alpha > temp
-      w[,i] <- ifelse(acre, w_temp, w[,i])
-      w_sqrt[,i] <- sqrt(w[,i])
-      acount_w[i] <- acount_w[i] + mean(acre)
-    }
+    # u <- A %*% (yt - B %*%xt)
+    # for (i in c(1:t_max)){
+    #   ran_stu = rt(K, df = 4)
+    #   Sigma2_inv_t = 1/exp(h[,i])
+    #   a_eq <- -0.5* (gamma^2 * Sigma2_inv_t)
+    #   b_eq <- -((0.5*1 + nu/2+1))
+    #   c_eq =  0.5 * (u[,i]^2 * Sigma2_inv_t) + nu/2
+    #   w_mode <- (- b_eq - sqrt(b_eq^2-4*a_eq*c_eq))/(2*a_eq)
+    #   w_mode <- ifelse(abs(w_mode)<1e-5, - c_eq/b_eq, w_mode)
+    #   mode_target <- log( w_mode )
+    #   cov_target <- 1/( c_eq / w_mode - a_eq * w_mode) * 1.2 # scale by 1.2
+    #
+    #   log_w_temp = mode_target + sqrt(cov_target)*ran_stu
+    #   w_temp = exp(log_w_temp)
+    #
+    #   num_mh =  mapply( dinvgamma, x = w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
+    #     ( - 0.5 * 1 * log_w_temp - 0.5 * (u[,i] - gamma*w_temp)^2 * Sigma2_inv_t / w_temp) - # posterior
+    #     dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
+    #   denum_mh = mapply( dinvgamma, x = w[,i], shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
+    #     ( - 0.5 * 1 * log(w[,i]) - 0.5 * (u[,i] - gamma*w[,i])^2 * Sigma2_inv_t / w[,i]) - # posterior
+    #     dt( (log(w[,i]) - mode_target)/sqrt(cov_target), df = 4, log = T) + log(w[,i]) # proposal
+    #   alpha = num_mh - denum_mh
+    #   temp = log(runif(K))
+    #   acre = alpha > temp
+    #   w[,i] <- ifelse(acre, w_temp, w[,i])
+    #   w_sqrt[,i] <- sqrt(w[,i])
+    #   acount_w[i] <- acount_w[i] + mean(acre)
+    # }
 
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)

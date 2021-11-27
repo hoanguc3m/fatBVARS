@@ -110,7 +110,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
         }
 
 
-        if (dist == "Hyper.Student") {
+        if (dist == "Skew.Student") {
           param_trans <- cbind(B_gen, A_gen, Gamma_gen, H0_gen, Sigma_transform, Nu_transform)
           sum_log_prop <- Laplace_approx(param_trans) -
             apply(Sigma_transform, MARGIN = 1, FUN = sum) -
@@ -144,7 +144,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
         }
 
-        if (dist == "multiStudent") {
+        if (dist == "MT") {
           param_trans <- cbind(B_gen, A_gen, H0_gen, Sigma_transform, Nu_transform)
           sum_log_prop <- Laplace_approx(param_trans) -
             apply(Sigma_transform, MARGIN = 1, FUN = sum) -
@@ -174,7 +174,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
         }
 
-        if (dist == "Hyper.multiStudent") {
+        if (dist == "MST") {
           param_trans <- cbind(B_gen, A_gen, Gamma_gen, H0_gen, Sigma_transform, Nu_transform)
           sum_log_prop <- Laplace_approx(param_trans) -
             apply(Sigma_transform, MARGIN = 1, FUN = sum) -
@@ -204,7 +204,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
         }
 
-        if (dist == "multiOrthStudent") {
+        if (dist == "OT") {
           param_trans <- cbind(B_gen, A_gen, H0_gen, Sigma_transform, Nu_transform)
           sum_log_prop <- Laplace_approx(param_trans) -
             apply(Sigma_transform, MARGIN = 1, FUN = sum) -
@@ -233,7 +233,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
         }
 
-        if (dist == "Hyper.multiOrthStudent") {
+        if (dist == "OST") {
           param_trans <- cbind(B_gen, A_gen, Gamma_gen, H0_gen, Sigma_transform, Nu_transform)
           sum_log_prop <- Laplace_approx(param_trans) -
             apply(Sigma_transform, MARGIN = 1, FUN = sum) -
@@ -317,7 +317,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
         }
 
-        if (dist == "Hyper.Student") {
+        if (dist == "Skew.Student") {
           param_trans <- cbind(B_gen, A_gen, Gamma_gen, Sigma_transform, Nu_transform)
           sum_log_prop <- Laplace_approx(param_trans) -
             apply(Sigma_transform, MARGIN = 1, FUN = sum) -
@@ -346,7 +346,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
         }
 
-        if (dist == "multiStudent") {
+        if (dist == "MT") {
           param_trans <- cbind(B_gen, A_gen, Sigma_transform, Nu_transform)
           sum_log_prop <- Laplace_approx(param_trans) -
             apply(Sigma_transform, MARGIN = 1, FUN = sum) -
@@ -372,7 +372,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
         }
 
-        if (dist == "Hyper.multiStudent") {
+        if (dist == "MST") {
           param_trans <- cbind(B_gen, A_gen, Gamma_gen, Sigma_transform, Nu_transform)
           sum_log_prop <- Laplace_approx(param_trans) -
             apply(Sigma_transform, MARGIN = 1, FUN = sum) -
@@ -400,7 +400,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
         }
 
-        if (dist == "multiOrthStudent") {
+        if (dist == "OT") {
           param_trans <- cbind(B_gen, A_gen, Sigma_transform, Nu_transform)
           sum_log_prop <- Laplace_approx(param_trans) -
             apply(Sigma_transform, MARGIN = 1, FUN = sum) -
@@ -426,7 +426,7 @@ harmonicLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
         }
 
-        if (dist == "Hyper.multiOrthStudent") {
+        if (dist == "OST") {
           param_trans <- cbind(B_gen, A_gen, Gamma_gen, Sigma_transform, Nu_transform)
           sum_log_prop <- Laplace_approx(param_trans) -
             apply(Sigma_transform, MARGIN = 1, FUN = sum) -

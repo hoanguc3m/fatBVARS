@@ -1,8 +1,10 @@
 Package: fatBVARS
 Type: Package
 Title: Bayesian VAR with Stochastic volatility and fat tails
-Version: 0.2.0
-Authors@R: person("Nguyen", "Hoang", role = c("aut", "cre"), email = "hoang.nguyen@oru.se")
+Version: 0.3.0
+Author: c(
+    person("Nguyen", "Hoang", role = c("aut", "cre"), email = "hoang.nguyen@oru.se"),
+    person("Karlsson", "Sune", role = "aut" , email = "Sune.Karlsson@oru.se") )
 Maintainer: Hoang Nguyen <hoang.nguyen@oru.se>
 Description: Bayesian VAR with Stochastic volatility and fat tails
 License: License: GPL (>= 2)

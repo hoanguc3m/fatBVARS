@@ -114,7 +114,7 @@ marginalLLSing <- function(Chain, ndraws = NULL){
           }
       }
 
-      if (dist == "Hyper.Student") {
+      if (dist == "Skew.Student") {
         for (j in c(1:ndraws)){
           B <- matrix(B_gen[j,], nrow = K)
           A <- a0toA(A_gen[j,], K)
@@ -138,7 +138,7 @@ marginalLLSing <- function(Chain, ndraws = NULL){
         }
       }
 
-      if (dist == "multiStudent") {
+      if (dist == "MT") {
         for (j in c(1:ndraws)){
           B <- matrix(B_gen[j,], nrow = K)
           A <- a0toA(A_gen[j,], K)
@@ -159,7 +159,7 @@ marginalLLSing <- function(Chain, ndraws = NULL){
         }
       }
 
-      if (dist == "Hyper.multiStudent") {
+      if (dist == "MST") {
         for (j in c(1:ndraws)){
           B <- matrix(B_gen[j,], nrow = K)
           A <- a0toA(A_gen[j,], K)
@@ -221,7 +221,7 @@ marginalLLSing <- function(Chain, ndraws = NULL){
         }
       }
 
-      if (dist == "Hyper.Student") {
+      if (dist == "Skew.Student") {
         for (j in c(1:ndraws)){
           B <- matrix(B_gen[j,], nrow = K)
           A <- a0toA(A_gen[j,], K)
@@ -245,7 +245,7 @@ marginalLLSing <- function(Chain, ndraws = NULL){
         }
       }
 
-      if (dist == "multiStudent") {
+      if (dist == "MT") {
         for (j in c(1:ndraws)){
           B <- matrix(B_gen[j,], nrow = K)
           A <- a0toA(A_gen[j,], K)
@@ -266,7 +266,7 @@ marginalLLSing <- function(Chain, ndraws = NULL){
         }
       }
 
-      if (dist == "Hyper.multiStudent") {
+      if (dist == "MST") {
         for (j in c(1:ndraws)){
           B <- matrix(B_gen[j,], nrow = K)
           A <- a0toA(A_gen[j,], K)

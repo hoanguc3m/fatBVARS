@@ -22,7 +22,7 @@ sim.VAR.novol(
 }
 \arguments{
 \item{dist}{The variable specifies the BVAR error distribution. It should be one of
-c("Gaussian","Student","Skew.Student","Hyper.Student", "multiStudent","Skew.multiStudent","Hyper.multiStudent").}
+c("Gaussian","Student","Skew.Student","Skew.Student", "MT","Skew.MT","MST").}
 
 \item{K}{The number of variables in BVAR model.}
 

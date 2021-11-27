@@ -143,7 +143,7 @@ get_prior_OLS <- function(y, p, tau = nrow(y) - p, scale_factor = 4 ){
 #' @param p The number of lags in BVAR model.
 #' @param priorStyle The prior style in BVAR model should be c("Minnesota", "OLS")
 #' @param dist The variable specifies the BVAR error distribution. It should be one of
-#' c("Gaussian","Student", "Hyper.Student", "multiStudent","Hyper.multiStudent","orthoStudent").
+#' c("Gaussian","Student", "Skew.Student", "MT","MST","orthoStudent").
 #' @param SV The indicator if this BVAR model has a Stochastic volatility part.
 #' @return A list of prior specifications. \eqn{b \sim N(b0, V_b_prior)}, \eqn{a \sim N(0, 1000I)}, \eqn{sigmaSq \sim IG(0.5*sigma_T0, 0.5*sigma_S0)},
 #' \eqn{nu \sim G(a,b)}, \eqn{gamma \sim N(0, I)}.
@@ -155,10 +155,10 @@ get_prior_OLS <- function(y, p, tau = nrow(y) - p, scale_factor = 4 ){
 get_prior <- function(y, p, priorStyle = c("Minnesota"),
                       dist = c("Gaussian"),
                       SV = FALSE, ...){
-  if (!(dist %in% c("Gaussian","Student","Hyper.Student",
-                    "multiStudent","Hyper.multiStudent",
-                    "multiOrthStudent","Hyper.multiOrthStudent",
-                    "dynHyper.Student", "OrthSkewNorm", "dynHyper.multiOrthStudent") ))
+  if (!(dist %in% c("Gaussian","Student","Skew.Student",
+                    "MT","MST",
+                    "OT","OST",
+                    "dynSkew.Student", "OrthSkewNorm", "dynOST") ))
     stop("dist is not implemented.")
 
   arguments <- eval(substitute(alist(...)))
@@ -198,9 +198,9 @@ get_prior <- function(y, p, priorStyle = c("Minnesota"),
     prior_collect$nu_gam_b = 0.1
   }
   #Skew.Student
-  if (dist =="Hyper.Student" |
-      dist =="Hyper.multiStudent" | dist =="Hyper.multiOrthStudent"|
-      dist =="dynHyper.Student" | dist =="OrthSkewNorm"| dist =="dynHyper.multiOrthStudent"){
+  if (dist =="Skew.Student" |
+      dist =="MST" | dist =="OST"|
+      dist =="dynSkew.Student" | dist =="OrthSkewNorm"| dist =="dynOST"){
     prior_collect$gamma_prior = rep(0, K)
     prior_collect$V_gamma_prior = diag(K)
   }
@@ -229,10 +229,10 @@ get_prior <- function(y, p, priorStyle = c("Minnesota"),
 #'
 get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
   dist = prior$dist
-  if (!(dist %in% c("Gaussian","Student","Hyper.Student",
-                    "multiStudent","Hyper.multiStudent",
-                    "multiOrthStudent","Hyper.multiOrthStudent",
-                    "dynHyper.Student", "OrthSkewNorm", "dynHyper.multiOrthStudent") ))
+  if (!(dist %in% c("Gaussian","Student","Skew.Student",
+                    "MT","MST",
+                    "OT","OST",
+                    "dynSkew.Student", "OrthSkewNorm", "dynOST") ))
     stop("dist is not implemented.")
 
   SV = prior$SV
@@ -261,15 +261,15 @@ get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
     inits$nu = 6
   }
   #Skew.Student
-  if (dist =="Hyper.Student" |
-      dist =="Hyper.multiStudent" | dist =="Hyper.multiOrthStudent"|
-      dist =="dynHyper.Student" | dist =="OrthSkewNorm"| dist =="dynHyper.multiOrthStudent"){
+  if (dist =="Skew.Student" |
+      dist =="MST" | dist =="OST"|
+      dist =="dynSkew.Student" | dist =="OrthSkewNorm"| dist =="dynOST"){
     inits$gamma = rep(0.001,K)
   }
-  #multiStudent
-  if (dist == "multiStudent" | dist =="multiOrthStudent" |
-      dist == "Hyper.multiStudent" | dist == "Hyper.multiOrthStudent" |
-      dist == "dynHyper.multiStudent"| dist == "dynHyper.multiOrthStudent"){
+  #MT
+  if (dist == "MT" | dist =="OT" |
+      dist == "MST" | dist == "OST" |
+      dist == "dynMST"| dist == "dynOST"){
     inits$nu = rep(6,K)
   }
   #Stochastic vol

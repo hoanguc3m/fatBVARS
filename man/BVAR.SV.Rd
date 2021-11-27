@@ -14,7 +14,7 @@ BVAR.SV(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL)
 \item{p}{The number of lags in BVAR model.}
 
 \item{dist}{The variable specifies the BVAR error distribution. It should be one of
-c("Gaussian","Student","Skew.Student","Hyper.Student", "multiStudent","Skew.multiStudent","Hyper.multiStudent").}
+c("Gaussian","Student","Skew.Student","Skew.Student", "MT","Skew.MT","MST").}
 
 \item{y0}{The number of observations}
 

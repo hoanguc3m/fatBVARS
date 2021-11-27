@@ -3,7 +3,7 @@
 #' This function simulate data from a BVAR model with SV.
 #' \deqn{y_t = B x_t + SQRT(w_t) A^(-1) Sigma_t eps_t}
 #' @param dist The variable specifies the BVAR error distribution. It should be one of
-#' c("Gaussian","Student","Skew.Student","Hyper.Student", "multiStudent","Skew.multiStudent","Hyper.multiStudent").
+#' c("Gaussian","Student","Skew.Student","Skew.Student", "MT","Skew.MT","MST").
 #' @param K The number of variables in BVAR model.
 #' @param p The number of lags in BVAR model.
 #' @param t_max The number of observations
@@ -26,24 +26,24 @@ sim.VAR.SV <- function(dist, K = 5, p = 2, t_max = 1000,
                           y0 = matrix(0, ncol = K, nrow = p),
                           nu = 6, gamma = 0.5, sigma_G = NULL,
                           seednum = 0, burn_in = 0){
-  if (!(dist %in% c("Gaussian","Student","Hyper.Student",
-                    "multiStudent","Hyper.multiStudent",
-                    "multiOrthStudent","Hyper.multiOrthStudent",
-                    "dynHyper.Student", "dynHyper.multiStudent", "dynHyper.multiOrthStudent") ))
+  if (!(dist %in% c("Gaussian","Student","Skew.Student",
+                    "MT","MST",
+                    "OT","OST",
+                    "dynSkew.Student", "dynMST", "dynOST") ))
     stop("dist is not implemented.")
 
   if (dist == "Gaussian") datagen <- sim.VAR.Gaussian.SV(K, p, t_max, b0, a0, h, sigma_h, y0, seednum, burn_in)
   if (dist == "Student") datagen <- sim.VAR.Student.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, seednum, burn_in)
   # if (dist == "Skew.Student") datagen <- sim.VAR.Skew.Student.SV(K, p, t_max, b0, a0, h, nu, gamma, seednum, burn_in)
-  if (dist == "Hyper.Student") datagen <- sim.VAR.Hyper.Student.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, seednum, burn_in)
-  if (dist == "multiStudent") datagen <- sim.VAR.multiStudent.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, seednum, burn_in)
-  if (dist == "Hyper.multiStudent") datagen <- sim.VAR.Hyper.multiStudent.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, seednum, burn_in)
-  if (dist == "multiOrthStudent") datagen <- sim.VAR.multiOrthStudent.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, seednum, burn_in)
-  if (dist == "Hyper.multiOrthStudent") datagen <- sim.VAR.Hyper.multiOrthStudent.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, seednum, burn_in)
+  if (dist == "Skew.Student") datagen <- sim.VAR.Skew.Student.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, seednum, burn_in)
+  if (dist == "MT") datagen <- sim.VAR.MT.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, seednum, burn_in)
+  if (dist == "MST") datagen <- sim.VAR.MST.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, seednum, burn_in)
+  if (dist == "OT") datagen <- sim.VAR.OT.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, seednum, burn_in)
+  if (dist == "OST") datagen <- sim.VAR.OST.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, seednum, burn_in)
 
-  if (dist == "dynHyper.Student") datagen <- sim.VAR.dynHyper.Student.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, sigma_G, seednum, burn_in)
-  if (dist == "dynHyper.multiStudent") datagen <- sim.VAR.dynHyper.multiStudent.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, sigma_G, seednum, burn_in)
-  if (dist == "dynHyper.multiOrthStudent") datagen <- sim.VAR.dynHyper.multiOrthStudent.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, sigma_G, seednum, burn_in)
+  if (dist == "dynSkew.Student") datagen <- sim.VAR.dynSkew.Student.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, sigma_G, seednum, burn_in)
+  if (dist == "dynMST") datagen <- sim.VAR.dynMST.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, sigma_G, seednum, burn_in)
+  if (dist == "dynOST") datagen <- sim.VAR.dynOST.SV(K, p, t_max, b0, a0, h, sigma_h, y0, nu, gamma, sigma_G, seednum, burn_in)
 
   return(datagen)
 }
@@ -195,7 +195,7 @@ sim.VAR.Student.SV <- function(K = 5, p = 2, t_max = 1000,
 }
 
 #' @export
-sim.VAR.Hyper.Student.SV <- function(K = 5, p = 2, t_max = 1000,
+sim.VAR.Skew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
                                      b0 = 0.5, a0 = 0.5, h = 0, sigma_h = NULL,
                                      y0 = matrix(0, ncol = K, nrow = p),
                                      nu = 6, gamma = 0.5, seednum = 0, burn_in = 0){
@@ -274,10 +274,10 @@ sim.VAR.Hyper.Student.SV <- function(K = 5, p = 2, t_max = 1000,
        A0 = A0, B0 = matrix(B0, nrow = K),
        nu = nu, gamma = gamma, w = w_t[(burn_in+1):(burn_in+t_max)],
        Vh = Vh,
-       dist = "Hyper.Student", SV = TRUE)
+       dist = "Skew.Student", SV = TRUE)
 }
 #' @export
-sim.VAR.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
+sim.VAR.MT.SV <- function(K = 5, p = 2, t_max = 1000,
                                     b0 = 0.5, a0 = 0.5, h = 0, sigma_h = NULL,
                                     y0 = matrix(0, ncol = K, nrow = p),
                                     nu = 6, seednum = 0, burn_in = 0){
@@ -350,10 +350,10 @@ sim.VAR.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
        A0 = A0, B0 = matrix(B0, nrow = K),
        nu = nu, w = w_t[(burn_in+1):(burn_in+t_max),],
        Vh = Vh,
-       dist = "multiStudent", SV = TRUE)
+       dist = "MT", SV = TRUE)
 }
 #' @export
-sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
+sim.VAR.MST.SV <- function(K = 5, p = 2, t_max = 1000,
                                           b0 = 0.5, a0 = 0.5, h = 0, sigma_h = NULL,
                                           y0 = matrix(0, ncol = K, nrow = p),
                                           nu = 6, gamma = 0.5, seednum = 0, burn_in = 0){
@@ -431,11 +431,11 @@ sim.VAR.Hyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
        nu = nu, gamma = gamma,
        w = w_t[(burn_in+1):(burn_in+t_max),],
        Vh = Vh,
-       dist = "Hyper.multiStudent", SV = TRUE)
+       dist = "MST", SV = TRUE)
 }
 
 #' @export
-sim.VAR.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
+sim.VAR.OT.SV <- function(K = 5, p = 2, t_max = 1000,
                                         b0 = 0.5, a0 = 0.5, h = 0, sigma_h = NULL,
                                         y0 = matrix(0, ncol = K, nrow = p),
                                         nu = 6, seednum = 0, burn_in = 0){
@@ -508,10 +508,10 @@ sim.VAR.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
        A0 = A0, B0 = matrix(B0, nrow = K),
        nu = nu, w = w_t[(burn_in+1):(burn_in+t_max),],
        Vh = Vh,
-       dist = "multiOrthStudent", SV = TRUE)
+       dist = "OT", SV = TRUE)
 }
 #' @export
-sim.VAR.Hyper.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
+sim.VAR.OST.SV <- function(K = 5, p = 2, t_max = 1000,
                                               b0 = 0.5, a0 = 0.5, h = 0, sigma_h = NULL,
                                               y0 = matrix(0, ncol = K, nrow = p),
                                               nu = 6, gamma = 0.5, seednum = 0, burn_in = 0){
@@ -589,10 +589,10 @@ sim.VAR.Hyper.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
        nu = nu, gamma = gamma,
        w = w_t[(burn_in+1):(burn_in+t_max),],
        Vh = Vh,
-       dist = "Hyper.multiOrthStudent", SV = TRUE)
+       dist = "OST", SV = TRUE)
 }
 #' @export
-sim.VAR.dynHyper.Student.SV <- function(K = 5, p = 2, t_max = 1000,
+sim.VAR.dynSkew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
                                         b0 = 0.5, a0 = 0.5, h = 0, sigma_h = NULL,
                                         y0 = matrix(0, ncol = K, nrow = p),
                                         nu = 6, gamma = 0.5, sigma_G = NULL, seednum = 0, burn_in = 0){
@@ -685,10 +685,10 @@ sim.VAR.dynHyper.Student.SV <- function(K = 5, p = 2, t_max = 1000,
        Vh = Vh,
        Gamma_T = Gamma_T,
        sigma_G = sigma_G,
-       dist = "dynHyper.Student", SV = TRUE)
+       dist = "dynSkew.Student", SV = TRUE)
 }
 #' @export
-sim.VAR.dynHyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
+sim.VAR.dynMST.SV <- function(K = 5, p = 2, t_max = 1000,
                                              b0 = 0.5, a0 = 0.5, h = 0, sigma_h = NULL,
                                              y0 = matrix(0, ncol = K, nrow = p),
                                              nu = 6, gamma = 0.5, sigma_G = NULL, seednum = 0, burn_in = 0){
@@ -780,11 +780,11 @@ sim.VAR.dynHyper.multiStudent.SV <- function(K = 5, p = 2, t_max = 1000,
        Vh = Vh,
        Gamma_T = Gamma_T,
        sigma_G = sigma_G,
-       dist = "dynHyper.multiStudent", SV = TRUE)
+       dist = "dynMST", SV = TRUE)
 }
 
 #' @export
-sim.VAR.dynHyper.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
+sim.VAR.dynOST.SV <- function(K = 5, p = 2, t_max = 1000,
                                                  b0 = 0.5, a0 = 0.5, h = 0, sigma_h = NULL,
                                                  y0 = matrix(0, ncol = K, nrow = p),
                                                  nu = 6, gamma = 0.5, sigma_G = NULL, seednum = 0, burn_in = 0){
@@ -877,7 +877,7 @@ sim.VAR.dynHyper.multiOrthStudent.SV <- function(K = 5, p = 2, t_max = 1000,
        Vh = Vh,
        Gamma_T = Gamma_T,
        sigma_G = sigma_G,
-       dist = "dynHyper.multiOrthStudent", SV = TRUE)
+       dist = "dynOST", SV = TRUE)
 }
 
 #' #' @export

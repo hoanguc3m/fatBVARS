@@ -83,8 +83,8 @@ log_posterior <- function(param, data){
     }
 
 
-    #Hyper.Student
-    if (dist == "Hyper.Student"){
+    #Skew.Student
+    if (dist == "Skew.Student"){
 
       # nu
       nu <- as.numeric(get_post(param, element = "nu"))
@@ -106,8 +106,8 @@ log_posterior <- function(param, data){
                                           sigma = diag(1, K), log = T, isChol = T)) - 0.5 * sum(h) - 0.5 * K * sum(log(w)) # Jacobian
     }
 
-    #multiStudent
-    if (dist == "multiStudent"){
+    #MT
+    if (dist == "MT"){
 
       # nu
       nu <- get_post(param, element = "nu")
@@ -129,8 +129,8 @@ log_posterior <- function(param, data){
                                           sigma = diag(1, K), log = T, isChol = T)) - 0.5 * sum(h) - 0.5 * sum(log(w)) # Jacobian
     }
 
-    #Hyper.multiStudent
-    if (dist == "Hyper.multiStudent"){
+    #MST
+    if (dist == "MST"){
 
       # nu
       nu <- get_post(param, element = "nu")
@@ -186,8 +186,8 @@ log_posterior <- function(param, data){
           0.5 * K * sum(log(w)) # Jacobian
       }
 
-      #Hyper.Student
-      if (dist == "Hyper.Student"){
+      #Skew.Student
+      if (dist == "Skew.Student"){
 
         # nu
         nu <- as.numeric(get_post(param, element = "nu"))
@@ -208,8 +208,8 @@ log_posterior <- function(param, data){
       }
 
 
-      #multiStudent
-      if (dist == "multiStudent"){
+      #MT
+      if (dist == "MT"){
 
         # nu
         nu <- get_post(param, element = "nu")
@@ -227,8 +227,8 @@ log_posterior <- function(param, data){
           0.5 * sum(log(w)) # Jacobian
       }
 
-      #Hyper.multiStudent
-      if (dist == "Hyper.multiStudent"){
+      #MST
+      if (dist == "MST"){
 
         # nu
         nu <- get_post(param, element = "nu")
@@ -322,8 +322,8 @@ log_likelihood <- function(param, data, aggregate = TRUE){
     }
 
 
-    #Hyper.Student
-    if (dist == "Hyper.Student"){
+    #Skew.Student
+    if (dist == "Skew.Student"){
 
       # nu
       nu <- as.numeric(get_post(param, element = "nu"))
@@ -335,8 +335,8 @@ log_likelihood <- function(param, data, aggregate = TRUE){
                                           sigma = diag(1, K), log = T, isChol = T) - 0.5 * apply(h, MARGIN = 2, sum) - 0.5 * K * log(w) # Jacobian
     }
 
-    #multiStudent
-    if (dist == "multiStudent"){
+    #MT
+    if (dist == "MT"){
 
       # nu
       nu <- get_post(param, element = "nu")
@@ -347,8 +347,8 @@ log_likelihood <- function(param, data, aggregate = TRUE){
                                           sigma = diag(1, K), log = T, isChol = T) - 0.5 * apply(h, MARGIN = 2, sum) - 0.5 * apply(log(w), MARGIN = 2, sum) # Jacobian
     }
 
-    #Hyper.multiStudent
-    if (dist == "Hyper.multiStudent"){
+    #MST
+    if (dist == "MST"){
 
       # nu
       nu <- get_post(param, element = "nu")
@@ -360,8 +360,8 @@ log_likelihood <- function(param, data, aggregate = TRUE){
                                           sigma = diag(1, K), log = T, isChol = T) - 0.5 * apply(h, MARGIN = 2, sum) - 0.5 * apply(log(w), MARGIN = 2, sum) # Jacobian
     }
 
-    #multiOrthStudent
-    if (dist == "multiOrthStudent"){
+    #OT
+    if (dist == "OT"){
 
       # nu
       nu <- get_post(param, element = "nu")
@@ -372,8 +372,8 @@ log_likelihood <- function(param, data, aggregate = TRUE){
                                       sigma = diag(1, K), log = T, isChol = T) - 0.5 * apply(h, MARGIN = 2, sum) - 0.5 * apply(log(w), MARGIN = 2, sum) # Jacobian
     }
 
-    #Hyper.multiStudent
-    if (dist == "Hyper.multiOrthStudent"){
+    #MST
+    if (dist == "OST"){
 
       # nu
       nu <- get_post(param, element = "nu")
@@ -410,8 +410,8 @@ log_likelihood <- function(param, data, aggregate = TRUE){
           0.5 * K * log(w) # Jacobian
       }
 
-      #Hyper.Student
-      if (dist == "Hyper.Student"){
+      #Skew.Student
+      if (dist == "Skew.Student"){
 
         # nu
         nu <- as.numeric(get_post(param, element = "nu"))
@@ -425,8 +425,8 @@ log_likelihood <- function(param, data, aggregate = TRUE){
       }
 
 
-      #multiStudent
-      if (dist == "multiStudent"){
+      #MT
+      if (dist == "MT"){
 
         # nu
         nu <- get_post(param, element = "nu")
@@ -438,8 +438,8 @@ log_likelihood <- function(param, data, aggregate = TRUE){
           0.5 * apply(log(w), MARGIN = 2, sum)  # Jacobian
       }
 
-      #Hyper.multiStudent
-      if (dist == "Hyper.multiStudent"){
+      #MST
+      if (dist == "MST"){
 
         # nu
         nu <- get_post(param, element = "nu")
@@ -452,8 +452,8 @@ log_likelihood <- function(param, data, aggregate = TRUE){
           0.5 * apply(log(w), MARGIN = 2, sum) # Jacobian
       }
 
-      #multiOrthStudent
-      if (dist == "multiOrthStudent"){
+      #OT
+      if (dist == "OT"){
 
         # nu
         nu <- get_post(param, element = "nu")
@@ -465,8 +465,8 @@ log_likelihood <- function(param, data, aggregate = TRUE){
           0.5 * apply(log(w), MARGIN = 2, sum)  # Jacobian
       }
 
-      #multiOrthStudent
-      if (dist == "Hyper.multiOrthStudent"){
+      #OT
+      if (dist == "OST"){
 
         # nu
         nu <- get_post(param, element = "nu")

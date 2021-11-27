@@ -25,29 +25,29 @@ ML_chain2 <- marginalLL(Chain2)
 waic_chain2 <- WAIC(Chain2)
 
 ###########################################################################
-datagen <- sim.VAR.novol(dist="Hyper.Student")
+datagen <- sim.VAR.novol(dist="Skew.Student")
 y <- datagen$y
-prior <- get_prior(y, p = 2, dist="Hyper.Student", SV = F)
+prior <- get_prior(y, p = 2, dist="Skew.Student", SV = F)
 inits <- get_init(prior)
-Chain3 <- BVAR.novol(y, K = 5, p = 2, dist = "Hyper.Student", y0 = NULL, prior = prior, inits = inits)
+Chain3 <- BVAR.novol(y, K = 5, p = 2, dist = "Skew.Student", y0 = NULL, prior = prior, inits = inits)
 ML_chain3 <- marginalLL(Chain3)
 waic_chain3 <- WAIC(Chain3)
 
 ###########################################################################
-datagen <- sim.VAR.novol(dist="multiStudent")
+datagen <- sim.VAR.novol(dist="MT")
 y <- datagen$y
-prior <- get_prior(y, p = 2, dist="multiStudent", SV = F)
+prior <- get_prior(y, p = 2, dist="MT", SV = F)
 inits <- get_init(prior)
-Chain4 <- BVAR.novol(y, K = 5, p = 2, dist = "multiStudent", y0 = NULL, prior = prior, inits = inits)
+Chain4 <- BVAR.novol(y, K = 5, p = 2, dist = "MT", y0 = NULL, prior = prior, inits = inits)
 ML_chain4 <- marginalLL(Chain4)
 waic_chain4 <- WAIC(Chain4)
 
 ###########################################################################
-datagen <- sim.VAR.novol(dist="Hyper.multiStudent")
+datagen <- sim.VAR.novol(dist="MST")
 y <- datagen$y
-prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = F)
+prior <- get_prior(y, p = 2, dist="MST", SV = F)
 inits <- get_init(prior)
-Chain5 <- BVAR.novol(y, K = 5, p = 2, dist = "Hyper.multiStudent", y0 = NULL, prior = prior, inits = inits)
+Chain5 <- BVAR.novol(y, K = 5, p = 2, dist = "MST", y0 = NULL, prior = prior, inits = inits)
 ML_chain5 <- marginalLL(Chain5)
 waic_chain5 <- WAIC(Chain5)
 
@@ -70,75 +70,75 @@ ML_chain7 <- marginalLL(Chain7)
 waic_chain7 <- WAIC(Chain7)
 
 ###########################################################################
-datagen <- sim.VAR.SV(dist="Hyper.Student")
+datagen <- sim.VAR.SV(dist="Skew.Student")
 y <- datagen$y
-prior <- get_prior(y, p = 2, dist="Hyper.Student", SV = T)
+prior <- get_prior(y, p = 2, dist="Skew.Student", SV = T)
 inits <- get_init(prior)
-Chain8 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.Student", y0 = NULL, prior = prior, inits = inits)
+Chain8 <- BVAR.SV(y, K = 5, p = 2, dist = "Skew.Student", y0 = NULL, prior = prior, inits = inits)
 ML_chain8 <- marginalLL(Chain8)
 waic_chain8 <- WAIC(Chain8)
 
 ###########################################################################
-datagen <- sim.VAR.SV(dist="multiStudent")
+datagen <- sim.VAR.SV(dist="MT")
 y <- datagen$y
-prior <- get_prior(y, p = 2, dist="multiStudent", SV = T)
+prior <- get_prior(y, p = 2, dist="MT", SV = T)
 inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
-Chain9 <- BVAR.SV(y, K = 5, p = 2, dist = "multiStudent", y0 = NULL, prior = prior, inits = inits)
+Chain9 <- BVAR.SV(y, K = 5, p = 2, dist = "MT", y0 = NULL, prior = prior, inits = inits)
 ML_chain9 <- marginalLL(Chain9)
 waic_chain9 <- WAIC(Chain9)
 
 ###########################################################################
-datagen <- sim.VAR.SV(dist="Hyper.multiStudent")
+datagen <- sim.VAR.SV(dist="MST")
 y <- datagen$y
-prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = T)
+prior <- get_prior(y, p = 2, dist="MST", SV = T)
 inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
-Chain10 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.multiStudent", y0 = NULL, prior = prior, inits = inits)
+Chain10 <- BVAR.SV(y, K = 5, p = 2, dist = "MST", y0 = NULL, prior = prior, inits = inits)
 ML_chain10 <- marginalLL(Chain10)
 waic_chain10 <- WAIC(Chain10)
 
 ###########################################################################
 
-datagen <- sim.VAR.novol(dist="multiOrthStudent")
+datagen <- sim.VAR.novol(dist="OT")
 y <- datagen$y
-prior <- get_prior(y, p = 2, dist="multiStudent", SV = F)
+prior <- get_prior(y, p = 2, dist="MT", SV = F)
 inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
-Chain11 <- BVAR.novol(y, K = 5, p = 2, dist = "multiOrthStudent", y0 = NULL, prior = prior, inits = inits)
+Chain11 <- BVAR.novol(y, K = 5, p = 2, dist = "OT", y0 = NULL, prior = prior, inits = inits)
 ML_chain11 <- marginalLL(Chain11)
 ###########################################################################
-datagen <- sim.VAR.novol(dist="Hyper.multiOrthStudent")
+datagen <- sim.VAR.novol(dist="OST")
 y <- datagen$y
-prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = F)
+prior <- get_prior(y, p = 2, dist="MST", SV = F)
 inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
-Chain12 <- BVAR.novol(y, K = 5, p = 2, dist = "Hyper.multiOrthStudent", y0 = NULL, prior = prior, inits = inits)
+Chain12 <- BVAR.novol(y, K = 5, p = 2, dist = "OST", y0 = NULL, prior = prior, inits = inits)
 ML_chain12 <- marginalLL(Chain12)
 ###########################################################################
-datagen <- sim.VAR.SV(dist="multiOrthStudent")
+datagen <- sim.VAR.SV(dist="OT")
 y <- datagen$y
-prior <- get_prior(y, p = 2, dist="multiStudent", SV = T)
+prior <- get_prior(y, p = 2, dist="MT", SV = T)
 inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
-Chain13 <- BVAR.SV(y, K = 5, p = 2, dist = "multiOrthStudent", y0 = NULL, prior = prior, inits = inits)
+Chain13 <- BVAR.SV(y, K = 5, p = 2, dist = "OT", y0 = NULL, prior = prior, inits = inits)
 ML_chain13 <- marginalLL(Chain13)
 ###########################################################################
-datagen <- sim.VAR.SV(dist="Hyper.multiOrthStudent")
+datagen <- sim.VAR.SV(dist="OST")
 y <- datagen$y
-prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = T)
+prior <- get_prior(y, p = 2, dist="MST", SV = T)
 inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
-Chain14 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.multiOrthStudent", y0 = NULL, prior = prior, inits = inits)
+Chain14 <- BVAR.SV(y, K = 5, p = 2, dist = "OST", y0 = NULL, prior = prior, inits = inits)
 ML_chain14 <- marginalLL(Chain14)
 
 ###########################################################################
 K = 3; p = 2
-datagen <- sim.VAR.novol(dist="dynHyper.Student", K = K, p = p, sigma_G = rep(0,K))
+datagen <- sim.VAR.novol(dist="dynSkew.Student", K = K, p = p, sigma_G = rep(0,K))
 y <- datagen$y
-prior <- get_prior(y, p = p, dist="dynHyper.Student", SV = F)
+prior <- get_prior(y, p = p, dist="dynSkew.Student", SV = F)
 inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
-Chain15 <- BVAR.novol(y, K = K, p = p, dist = "dynHyper.Student", y0 = NULL, prior = prior, inits = inits)
+Chain15 <- BVAR.novol(y, K = K, p = p, dist = "dynSkew.Student", y0 = NULL, prior = prior, inits = inits)
 
 ###########################################################################
 K = 3; p = 2
-datagen <- sim.VAR.SV(dist="dynHyper.Student", K = K, p = p, sigma_G = rep(0,K))
+datagen <- sim.VAR.SV(dist="dynSkew.Student", K = K, p = p, sigma_G = rep(0,K))
 y <- datagen$y
-prior <- get_prior(y, p = p, dist="dynHyper.Student", SV = T)
+prior <- get_prior(y, p = p, dist="dynSkew.Student", SV = T)
 inits <- get_init(prior, samples = 1100, burnin = 100, thin = 1)
-Chain16 <- BVAR.SV(y, K = K, p = p, dist = "dynHyper.Student", y0 = NULL, prior = prior, inits = inits)
+Chain16 <- BVAR.SV(y, K = K, p = p, dist = "dynSkew.Student", y0 = NULL, prior = prior, inits = inits)
 

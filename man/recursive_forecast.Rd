@@ -10,7 +10,7 @@ recursive_forecast(
   t_pred = 12,
   K,
   p,
-  dist = "Hyper.multiStudent",
+  dist = "MST",
   SV = T,
   numCores = NULL
 )
@@ -34,7 +34,7 @@ This function returns a recursive forecast of future observations of BVAR-SV-fat
 }
 \examples{
 \dontrun{
-recuresive_model1 <- recursive_forecast(y, t_start, t_pred, K, p, dist = "Hyper.multiStudent", SV = T)
+recuresive_model1 <- recursive_forecast(y, t_start, t_pred, K, p, dist = "MST", SV = T)
 }
 
 }

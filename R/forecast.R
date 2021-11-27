@@ -77,40 +77,40 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, t_current, Nfsample = NU
                                             y0 = y0, nu = nu,
                                             seednum = seed_set[count_id], burn_in = 0)
         }
-        if (dist == "Hyper.Student") {
+        if (dist == "Skew.Student") {
           nu <- Nu_mat[i]
           gamma <- Gamma_mat[i,]
-          pred_tmp <- sim.VAR.Hyper.Student.SV(K = K, p = p, t_max = t_pred,
+          pred_tmp <- sim.VAR.Skew.Student.SV(K = K, p = p, t_max = t_pred,
                                                   b0 = b0, a0 = a0, h = h, sigma_h = sigma_h,
                                                   y0 = y0, nu = nu, gamma = gamma,
                                                   seednum = seed_set[count_id], burn_in = 0)
         }
-        if (dist == "multiStudent") {
+        if (dist == "MT") {
           nu <- Nu_mat[i,]
-          pred_tmp <- sim.VAR.multiStudent.SV(K = K, p = p, t_max = t_pred,
+          pred_tmp <- sim.VAR.MT.SV(K = K, p = p, t_max = t_pred,
                                                  b0 = b0, a0 = a0, h = h, sigma_h = sigma_h,
                                                  y0 = y0, nu = nu,
                                                  seednum = seed_set[count_id], burn_in = 0)
         }
-        if (dist == "Hyper.multiStudent") {
+        if (dist == "MST") {
           nu <- Nu_mat[i,]
           gamma <- Gamma_mat[i,]
-          pred_tmp <- sim.VAR.Hyper.multiStudent.SV(K = K, p = p, t_max = t_pred,
+          pred_tmp <- sim.VAR.MST.SV(K = K, p = p, t_max = t_pred,
                                                        b0 = b0, a0 = a0, h = h, sigma_h = sigma_h,
                                                        y0 = y0, nu = nu, gamma = gamma,
                                                        seednum = seed_set[count_id], burn_in = 0)
         }
-        if (dist == "multiOrthStudent") {
+        if (dist == "OT") {
           nu <- Nu_mat[i,]
-          pred_tmp <- sim.VAR.multiOrthStudent.SV(K = K, p = p, t_max = t_pred,
+          pred_tmp <- sim.VAR.OT.SV(K = K, p = p, t_max = t_pred,
                                               b0 = b0, a0 = a0, h = h, sigma_h = sigma_h,
                                               y0 = y0, nu = nu,
                                               seednum = seed_set[count_id], burn_in = 0)
         }
-        if (dist == "Hyper.multiOrthStudent") {
+        if (dist == "OST") {
           nu <- Nu_mat[i,]
           gamma <- Gamma_mat[i,]
-          pred_tmp <- sim.VAR.Hyper.multiOrthStudent.SV(K = K, p = p, t_max = t_pred,
+          pred_tmp <- sim.VAR.OST.SV(K = K, p = p, t_max = t_pred,
                                                     b0 = b0, a0 = a0, h = h, sigma_h = sigma_h,
                                                     y0 = y0, nu = nu, gamma = gamma,
                                                     seednum = seed_set[count_id], burn_in = 0)
@@ -131,40 +131,40 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, t_current, Nfsample = NU
                                              y0 = y0, nu = nu,
                                              seednum = seed_set[count_id], burn_in = 0)
         }
-        if (dist == "Hyper.Student") {
+        if (dist == "Skew.Student") {
           nu <- Nu_mat[i]
           gamma <- Gamma_mat[i,]
-          pred_tmp <- sim.VAR.Hyper.Student.novol(K = K, p = p, t_max = t_pred,
+          pred_tmp <- sim.VAR.Skew.Student.novol(K = K, p = p, t_max = t_pred,
                                             b0 = b0, a0 = a0, h = h,
                                             y0 = y0, nu = nu, gamma = gamma,
                                             seednum = seed_set[count_id], burn_in = 0)
         }
-        if (dist == "multiStudent") {
+        if (dist == "MT") {
           nu <- Nu_mat[i,]
-          pred_tmp <- sim.VAR.multiStudent.novol(K = K, p = p, t_max = t_pred,
+          pred_tmp <- sim.VAR.MT.novol(K = K, p = p, t_max = t_pred,
                                             b0 = b0, a0 = a0, h = h,
                                             y0 = y0, nu = nu,
                                             seednum = seed_set[count_id], burn_in = 0)
         }
-        if (dist == "Hyper.multiStudent") {
+        if (dist == "MST") {
           nu <- Nu_mat[i,]
           gamma <- Gamma_mat[i,]
-          pred_tmp <- sim.VAR.Hyper.multiStudent.novol(K = K, p = p, t_max = t_pred,
+          pred_tmp <- sim.VAR.MST.novol(K = K, p = p, t_max = t_pred,
                                                  b0 = b0, a0 = a0, h = h,
                                                  y0 = y0, nu = nu, gamma = gamma,
                                                  seednum = seed_set[count_id], burn_in = 0)
         }
-        if (dist == "multiOrthStudent") {
+        if (dist == "OT") {
           nu <- Nu_mat[i,]
-          pred_tmp <- sim.VAR.multiOrthStudent.novol(K = K, p = p, t_max = t_pred,
+          pred_tmp <- sim.VAR.OT.novol(K = K, p = p, t_max = t_pred,
                                                  b0 = b0, a0 = a0, h = h,
                                                  y0 = y0, nu = nu,
                                                  seednum = seed_set[count_id], burn_in = 0)
         }
-        if (dist == "Hyper.multiOrthStudent") {
+        if (dist == "OST") {
           nu <- Nu_mat[i,]
           gamma <- Gamma_mat[i,]
-          pred_tmp <- sim.VAR.Hyper.multiOrthStudent.novol(K = K, p = p, t_max = t_pred,
+          pred_tmp <- sim.VAR.OST.novol(K = K, p = p, t_max = t_pred,
                                                        b0 = b0, a0 = a0, h = h,
                                                        y0 = y0, nu = nu, gamma = gamma,
                                                        seednum = seed_set[count_id], burn_in = 0)
@@ -319,11 +319,11 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current){
 #' @export
 #' @examples
 #' \dontrun{
-#' recuresive_model1 <- recursive_forecast(y, t_start, t_pred, K, p, dist = "Hyper.multiStudent", SV = T)
+#' recuresive_model1 <- recursive_forecast(y, t_start, t_pred, K, p, dist = "MST", SV = T)
 #' }
 #'
 #' @export
-recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hyper.multiStudent", SV = T, numCores = NULL){
+recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "MST", SV = T, numCores = NULL){
     t_max = nrow(y)
     max_rolling <- t_max - (t_start + t_pred) + 1
 
@@ -381,7 +381,7 @@ recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hype
 }
 
 #' @export
-recursive_seperate <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hyper.multiStudent", SV = T, outname = NULL){
+recursive_seperate <- function(y, t_start = 100, t_pred = 12, K, p, dist = "MST", SV = T, outname = NULL){
   t_max = nrow(y)
   if (is.null(outname)) outname = paste("Recursive_", dist, "_", SV, "_", t_start+1, ".RData", sep = "")
   time_current <- t_start # index of the longer y
@@ -413,7 +413,7 @@ recursive_seperate <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hype
   return( out_recursive)
 
 }
-# recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "Hyper.multiStudent", SV = T, core = NULL){
+# recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "MST", SV = T, core = NULL){
 #   t_max = nrow(y)
 #   max_rolling <- t_max - (t_start + t_pred) + 1
 #

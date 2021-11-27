@@ -6,7 +6,7 @@
 #' @param K The number of variables in BVAR model.
 #' @param p The number of lags in BVAR model.
 #' @param dist The variable specifies the BVAR error distribution. It should be one of
-#' c("Gaussian","Student","Skew.Student","Hyper.Student", "multiStudent","Skew.multiStudent","Hyper.multiStudent").
+#' c("Gaussian","Student","Skew.Student","Skew.Student", "MT","Skew.MT","MST").
 #' @param y0 The number of observations
 #' @param prior The prior specification of BVAR.
 #' @param inits The initial values of BVAR.
@@ -22,20 +22,20 @@
 #' plot(Chain1)
 #' }
 BVAR.stochvol <- function(y, K, p, dist, y0 = NULL, prior = NULL, inits = NULL){
-  if (!(dist %in% c("Gaussian","Student","Hyper.Student",
-                    "multiStudent","Hyper.multiStudent",
-                    "multiOrthStudent","Hyper.multiOrthStudent",
-                    "dynHyper.Student", "dynHyper.multiStudent", "dynHyper.multiOrthStudent") ))
+  if (!(dist %in% c("Gaussian","Student","Skew.Student",
+                    "MT","MST",
+                    "OT","OST",
+                    "dynSkew.Student", "dynMST", "dynOST") ))
     stop("dist is not implemented.")
   if (prior$SV == TRUE){
     Start = Sys.time()
     if (dist == "Gaussian") Chain <- BVAR.Gaussian.stochvol(y, K, p, y0, prior, inits)
     if (dist == "Student") Chain <- BVAR.Student.stochvol(y, K, p, y0, prior, inits)
-    if (dist == "Hyper.Student") Chain <- BVAR.Hyper.Student.stochvol(y, K, p, y0, prior, inits)
-    if (dist == "multiStudent") Chain <- BVAR.multiStudent.stochvol(y, K, p, y0, prior, inits)
-    if (dist == "Hyper.multiStudent") Chain <- BVAR.Hyper.multiStudent.stochvol(y, K, p, y0, prior, inits)
-    if (dist == "multiOrthStudent") Chain <- BVAR.multiOrthStudent.stochvol(y, K, p, y0, prior, inits)
-    if (dist == "Hyper.multiOrthStudent") Chain <- BVAR.Hyper.multiOrthStudent.stochvol(y, K, p, y0, prior, inits)
+    if (dist == "Skew.Student") Chain <- BVAR.Skew.Student.stochvol(y, K, p, y0, prior, inits)
+    if (dist == "MT") Chain <- BVAR.MT.stochvol(y, K, p, y0, prior, inits)
+    if (dist == "MST") Chain <- BVAR.MST.stochvol(y, K, p, y0, prior, inits)
+    if (dist == "OT") Chain <- BVAR.OT.stochvol(y, K, p, y0, prior, inits)
+    if (dist == "OST") Chain <- BVAR.OST.stochvol(y, K, p, y0, prior, inits)
     elapsedTime = Sys.time() - Start
     print(elapsedTime)
     out <- list(mcmc = Chain,
@@ -166,7 +166,7 @@ BVAR.Gaussian.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NUL
     diag(A) <- 1
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, as.numeric(paravol), h0, as.numeric(h))
-    if (j %% 100 == 0) { cat(" Iteration ", j, " \n")}
+    if (j %% 1000 == 0) { cat(" Iteration ", j, " \n")}
   }
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
@@ -335,7 +335,7 @@ BVAR.Student.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
 
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, nu, as.numeric(paravol), h0, as.numeric(h), as.numeric(w_sample))
-    if (j %% 100 == 0) {
+    if (j %% 1000 == 0) {
       cat(" Iteration ", j, " ", logsigma_nu," ", round(nu,2)," \n")
       acount_w <- rep(0,t_max)
     }
@@ -360,7 +360,7 @@ BVAR.Student.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
 
 #############################################################################################
 #' @export
-BVAR.Hyper.Student.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
+BVAR.Skew.Student.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   # Init regressors in the right hand side
   t_max <- nrow(y)
   yt = t(y)
@@ -369,7 +369,7 @@ BVAR.Hyper.Student.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits 
   # Init prior and initial values
   m = K * p + 1
   if (is.null(prior)){
-    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "Hyper.Student", SV = TRUE)
+    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "Skew.Student", SV = TRUE)
   }
   # prior B
   b_prior = prior$b_prior
@@ -550,7 +550,7 @@ BVAR.Hyper.Student.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits 
     }
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, gamma, nu, as.numeric(paravol), h0, as.numeric(h), as.numeric(w_sample))
-    if (j %% 100 == 0) {
+    if (j %% 1000 == 0) {
       cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2) , " ", gamma ,  " \n")
       acount_w <- rep(0,t_max)
     }
@@ -574,7 +574,7 @@ BVAR.Hyper.Student.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits 
 
 ###########################################################################
 #' @export
-BVAR.multiStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
+BVAR.MT.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   # Init regressors in the right hand side
   t_max <- nrow(y)
   yt = t(y)
@@ -583,7 +583,7 @@ BVAR.multiStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
   # Init prior and initial values
   m = K * p + 1
   if (is.null(prior)){
-    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "multiStudent", SV = TRUE)
+    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "MT", SV = TRUE)
   }
   # prior B
   b_prior = prior$b_prior
@@ -753,7 +753,7 @@ BVAR.multiStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, nu, as.numeric(paravol), h0, as.numeric(h), as.numeric(w))
 
-    if (j %% 100 == 0) {
+    if (j %% 1000 == 0) {
       cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2), " \n")
       acount_w <- rep(0,t_max)
     }
@@ -776,7 +776,7 @@ BVAR.multiStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
 
 #############################################################################################
 #' @export
-BVAR.Hyper.multiStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
+BVAR.MST.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   # Init regressors in the right hand side
   t_max <- nrow(y)
   yt = t(y)
@@ -785,7 +785,7 @@ BVAR.Hyper.multiStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, i
   # Init prior and initial values
   m = K * p + 1
   if (is.null(prior)){
-    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "Hyper.multiStudent", SV = TRUE)
+    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "MST", SV = TRUE)
   }
   # prior B
   b_prior = prior$b_prior
@@ -969,7 +969,7 @@ BVAR.Hyper.multiStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, i
     }
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, gamma, nu, as.numeric(paravol), h0, as.numeric(h), as.numeric(w))
-    if (j %% 100 == 0) {
+    if (j %% 1000 == 0) {
       cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2), " gamma ", round(gamma,2) ," \n")
       acount_w <- rep(0,t_max)
     }
@@ -994,7 +994,7 @@ BVAR.Hyper.multiStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, i
 
 ###########################################################################
 #' @export
-BVAR.multiOrthStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
+BVAR.OT.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   # Init regressors in the right hand side
   t_max <- nrow(y)
   yt = t(y)
@@ -1003,7 +1003,7 @@ BVAR.multiOrthStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, ini
   # Init prior and initial values
   m = K * p + 1
   if (is.null(prior)){
-    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "multiStudent", SV = TRUE)
+    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "MT", SV = TRUE)
   }
   # prior B
   b_prior = prior$b_prior
@@ -1149,7 +1149,7 @@ BVAR.multiOrthStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, ini
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, nu, as.numeric(paravol), h0, as.numeric(h), as.numeric(w))
 
-    if (j %% 100 == 0) {
+    if (j %% 1000 == 0) {
       cat(" Iteration ", j, " ", logsigma_nu," ", round(nu,2)," \n")
       acount_w <- rep(0,t_max)
     }
@@ -1172,7 +1172,7 @@ BVAR.multiOrthStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, ini
 
 #############################################################################################
 #' @export
-BVAR.Hyper.multiOrthStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
+BVAR.OST.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   # Init regressors in the right hand side
   t_max <- nrow(y)
   yt = t(y)
@@ -1181,7 +1181,7 @@ BVAR.Hyper.multiOrthStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NUL
   # Init prior and initial values
   m = K * p + 1
   if (is.null(prior)){
-    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "Hyper.multiStudent", SV = TRUE)
+    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "MST", SV = TRUE)
   }
   # prior B
   b_prior = prior$b_prior
@@ -1359,7 +1359,7 @@ BVAR.Hyper.multiOrthStudent.stochvol <- function(y, K, p, y0 = NULL, prior = NUL
 
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, gamma, nu, as.numeric(paravol), h0, as.numeric(h), as.numeric(w))
-    if (j %% 100 == 0) {
+    if (j %% 1000 == 0) {
       cat(" Iteration ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2) , " ", round(gamma,2) ,  " \n")
       acount_w <- rep(0,t_max)
     }

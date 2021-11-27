@@ -7,11 +7,11 @@ library(bridgesampling)
 # seednum = 0, burn_in = 0
 
 ###########################################################################
-datagen <- sim.VAR.SV(dist="Hyper.multiStudent")
+datagen <- sim.VAR.SV(dist="MST")
 y <- datagen$y
-prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = T)
+prior <- get_prior(y, p = 2, dist="MST", SV = T)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
-Chain10 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.multiStudent", y0 = NULL, prior = prior, inits = inits)
+Chain10 <- BVAR.SV(y, K = 5, p = 2, dist = "MST", y0 = NULL, prior = prior, inits = inits)
 # plot(Chain10)
 
 log_posterior(Chain10$mcmc[1,], Chain10)
@@ -65,9 +65,9 @@ ML_chain2 <- marginalLL(Chain2)
 
 ###########################################################################
 
-prior <- get_prior(y, p = 2, dist="Hyper.Student", SV = F)
+prior <- get_prior(y, p = 2, dist="Skew.Student", SV = F)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
-Chain3 <- BVAR.novol(y, K = 5, p = 2, dist = "Hyper.Student", y0 = NULL, prior = prior, inits = inits)
+Chain3 <- BVAR.novol(y, K = 5, p = 2, dist = "Skew.Student", y0 = NULL, prior = prior, inits = inits)
 waic_chain3 <- WAIC(Chain3)
 recur_chain3 <- recursive_forecast(Chain = Chain3, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 ML_chain3 <- marginalLL(Chain3)
@@ -85,9 +85,9 @@ ML_chain3 <- marginalLL(Chain3)
 #                                  maxiter = 1000, silent = F)
 ###########################################################################
 
-prior <- get_prior(y, p = 2, dist="multiStudent", SV = F)
+prior <- get_prior(y, p = 2, dist="MT", SV = F)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
-Chain4 <- BVAR.novol(y, K = 5, p = 2, dist = "multiStudent", y0 = NULL, prior = prior, inits = inits)
+Chain4 <- BVAR.novol(y, K = 5, p = 2, dist = "MT", y0 = NULL, prior = prior, inits = inits)
 waic_chain4 <- WAIC(Chain4)
 recur_chain4 <- recursive_forecast(Chain = Chain4, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 ML_chain4 <- marginalLL(Chain4)
@@ -106,9 +106,9 @@ ML_chain4 <- marginalLL(Chain4)
 
 ###########################################################################
 
-prior <- get_prior(y, p = 2, dist="Hyper.multiStudent", SV = F)
+prior <- get_prior(y, p = 2, dist="MST", SV = F)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
-Chain5 <- BVAR.novol(y, K = 5, p = 2, dist = "Hyper.multiStudent", y0 = NULL, prior = prior, inits = inits)
+Chain5 <- BVAR.novol(y, K = 5, p = 2, dist = "MST", y0 = NULL, prior = prior, inits = inits)
 waic_chain5 <- WAIC(Chain5)
 recur_chain5 <- recursive_forecast(Chain = Chain5, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 ML_chain5 <- marginalLL(Chain5)
@@ -166,9 +166,9 @@ log_posterior(Chain7$mcmc[1,], Chain7)
 
 ###########################################################################
 
-prior <- get_prior(y, p = 2, dist="Hyper.Student", SV = T)
+prior <- get_prior(y, p = 2, dist="Skew.Student", SV = T)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
-Chain8 <- BVAR.SV(y, K = 5, p = 2, dist = "Hyper.Student", y0 = NULL, prior = prior, inits = inits)
+Chain8 <- BVAR.SV(y, K = 5, p = 2, dist = "Skew.Student", y0 = NULL, prior = prior, inits = inits)
 waic_chain8 <- WAIC(Chain8)
 recur_chain8 <- recursive_forecast(Chain = Chain8, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 ML_chain8 <- marginalLL(Chain8)
@@ -182,9 +182,9 @@ log_posterior(Chain8$mcmc[1,], Chain8)
 
 ###########################################################################
 
-prior <- get_prior(y, p = 2, dist="multiStudent", SV = T)
+prior <- get_prior(y, p = 2, dist="MT", SV = T)
 inits <- get_init(prior, samples = 12000, burnin = 2000, thin = 1)
-Chain9 <- BVAR.SV(y, K = 5, p = 2, dist = "multiStudent", y0 = NULL, prior = prior, inits = inits)
+Chain9 <- BVAR.SV(y, K = 5, p = 2, dist = "MT", y0 = NULL, prior = prior, inits = inits)
 waic_chain9 <- WAIC(Chain9)
 recur_chain9 <- recursive_forecast(Chain = Chain9, y0 = y[1:2,], y_future = y[3:1000,], t_pred = 12, reestimated = F)
 

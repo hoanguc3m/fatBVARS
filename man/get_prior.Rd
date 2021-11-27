@@ -21,7 +21,7 @@ get_prior(
 \item{priorStyle}{The prior style in BVAR model should be c("Minnesota", "OLS")}
 
 \item{dist}{The variable specifies the BVAR error distribution. It should be one of
-c("Gaussian","Student", "Hyper.Student", "multiStudent","Hyper.multiStudent","orthoStudent").}
+c("Gaussian","Student", "Skew.Student", "MT","MST","orthoStudent").}
 
 \item{SV}{The indicator if this BVAR model has a Stochastic volatility part.}
 }

@@ -124,7 +124,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
           }
 
 
-        if (dist == "Hyper.Student") {
+        if (dist == "Skew.Student") {
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -150,7 +150,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
           }
 
-        if (dist == "multiStudent") {
+        if (dist == "MT") {
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -175,7 +175,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
           }
 
-        if (dist == "Hyper.multiStudent") {
+        if (dist == "MST") {
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -201,7 +201,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
         }
 
-        if (dist == "multiOrthStudent") {
+        if (dist == "OT") {
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -226,7 +226,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
         }
 
-        if (dist == "Hyper.multiOrthStudent") {
+        if (dist == "OST") {
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -303,7 +303,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
           }
 
-        if (dist == "Hyper.Student") {
+        if (dist == "Skew.Student") {
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -327,7 +327,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
           }
 
-        if (dist == "multiStudent") {
+        if (dist == "MT") {
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -347,7 +347,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
           }
 
-        if (dist == "Hyper.multiStudent") {
+        if (dist == "MST") {
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -370,7 +370,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
           }
 
-        if (dist == "multiOrthStudent") {
+        if (dist == "OT") {
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
@@ -391,7 +391,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                         mc.cores = numCores)
         }
 
-        if (dist == "Hyper.multiOrthStudent") {
+        if (dist == "OST") {
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)

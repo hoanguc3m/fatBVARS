@@ -381,18 +381,14 @@ recursive_forecast <- function(y, t_start = 100, t_pred = 12, K, p, dist = "MST"
 }
 
 #' @export
-recursive_seperate <- function(y, t_start = 100, t_pred = 12, K, p, dist = "MST", SV = T, outname = NULL){
+recursive_seperate <- function(y, t_start = 100, t_pred = 12, K, p, dist = "MST", SV = T, outname = NULL, samples = 30000, burnin = 10000, thin = 1){
   t_max = nrow(y)
   if (is.null(outname)) outname = paste("Recursive_", dist, "_", SV, "_", t_start+1, ".RData", sep = "")
   time_current <- t_start # index of the longer y
   t_current <- time_current - p # length of the shorter y
   y_current <- matrix(y[c(1:time_current), ], ncol = K)
   prior <- get_prior(tail(y_current, time_current - p), p = p, dist=dist, SV = SV)
-  if (nrow(y) < 300) {
-    inits <- get_init(prior, samples = 30000, burnin = 10000, thin = 1)
-    } else {
-    inits <- get_init(prior, samples = 15000, burnin = 5000, thin = 1)
-  }
+  inits <- get_init(prior, samples = samples, burnin = burnin, thin = thin)
 
   if (SV) {
     Chain <- BVAR.SV(y = tail(y_current, time_current - p), K = K, p = p, dist = dist,

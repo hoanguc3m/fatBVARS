@@ -171,7 +171,7 @@ BVAR.Gaussian.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NUL
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("mu_vol",c(1:K), sep = ""),
                         paste("phi_vol",c(1:K), sep = ""),
@@ -343,7 +343,7 @@ BVAR.Student.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("nu"),
                         paste("mu_vol",c(1:K), sep = ""),
@@ -558,7 +558,7 @@ BVAR.Skew.Student.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu"),
@@ -761,7 +761,7 @@ BVAR.MT.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("nu",c(1:K), sep = ""),
                         paste("mu_vol",c(1:K), sep = ""),
@@ -977,7 +977,7 @@ BVAR.MST.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu",c(1:K), sep = ""),
@@ -1157,7 +1157,7 @@ BVAR.OT.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("nu",c(1:K), sep = ""),
                         paste("mu_vol",c(1:K), sep = ""),
@@ -1367,7 +1367,7 @@ BVAR.OST.stochvol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("gamma",c(1:K), sep = ""),
                         paste("nu",c(1:K), sep = ""),

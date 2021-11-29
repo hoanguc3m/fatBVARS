@@ -99,7 +99,7 @@ BVAR.Gaussian.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   V_b_prior_inv <- solve(V_b_prior)
   # new precompute
   theta.prior.precmean <- V_b_prior_inv %*% b_prior
-  
+
   # Output
   mcmc <- matrix(NA, nrow = m*K + 0.5*K*(K-1) + K,
                  ncol = (samples - inits$burnin)%/% inits$thin)
@@ -107,23 +107,23 @@ BVAR.Gaussian.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # # Sample B
     # V_b_post_inv <- V_b_prior_inv + kronecker(xt %*% t(xt),Sigma2_inv)
     # b_post <- kronecker(xt, Sigma2_inv) %*% vec(yt)
-    # 
+    #
     # V_b_post <- solve(V_b_post_inv)
     # b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
     # b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
     # B <- Vec_to_Mat(b_sample, K,p)
 
     # sample B
-    A.tmp <- diag(1/sigma) %*% A 
-    y.tilde <- as.vector( A.tmp %*% yt ) 
-    x.tilde <- kronecker( t(xt), A.tmp ) 
+    A.tmp <- diag(1/sigma) %*% A
+    y.tilde <- as.vector( A.tmp %*% yt )
+    x.tilde <- kronecker( t(xt), A.tmp )
     theta.prec.chol <- chol( V_b_prior_inv + crossprod(x.tilde) )
     b_sample <- backsolve( theta.prec.chol,
                            backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
-                                      upper.tri = T, transpose = T ) 
+                                      upper.tri = T, transpose = T )
                          + rnorm(K*m) )
     B <- matrix(b_sample,K,m)
-    
+
     # Sample sigma
     sigma2 <- rep(0,K)
     u_ort <- A %*% (yt - B %*%xt)
@@ -166,7 +166,7 @@ BVAR.Gaussian.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("sigma",c(1:K), sep = ""))
   return(as.mcmc(t(mcmc)))
@@ -233,7 +233,7 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # yt_G <- yt / w_sqrt
     # V_b_post_inv <- V_b_prior_inv + kronecker(xt_G %*% t(xt_G),Sigma2_inv)
     # b_post <- kronecker(xt_G, Sigma2_inv) %*% vec(yt_G)
-    # 
+    #
     # V_b_post <- solve(V_b_post_inv)
     # b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
     # b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
@@ -247,10 +247,10 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     theta.prec.chol <- chol( V_b_prior_inv + crossprod(x.tilde) )
     b_sample <- backsolve( theta.prec.chol,
                            backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
-                                      upper.tri = T, transpose = T ) 
+                                      upper.tri = T, transpose = T )
                            + rnorm(K*m) )
     B <- matrix(b_sample,K,m)
-    
+
     # Sample sigma
     sigma2 <- rep(0,K)
     u_ort <- A %*% ((yt - B %*%xt)/ w_sqrt)    # change from Gaussian
@@ -338,7 +338,7 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("nu"),
@@ -400,14 +400,14 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
   w_sample <- rep(1, t_max)
   w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
-  
+
   # new precompute
   i <- K*m
   theta.prior.prec = matrix(0,i+K,i+K)
   theta.prior.prec[1:i,1:i] <- V_b_prior_inv
   theta.prior.prec[i+(1:K),i+(1:K)] <- solve( V_gamma_prior )
   theta.prior.precmean <- theta.prior.prec %*% c( b_prior, gamma_prior )
-  
+
   # Output
   mcmc <- matrix(NA, nrow = m*K + 0.5*K*(K-1) + K + K + 1 + t_max,
                  ncol = (samples - inits$burnin)%/% inits$thin)
@@ -417,12 +417,12 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     # yt_G <- (yt - D %*% w)  / w_sqrt
     # V_b_post_inv <- V_b_prior_inv + kronecker(xt_G %*% t(xt_G),Sigma2_inv)
     # b_post <- kronecker(xt_G, Sigma2_inv) %*% vec(yt_G)
-    # 
+    #
     # V_b_post <- solve(V_b_post_inv)
     # b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
     # b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
     # B <- Vec_to_Mat(b_sample, K,p)
-    # 
+    #
     # # Sample gamma
     # V_gamma_post_inv = solve(V_gamma_prior) + sum(w_sample) * Sigma2_inv
     # gamma_post = apply( Sigma2_inv %*% (yt - B %*% xt), MARGIN = 1, FUN = sum)
@@ -430,7 +430,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     # gamma_post <- V_gamma_post %*% ( solve(V_gamma_prior) %*% gamma_prior + gamma_post)
     # gamma <- as.numeric(gamma_post + t(chol(V_gamma_post)) %*% rnorm(K))
     # D <- diag(gamma, nrow = length(gamma))
-    
+
     # Sample B and gamma
     wt <- as.vector(sigma/w_sqrt)
     y.tilde <- as.vector( A %*% yt ) * wt
@@ -438,13 +438,13 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
     theta <- backsolve( theta.prec.chol,
                         backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
-                                   upper.tri = T, transpose = T ) 
+                                   upper.tri = T, transpose = T )
                         + rnorm(K*(m+1)) )
     B <- matrix(theta[1:(m*K)],K,m)
     b_sample <- as.vector(B)
     gamma <- theta[(m*K+1):((m+1)*K)]
     D <- diag(gamma)
-    
+
     # Sample sigma
     sigma2 <- rep(0,K)
     u_ort <- A %*% ((yt - B %*% xt - D %*% w)/ w_sqrt)    # change from Gaussian
@@ -496,7 +496,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
 #     cov_target <- 1/( c_eq / w_mode - a_eq * w_mode)
 #     log_w_temp = mode_target + sqrt(cov_target)*ran_stu
 #     w_temp = exp(log_w_temp)
-# 
+#
 #     # num_mh =  dinvgamma(w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
 #     #   ( - 0.5 * K * log_w_temp - 0.5 * apply((A %*% (u - gamma %x% t(w_temp)) / sigma)^2, MARGIN = 2, FUN = sum) / w_temp) - # posterior
 #     #   dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
@@ -506,7 +506,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
 #     num_mh =  dinvgamma(w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
 #       ( - 0.5 * K * log_w_temp - 0.5 * colSums((A %*% (u - gamma %x% t(w_temp)) / sigma)^2) / w_temp) - # posterior
 #       dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
-#     
+#
 #     denum_mh = dinvgamma(w_sample, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
 #       ( - 0.5 * K * log(w_sample) - 0.5 * colSums((A %*% (u - gamma %x% t(w_sample)) / sigma)^2) / w_sample) - # posterior
 #       dt( (log(w_sample) - mode_target)/sqrt(cov_target), df = 4, log = T) + log(w_sample) # proposal
@@ -517,7 +517,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
 #     w <- reprow(w_sample, K)
 #     w_sqrt <- reprow(sqrt(w_sample), K)
 #     acount_w <- acount_w + acre
-    
+
     # Sample w
     q2 <- colSums( ( ( A %*% ( yt - B%*%xt ) ) / sigma )^2 )
     p2 <- sum( ( c( A %*% gamma ) / sigma )^2 )
@@ -525,7 +525,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
                         psi = p2 )
     w <- reprow(w_sample, K)
     w_sqrt <- sqrt(w)
-    
+
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(1)
     if (nu_temp > 2 && nu_temp < 100){
@@ -561,7 +561,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("gamma",c(1:K), sep = ""),
@@ -620,10 +620,10 @@ BVAR.MT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
 #  w_sqrt_inv <- 1/w_sqrt
-  
+
   # new precompute
   theta.prior.precmean <- V_b_prior_inv %*% b_prior
-  
+
   # Output
   mcmc <- matrix(NA, nrow = m*K + 0.5*K*(K-1) + K + K + K*t_max,
                  ncol = (samples - inits$burnin)%/% inits$thin)
@@ -633,17 +633,17 @@ BVAR.MT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     #   Reduce( f = "+",
     #           x = lapply(1:t_max, function(i) kronecker(xt[,i] %*% t(xt[,i]), (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i]))) ),
     #           accumulate = FALSE) * (kronecker(matrix(1,m,m), Sigma2_inv))
-    # 
+    #
     # b_post <- Reduce(f = "+",
     #                   x = lapply(1:t_max, function(i) kronecker(xt[,i], ( (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv ) %*% yt[,i])),
     #                   accumulate = FALSE)
-    # 
+    #
     # V_b_post <- solve(V_b_post_inv)
     # b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
     # b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
     # B <- Vec_to_Mat(b_sample, K,p)
 
-    # Sample B 
+    # Sample B
     wt <- rep(1/sigma, t_max)
     y.tilde <- as.vector( A %*% ( w^(-0.5) * yt ) ) * wt
     # make and stack X matrices
@@ -657,7 +657,7 @@ BVAR.MT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     theta.prec.chol <- chol( V_b_prior_inv + crossprod(x.tilde) )
     b_sample <- backsolve( theta.prec.chol,
                            backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
-                                      upper.tri = T, transpose = T ) 
+                                      upper.tri = T, transpose = T )
                            + rnorm(K*m) )
     B <- matrix(b_sample,K,m)
 
@@ -716,7 +716,7 @@ BVAR.MT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     prior_denum <- colSums(dinvgamma(w, shape = nu*0.5, rate = nu*0.5, log = T))
     proposal_num <- colSums(dinvgamma(w_temp, shape = a_target, rate = b_target, log = T))
     proposal_denum <- colSums(dinvgamma(w, shape = a_target, rate = b_target, log = T))
-    
+
     # num_mh <- prior_num - proposal_num -
     #   0.5 * apply(log_w_temp, MARGIN = 2, FUN = sum) -
     #   0.5 * sapply(1:t_max, function(i) t(u[,i]) %*% ((w_temp_sqrt_inv[,i] %*% t(w_temp_sqrt_inv[,i])) * Sigma2_inv) %*% u[,i])
@@ -774,7 +774,7 @@ BVAR.MT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("nu",c(1:K), sep = ""),
@@ -860,24 +860,24 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     #   Reduce( f = "+",
     #           x = lapply(1:t_max, function(i) kronecker(xt[,i] %*% t(xt[,i]), (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i]))) ),
     #           accumulate = FALSE) * (kronecker(matrix(1,m,m), Sigma2_inv))
-    # 
+    #
     # b_post <- Reduce(f = "+",
     #                  x = lapply(1:t_max, function(i) kronecker(xt[,i], ((w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv) %*% (yt[,i] - gamma * w[,i]))),
     #                  accumulate = FALSE)
-    # 
-    # 
+    #
+    #
     # V_b_post <- solve(V_b_post_inv)
     # b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
     # b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
     # B <- Vec_to_Mat(b_sample, K,p)
-    # 
+    #
     # gamma_post = rep(0, K)
     # V_gamma_post_inv = solve(V_gamma_prior)
     # for (i in c(1:t_max)){
     #   V_gamma_post_inv <- V_gamma_post_inv +  (w_sqrt[,i] %*% t(w_sqrt[,i])) * Sigma2_inv # ww' sqrt(w_inv) Signma_inv sqrt(w_inv)
     #   gamma_post <- gamma_post + ((w_sqrt[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv) %*% (yt[,i] - B %*% xt[,i] )
     # }
-    # 
+    #
     # V_gamma_post <- solve(V_gamma_post_inv)
     # gamma_post <- V_gamma_post %*% ( solve(V_gamma_prior) %*% gamma_prior + gamma_post)
     # gamma <- as.numeric(gamma_post + t(chol(V_gamma_post)) %*% rnorm(K))
@@ -907,14 +907,14 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
     theta <- backsolve( theta.prec.chol,
                         backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
-                                   upper.tri = T, transpose = T ) 
+                                   upper.tri = T, transpose = T )
                         + rnorm(K*(m+1)) )
     B <- matrix(theta[1:(m*K)],K,m)
     b_sample <- as.vector(B)
     gamma <- theta[(m*K+1):((m+1)*K)]
     D <- diag(gamma)
-    
-    
+
+
     # Sample sigma
     sigma2 <- rep(0,K)
     u_ort <- A %*% ((yt - B %*% xt - D %*% w)/ w_sqrt)    # change from Gaussian
@@ -978,8 +978,8 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     w[,acc] <- w_temp[,acc]
     w_sqrt[,acc] <- w_temp_sqrt[,acc]
     acount_w[acc] <- acount_w[acc] + 1
-    
-    
+
+
 #     num_mh <- prior_num - proposal_num -
 #       0.5 * colSums(log_w_temp) -
 #       0.5 * sapply(1:t_max, function(i) { u.gw <- w_temp_sqrt_inv[,i]*(u[,i]- gamma*w_temp[,i]); t(u.gw) %*% Sigma2_inv %*% u.gw } )
@@ -995,7 +995,7 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 #     w_sqrt <- sqrt(w)
 # #    w_sqrt_inv <- 1/w_sqrt
 #     acount_w[acre] <- acount_w[acre] + 1
-    
+
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
@@ -1037,7 +1037,7 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("gamma",c(1:K), sep = ""),
@@ -1059,7 +1059,7 @@ BVAR.OT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   # Init prior and initial values
   m = K * p + 1
   if (is.null(prior)){
-    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "MT", SV = FALSE)
+    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "OT", SV = FALSE)
   }
   # prior B
   b_prior = prior$b_prior
@@ -1099,7 +1099,7 @@ BVAR.OT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
   # new precompute
   theta.prior.precmean <- V_b_prior_inv %*% b_prior
-  
+
   # Output
   mcmc <- matrix(NA, nrow = m*K + 0.5*K*(K-1) + K + K + K*t_max,
                  ncol = (samples - inits$burnin)%/% inits$thin)
@@ -1111,23 +1111,23 @@ BVAR.OT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     #   V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/sigma2 / w[,i] ) %*% A )
     #   b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/sigma2 / w[,i] ) %*% A) %*% yt[,i])
     # }
-    # 
+    #
     # V_b_post <- solve(V_b_post_inv)
     # b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
     # b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
     # B <- Vec_to_Mat(b_sample, K,p)
-    
+
     # Sample B
-    wt <- as.vector(1/w_sqrt)
+    wt <- rep( 1/sigma, t_max ) / as.numeric(w_sqrt)
     y.tilde <- as.vector( A %*% yt ) * wt
     x.tilde <- kronecker( t(xt), A ) * wt
     theta.prec.chol <- chol( V_b_prior_inv + crossprod(x.tilde) )
     b_sample <- backsolve( theta.prec.chol,
                            backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
-                                      upper.tri = T, transpose = T ) 
+                                      upper.tri = T, transpose = T )
                            + rnorm(K*m) )
     B <- matrix(b_sample,K,m)
-    
+
     # Sample sigma
     u_ort <- (A %*% (yt - B %*%xt))/ w_sqrt    # change from Gaussian
     sigma_post_a <- sigma0_T0 + rep(t_max,K)
@@ -1160,7 +1160,7 @@ BVAR.OT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
     # Sample w
     u <-  A %*% (yt - B %*%xt)
-    w <- matrix( rinvgamma( n = K*t_max, shape = (nu+1)*0.5, rate = 0.5*( nu + (u[,i]^2)/sigma2 ) ), K, t_max )
+    w <- matrix( rinvgamma( n = K*t_max, shape = (nu+1)*0.5, rate = 0.5*( nu + (u^2)/sigma2 ) ), K, t_max )
     # for (i in c(1:t_max)){
     #   w[,i] <- mapply(rinvgamma, n = 1, shape = nu*0.5 + 1*0.5, rate = nu*0.5 + 0.5 * (u[,i]^2) / sigma2)
     # }
@@ -1206,7 +1206,7 @@ BVAR.OT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("nu",c(1:K), sep = ""),
@@ -1227,7 +1227,7 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   # Init prior and initial values
   m = K * p + 1
   if (is.null(prior)){
-    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "MT", SV = FALSE)
+    prior <- get_prior(y, p, priorStyle = "Minnesota", dist = "OST", SV = FALSE)
   }
   # prior B
   b_prior = prior$b_prior
@@ -1270,7 +1270,7 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   theta.prior.prec[1:i,1:i] <- V_b_prior_inv
   theta.prior.prec[i+(1:K),i+(1:K)] <- solve( V_gamma_prior )
   theta.prior.precmean <- theta.prior.prec %*% c( b_prior, gamma_prior )
-  
+
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
   w <- reprow(w_sample, K)
@@ -1288,27 +1288,27 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     #   V_b_post_inv <- V_b_post_inv + kronecker(xt[,i] %*% t(xt[,i]), t(A)%*% diag(1/sigma2 / w[,i] ) %*% A )
     #   b_post <- b_post + kronecker(xt[,i], (t(A)%*% diag(1/sigma2 / w[,i] ) %*% A) %*% (yt[,i] - inv_A %*% (gamma * w[,i])) )
     # }
-    # 
+    #
     # V_b_post <- solve(V_b_post_inv)
     # b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
     # b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
     # B <- Vec_to_Mat(b_sample, K,p)
-    # 
+    #
     # # Sample gamma
     # gamma_post = rep(0, K)
     # V_gamma_post_inv = solve(V_gamma_prior)
     # u <- A %*% (yt - B %*%xt)
-    # 
+    #
     # V_gamma_post_inv <- solve(V_gamma_prior) + diag(apply(w, MARGIN = 1, FUN = sum)/ sigma2)
     # gamma_post <- apply(u, MARGIN = 1, FUN = sum) / sigma2
-    # 
+    #
     # V_gamma_post <- solve(V_gamma_post_inv)
     # gamma_post <- V_gamma_post %*% ( solve(V_gamma_prior) %*% gamma_prior + gamma_post)
     # gamma <- as.numeric(gamma_post + t(chol(V_gamma_post)) %*% rnorm(K))
     # D <- diag(gamma)
 
     # Sample B and gamma
-    wt <- rep( 1/sigma, t_max )
+    wt <- rep( 1/sigma, t_max ) / as.numeric(w_sqrt)
     y.tilde <- as.vector( A %*% yt ) * wt
     # make and stack diagonal W matrices
     W.mat <- matrix(0,K*t_max,K)
@@ -1326,7 +1326,7 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     b_sample <- as.vector(B)
     gamma <- theta[(m*K+1):((m+1)*K)]
     D <- diag(gamma)
-    
+
     # Sample sigma
     u_ort <- (A %*% (yt - B %*%xt) - D %*% w)/ w_sqrt    # change from Gaussian
     sigma_post_a <- sigma0_T0 + rep(t_max,K)
@@ -1356,11 +1356,13 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     A_post[upper.tri(A)] <- a_sample
     A <- t(A_post)
     diag(A) <- 1
-    
+
     # Sample w
     u <-  A %*% (yt - B %*%xt)
-    w <- matrix( mapply( GIGrvg::rgig, n = 1, lambda = -(nu+1)*0.5, chi = nu + (u^2)/sigma2,
+    w <- matrix( mapply( GIGrvg::rgig, n = 1, lambda = -(nu+1)*0.5, chi = nu + (u^2)/ sigma2,
                          psi = gamma^2/sigma2 ), K, t_max )
+    # w <- matrix( rinvgamma( n = K*t_max, shape = (nu+1)*0.5, rate = 0.5*( nu + (u^2)/sigma2 ) ), K, t_max )
+
     # # Sample w
     # inv_sigma2 = 1/sigma2
     # u <- A %*% (yt - B %*%xt)
@@ -1372,10 +1374,10 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     #   w_mode <- (- b_eq - sqrt(b_eq^2-4*a_eq*c_eq))/(2*a_eq)
     #   mode_target <- log( w_mode )
     #   cov_target <- 1/( c_eq / w_mode - a_eq * w_mode) * 1.2 # scale by 1.2
-    # 
+    #
     #   log_w_temp = mode_target + sqrt(cov_target)*ran_stu
     #   w_temp = exp(log_w_temp)
-    # 
+    #
     #   num_mh =  mapply( dinvgamma, x = w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
     #     ( - 0.5 * 1 * log_w_temp - 0.5 * (u[,i] - gamma*w_temp)^2 * inv_sigma2 / w_temp) - # posterior
     #     dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
@@ -1431,7 +1433,7 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("gamma",c(1:K), sep = ""),
@@ -1650,7 +1652,7 @@ BVAR.dynSkew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("nu"),
@@ -1844,7 +1846,7 @@ BVAR.OrthSkewNorm1.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = N
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("gamma",c(1:K), sep = ""),
@@ -1994,7 +1996,7 @@ BVAR.OrthSkewNorm.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
   nameA <- matrix(paste("a", reprow(c(1:K),K), repcol(c(1:K),K), sep = "_"), ncol = K)
   nameA <- nameA[upper.tri(nameA, diag = F)]
   row.names(mcmc) <- c( paste("B0",c(1:K), sep = ""),
-                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K)), p),
+                        sprintf("B%d_%d_%d",reprow(c(1:p),K*K), rep(repcol(c(1:K),K), p), rep(reprow(c(1:K),K), p)),
                         nameA,
                         paste("sigma",c(1:K), sep = ""),
                         paste("gamma",c(1:K), sep = ""),

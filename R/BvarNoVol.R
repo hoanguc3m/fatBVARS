@@ -432,7 +432,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     # D <- diag(gamma, nrow = length(gamma))
 
     # Sample B and gamma
-    wt <- as.vector(sigma/w_sqrt)
+    wt <- as.vector(1/(sigma*w_sqrt))
     y.tilde <- as.vector( A %*% yt ) * wt
     x.tilde <- kronecker( cbind( t(xt), w_sample ), A ) * wt
     theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
@@ -521,7 +521,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     # Sample w
     q2 <- colSums( ( ( A %*% ( yt - B%*%xt ) ) / sigma )^2 )
     p2 <- sum( ( c( A %*% gamma ) / sigma )^2 )
-    w_sample <- mapply( GIGrvg::rgig, n = 1, lambda = -(nu+1)*0.5, chi = nu + q2,
+    w_sample <- mapply( GIGrvg::rgig, n = 1, lambda = -(nu+K)*0.5, chi = nu + q2,
                         psi = p2 )
     w <- reprow(w_sample, K)
     w_sqrt <- sqrt(w)

@@ -12,9 +12,16 @@ adaptamount <- function(iteration){
 # This function is borrowed from https://github.com/FK83/bvarsv
 #' @export
 getmix <- function(){
+  # 7 components
   q <- c(0.00730, 0.10556, 0.00002, 0.04395, 0.34001, 0.24566, 0.25750)      # probabilities
   m <- c(-10.12999, -3.97281, -8.56686, 2.77786, 0.61942, 1.79518, -1.08819) # means
   u2 <- c(5.79596, 2.61369, 5.17950, 0.16735, 0.64009, 0.34023, 1.26261)    #variances
+
+  # # 10 components
+  # q <- c(0.00609, 0.04775, 0.13057, 0.20674, 0.22715, 0.18842, 0.12047, 0.05591, 0.01575, 0.00115)      # probabilities
+  # m <- c(3.13417, 2.55484, 1.94244, 1.23006, 0.35567, -0.76538, -2.26048, -4.34506, -7.47644, -13.44260)
+  # u2 <- c(0.11265, 0.17788, 0.26768, 0.40611, 0.62699, 0.98583, 1.57469, 2.54498, 4.16591, 7.33342)    #variances
+  # # m <- c(1.92677, 1.34744, 0.73504, 0.02266, -0.85173, -1.97278, -3.46788, -5.55246, -8.68384, -14.65000) # means in the Omori paper
   return(list(q=q,m=m,u2=u2))
 }
 ##########################################################################
@@ -147,10 +154,7 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
   aux <- list(sigma_h = sigma_h,
               h0 = h0,
               Sigtdraw = h,
-              sigt = exp(0.5*h)
-              # log_zero_omega_den = dnorm(0, mean = cond_mean_sigma, sd = sqrt(cond_var_sigma), log = TRUE),
-              # log_post_omega_den = dnorm(diag(sigma_h), mean = cond_mean_sigma, sd = sqrt(cond_var_sigma), log = TRUE)
-              )
+              sigt = exp(0.5*h))
   return(aux)
 }
 

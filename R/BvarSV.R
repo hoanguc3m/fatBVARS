@@ -566,7 +566,7 @@ BVAR.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
     # Sample w
     q2 <- colSums( ( ( A %*% ( yt - B%*%xt ) ) / sqrtvol )^2 )
     p2 <- colSums( ( c( A %*% gamma ) / sqrtvol )^2 )
-    w_sample <- mapply( GIGrvg::rgig, n = 1, lambda = -(nu+1)*0.5, chi = nu + q2,
+    w_sample <- mapply( GIGrvg::rgig, n = 1, lambda = -(nu+K)*0.5, chi = nu + q2,
                          psi = p2 )
     w <- reprow(w_sample, K)
     w_sqrt <- sqrt(w)

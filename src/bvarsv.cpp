@@ -206,33 +206,41 @@ List sigmahelper4(arma::mat y2, arma::colvec qs, arma::colvec ms, arma::colvec u
   double t = y2.n_rows;  // time
   arma::mat aux = 0.001 * arma::ones(t,M);
   arma::mat yss = log( aux + y2); // yss = log( y2)
-  arma::colvec cprw = arma::zeros(7,1);  // Cumulative prob
+  int nc_mix =  ms.size();
+
+  arma::colvec cprw = arma::zeros(nc_mix,1);  // Cumulative prob
   arma::mat statedraw = arma::zeros(t,M); // Index of mixtures which component
 
   for (int jj = 1; jj < (M+1); jj++) {
     for (int i = 1; i < (t+1); i++) {
-      arma::colvec prw = arma::zeros(7,1); // Prob value
-      for (int k = 1; k < 8; k++) {
+      arma::colvec prw = arma::zeros(nc_mix,1); // Prob value
+      for (int k = 1; k <= nc_mix; k++) {
         prw(k-1) = qs(k-1) * (1/sqrt(2*M_PI*u2s(k-1)))*exp(-0.5*((pow(yss(i-1,jj-1) - Sigtdraw(jj-1,i-1) - ms(k-1) + 1.2704,2))/u2s(k-1)));
       }
       cprw = arma::cumsum(prw/arma::sum(prw));
       double trand = as<double>(runif(1));
       double imix = 0;
-      if (trand < cprw[0]){
-        imix = 1;
-      } else if (trand < cprw[1]) {
-        imix = 2;
-      } else if (trand < cprw[2]) {
-        imix = 3;
-      } else if (trand < cprw[3]) {
-        imix = 4;
-      } else if (trand < cprw[4]) {
-        imix = 5;
-      } else if (trand < cprw[5]) {
-        imix = 6;
-      } else if (trand < cprw[6]) {
-        imix = 7;
+      for (int k = 0; k < nc_mix; k++) {
+        if (trand < cprw[k]){
+          imix = k+1;
+          break;
+        }
       }
+      // if (trand < cprw[0]){
+      //   imix = 1;
+      // } else if (trand < cprw[1]) {
+      //   imix = 2;
+      // } else if (trand < cprw[2]) {
+      //   imix = 3;
+      // } else if (trand < cprw[3]) {
+      //   imix = 4;
+      // } else if (trand < cprw[4]) {
+      //   imix = 5;
+      // } else if (trand < cprw[5]) {
+      //   imix = 6;
+      // } else if (trand < cprw[6]) {
+      //   imix = 7;
+      // }
       statedraw(i-1,jj-1) = imix;
     }
   }

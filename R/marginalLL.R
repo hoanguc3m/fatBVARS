@@ -847,41 +847,39 @@ int_h_SkewSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean
   for (i in c(1:R)){
     hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
     hnew <- matrix(hc, nrow = K)
-    if (K == 1){
-      allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
-        ghyp::dghyp(u[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
-                                                   sigma = diag(exp(hnew[,t]/2), nrow = K),
-                                                   gamma = gamma), logvalue = T) # use sigma for univariable
+    # if (K == 1){
+    #   allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
+    #     ghyp::dghyp(u[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
+    #                                                sigma = diag(exp(hnew[,t]/2), nrow = K),
+    #                                                gamma = gamma), logvalue = T) # use sigma for univariable
+    #
+    #
+    #   })) )
+    #
+    # } else {
+
+    # allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
+    #   ghyp::dghyp(u[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
+    #                                          sigma = solve(A) %*% diag(exp(hnew[,t]), nrow = K) %*% t(solve(A)),
+    #                                          gamma = gamma), logvalue = T) # use Sigma = AA' for multivariable
+    # })) )
+    # }
+      lambda = -0.5*nu; chi = nu; psi = 0;
+      inv.vola <- exp(-0.5*hnew)
+      xtilde <- A %*% u * inv.vola
+      gtilde <- as.vector(A %*% gamma) * inv.vola
+      Q.vec <- colSums(xtilde^2)
+      skewnorm.vec <- colSums(gtilde^2)
+      skewness.scaled.vec <- colSums(xtilde*gtilde)
+      interm.vec <- sqrt((chi + Q.vec) * skewnorm.vec)
+      lambda.min.d.2 <- lambda - K/2
+      log.const.top <- -lambda * log(chi) - lambda.min.d.2 * log(skewnorm.vec)
+      log.const.bottom <- K/2 * log(2 * pi) + 0.5 * colSums(hnew) + lgamma(-lambda) - (lambda + 1) * log(2)
+      log.top <- log(besselK(interm.vec, lambda.min.d.2, expon.scaled = TRUE)) - interm.vec + skewness.scaled.vec
+      log.bottom <- - lambda.min.d.2 * log(interm.vec)
+      allw <- sum(log.const.top + log.top - log.const.bottom - log.bottom)
 
 
-      })) )
-
-    } else {
-      # t <- 1 # Skew Student density
-      # lambda = -0.5*nu; chi = nu; psi = 0; mu = rep(0,K);
-      # sigma = solve(A) %*% diag(exp(hnew[,t]), nrow = K) %*% t(solve(A));
-      # x <- matrix(u[,t], nrow = 1)
-      # d <- K
-      # n <- 1
-      # det.sigma <- prod(exp(hnew[,t]))
-      # inv.sigma <- solve(sigma)
-      # Q <- rowSums(x %*% inv.sigma * x)
-      # skewness.scaled <- as.vector((as.matrix(x) - matrix(mu, nrow = n, ncol = d, byrow = TRUE)) %*% (inv.sigma %*% gamma))
-      # skewness.norm <- t(gamma) %*% inv.sigma %*% gamma
-      # interm <- sqrt((chi + Q) * as.vector(skewness.norm))
-      # lambda.min.d.2 <- lambda - d/2
-      # log.const.top <- -lambda * log(chi) - lambda.min.d.2 * log(as.vector(skewness.norm))
-      # log.const.bottom <- d/2 * log(2 * pi) + 0.5 * log(det.sigma) + lgamma(-lambda) - (lambda + 1) * log(2)
-      # log.top <- log(besselK(interm, lambda.min.d.2, expon.scaled = TRUE)) - interm + skewness.scaled
-      # log.bottom <- - lambda.min.d.2 * log(interm)
-      # out <- log.const.top + log.top - log.const.bottom - log.bottom
-
-      allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
-        ghyp::dghyp(u[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
-                                               sigma = solve(A) %*% diag(exp(hnew[,t]), nrow = K) %*% t(solve(A)),
-                                               gamma = gamma), logvalue = T) # use Sigma = AA' for multivariable
-      })) )
-    }
 
     #
     # mvnfast::dmvt(X = u[,t],

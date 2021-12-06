@@ -139,7 +139,7 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
   # }
 
   sigma_h <- diag(mapply( GIGrvg::rgig, n = 1, lambda = - (t_max - 1)*0.5, chi = sse_2,
-                       psi = 1/prior$sigma_S0 ) )
+                       psi = 1/prior$sigma_S0 ) , nrow = K)
 
 
 
@@ -158,6 +158,39 @@ sample_h_ele <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
   return(aux)
 }
 
+#' @export
+sample_h_mod <- function(ytilde, sigma_h = 0.0001*diag(K), h0_mean = rep(0,K),
+                         h = matrix(0, nrow = t_max, ncol = K), K, t_max, prior){
+  tmp <- getmix()
+  q <- tmp$q
+  m_mean <- tmp$m
+  u2 <- tmp$u2
+
+    h0 <- rep(0,K)
+    h0mean <- rep(0,K)
+    h0var <- rep(0,K)
+
+    cond_var_sigma <- rep(0,K)
+    cond_mean_sigma <- rep(0,K)
+    Zs <- matrix(1,t_max,1) %x% diag(1)
+    for (i in c(1:K)){
+      sigma_prmean <- h0_mean[i] # mean h_0
+      sigma_prvar <- matrix(4)   # variance h_0
+      aux <- sigmahelper4(t(ytilde[ i,, drop =FALSE]^2), q, m_mean, u2, h[ i,, drop =FALSE], Zs, matrix(sigma_h[i,i]), sigma_prmean, sigma_prvar)
+      h[i,] <- aux$Sigtdraw
+      h0[i] <- as.numeric(aux$h0)
+      h0mean[i] <- as.numeric(aux$h0mean)
+      h0var[i] <- as.numeric(aux$h0var)
+
+    }
+
+  aux <- list(h0 = h0,
+              Sigtdraw = h,
+              sigt = exp(0.5*h),
+              h0mean = h0mean,
+              h0var = h0var)
+  return(aux)
+}
 ##########################################################################
 # Plot functions  #
 ##########################################################################
@@ -436,4 +469,18 @@ PF_StudentSV <- function(ytilde, h0, sigma_h, nu, noParticles = 1000) {
   xHatFiltered <- particles[cbind(ancestorIndices[ancestorIndex, ], 1:(t_len + 1))]
 
   list(xHatFiltered = xHatFiltered, logLikelihood = logLikelihood)
+}
+
+#' @export
+logmeanexp <- function(sum_log){
+  if (class(sum_log) == "numeric"){
+    max_sumlog <- max(sum_log)
+    out <- log( mean(exp(sum_log - max_sumlog))) + max_sumlog
+  } else {
+    max_sumlog = apply(sum_log, MARGIN = 2 , FUN = max)
+
+    out = log( apply(exp(sum_log-reprow(max_sumlog,nrow(sum_log))), MARGIN = 2, FUN = mean )) + max_sumlog
+
+  }
+  return(out)
 }

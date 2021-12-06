@@ -162,7 +162,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
 
                                           llw <- int_h_SkewSV(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
-                                                               gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+                                                               gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 1000)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
@@ -801,7 +801,7 @@ int_h_StudentSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_m
 #' @export
 int_h_SkewSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100){
   u <- yt - B %*% xt
-  y_tilde = A %*% (( u )  / reprow(sqrt(w_mean),K))
+  y_tilde = A %*% (( u - reprow(w_mean,K)*gamma )  / reprow(sqrt(w_mean),K))
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
   Hh = sparseMatrix(i = 1:(t_max*K),
@@ -825,7 +825,7 @@ int_h_SkewSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean
     Gh = 0.5 * (Gh + Matrix::t(Gh))
     newht = ht - Matrix::solve(Gh,gh)
     e_h = max(abs(newht-ht));
-    if (is.na(e_h)) break
+    # if (is.na(e_h)) break
     ht = newht;
     count = count + 1;
   }
@@ -857,12 +857,12 @@ int_h_SkewSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean
     #   })) )
     #
     # } else {
-
-    # allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
-    #   ghyp::dghyp(u[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
-    #                                          sigma = solve(A) %*% diag(exp(hnew[,t]), nrow = K) %*% t(solve(A)),
-    #                                          gamma = gamma), logvalue = T) # use Sigma = AA' for multivariable
-    # })) )
+#
+#     allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
+#       ghyp::dghyp(u[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
+#                                              sigma = solve(A) %*% diag(exp(hnew[,t]), nrow = K) %*% t(solve(A)),
+#                                              gamma = gamma), logvalue = T) # use Sigma = AA' for multivariable
+#     })) )
     # }
       lambda = -0.5*nu; chi = nu; psi = 0;
       inv.vola <- exp(-0.5*hnew)

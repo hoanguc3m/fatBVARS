@@ -92,7 +92,10 @@ List carterkohn(arma::mat y, arma::mat Z, arma::mat Ht, arma::mat Qt, double m, 
 
   return List::create(Named("loglik") = loglik,
                       Named("bdraws") = bdraw.t(),
-                      Named("b0draws") = b0draw.t());
+                      Named("b0draws") = b0draw.t(),
+                      Named("b0mean") = bmean,
+                      Named("b0var") = bvar
+                      );
 }
 
 // [[Rcpp::export]]
@@ -257,6 +260,8 @@ List sigmahelper4(arma::mat y2, arma::colvec qs, arma::colvec ms, arma::colvec u
   List H_new = carterkohn(yss1.t(),Zs,vart,Wdraw,M,M,t,sigma_prmean,sigma_prvar);
   arma::mat Sigtdraw_new = H_new["bdraws"];
   arma::rowvec H0_new = H_new["b0draws"];
+  arma::rowvec h0mean = H_new["b0mean"];
+  arma::mat h0var = H_new["b0var"];
 
 
   // arma::mat Sigtdraw_new = carterkohn(yss1.t(),Zs,vart,Wdraw,M,M,t,sigma_prmean,sigma_prvar)["bdraws"];
@@ -266,6 +271,8 @@ List sigmahelper4(arma::mat y2, arma::colvec qs, arma::colvec ms, arma::colvec u
   return List::create(Named("Sigtdraw") = Sigtdraw_new,
                       Named("sigt") = sigt,
                       Named("h0") = H0_new,
+                      Named("h0mean") = h0mean,
+                      Named("h0var") = h0var,
                       Named("vart") = vart,
                       Named("yss1") = yss1);
 }

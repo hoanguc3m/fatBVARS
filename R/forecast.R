@@ -273,15 +273,22 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current){
   # }
 
   CRPS <- matrix(NA, nrow = t_pred, ncol = K)
-  SCRPS <- matrix(NA, nrow = t_pred, ncol = K)
-
+  qwCRPS_2t <- matrix(NA, nrow = t_pred, ncol = K) # Quantile weighted CRPS - 2 tails
+  qwCRPS_rt <- matrix(NA, nrow = t_pred, ncol = K) # Quantile weighted CRPS - right tail
+  qwCRPS_lt <- matrix(NA, nrow = t_pred, ncol = K) # Quantile weighted CRPS - left tail
+  alpha <- seq(0.05, 0.95, by = 0.05)
   for (i in c(1:K)){
     for (j in c(1:t_pred)){
       y_obs <- as.numeric(y_obs_future[j,i])
       samples1 <- predictive_samples$y_pred[j,i,]
       samples2 <- sample(samples1, size = length(samples1), replace = T)
       CRPS[j,i] <- - mean(abs(samples1 - y_obs)) + 0.5*mean(abs(samples1 - samples2))
-      SCRPS[j,i] <- - mean(abs(samples1 - y_obs)) / mean(abs(samples1 - samples2)) - 0.5*log(mean(abs(samples1 - samples2)))
+      Q_tau <- quantile(predictive_samples$y_pred[j,i,], probs = alpha)
+      QS <- (y_obs - Q_tau) * ( (y_obs < Q_tau) - alpha )
+      qwCRPS_2t[j,i] <- 2/length(alpha) * sum(  (2 * alpha - 1)^2 * QS )
+      qwCRPS_rt[j,i] <- 2/length(alpha) * sum(  alpha^2 * QS )
+      qwCRPS_lt[j,i] <- 2/length(alpha) * sum(  (1 - alpha)^2 * QS )
+
     }
   }
 
@@ -303,7 +310,9 @@ forecast_density <- function(Chain, y_current = NULL, y_obs_future, t_current){
               cMSFE = (apply(cy_pred, MARGIN = c(1,2), FUN = mean) - cy_obs_future)^2,
               cMAFE = abs(apply(cy_pred, MARGIN = c(1,2), FUN = mean) - cy_obs_future),
               CRPS = CRPS,
-              SCRPS = SCRPS
+              qwCRPS_2t = qwCRPS_2t,
+              qwCRPS_rt = qwCRPS_rt,
+              qwCRPS_lt = qwCRPS_lt
   ))
 }
 

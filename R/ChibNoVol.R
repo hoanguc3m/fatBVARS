@@ -145,7 +145,7 @@ Chib.LML.nonSV <- function(Chain,
     }
     if (dist == "MT") {
       inits$w <- matrix(W_med, nrow = K)
-      ChibLLP_chain <- ChibLLP(Chain, ndraws = 10000, numCores = numCores)
+      ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
       RhpcBLASctl::blas_set_num_threads(RhpcBLASctl::get_num_cores())
 
 
@@ -184,7 +184,7 @@ Chib.LML.nonSV <- function(Chain,
     }
     if (dist == "MST") {
       inits$w <- matrix(W_med, nrow = K)
-      ChibLLP_chain <- ChibLLP(Chain, ndraws = 10000, numCores = numCores)
+      ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
       RhpcBLASctl::blas_set_num_threads(RhpcBLASctl::get_num_cores())
 
 

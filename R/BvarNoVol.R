@@ -114,7 +114,7 @@ BVAR.Gaussian.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # B <- Vec_to_Mat(b_sample, K,p)
 
     # sample B
-    A.tmp <- diag(1/sigma) %*% A
+    A.tmp <- diag(1/sigma, K) %*% A
     y.tilde <- as.vector( A.tmp %*% yt )
     x.tilde <- kronecker( t(xt), A.tmp )
     theta.prec.chol <- chol( V_b_prior_inv + crossprod(x.tilde) )
@@ -240,7 +240,7 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # B <- Vec_to_Mat(b_sample, K,p)
 
     # sample B
-    A.tmp <- diag(1/sigma) %*% A
+    A.tmp <- diag(1/sigma, K) %*% A
     wt <- as.vector(1/w_sqrt)
     y.tilde <- as.vector( A.tmp %*% yt ) * wt
     x.tilde <- kronecker( t(xt), A.tmp ) * wt
@@ -443,7 +443,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     B <- matrix(theta[1:(m*K)],K,m)
     b_sample <- as.vector(B)
     gamma <- theta[(m*K+1):((m+1)*K)]
-    D <- diag(gamma)
+    D <- diag(gamma, K)
 
     # Sample sigma
     sigma2 <- rep(0,K)
@@ -832,7 +832,7 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   acount_nu <- rep(0,K)
   acount_w <- rep(0, t_max)
   gamma <- inits$gamma
-  D <- diag(gamma)
+  D <- diag(gamma, K)
 
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
@@ -912,7 +912,7 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     B <- matrix(theta[1:(m*K)],K,m)
     b_sample <- as.vector(B)
     gamma <- theta[(m*K+1):((m+1)*K)]
-    D <- diag(gamma)
+    D <- diag(gamma, K)
 
 
     # Sample sigma

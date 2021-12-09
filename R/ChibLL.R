@@ -93,7 +93,7 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
           w_mean <- apply(W_mat, MARGIN = 2, mean)
           lprior <- mvnfast::dmvn(X = B_gen, mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                     mvnfast::dmvn(X = A_gen, mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                    sum(dgamma(Sigma_gen, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T))
+                    sum(dgamma(Sigma_gen, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
                     # sum(dnorm(H0_gen, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
                     dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)
           sum_log <- parallel::mclapply(1:ndraws,

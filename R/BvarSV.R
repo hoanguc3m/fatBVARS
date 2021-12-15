@@ -492,7 +492,7 @@ BVAR.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
     B <- matrix(theta[1:(m*K)],K,m)
     b_sample <- as.vector(B)
     gamma <- theta[(m*K+1):((m+1)*K)]
-    D <- diag(gamma)
+    D <- diag(gamma, K)
 
     # Sample vol
     ytilde <- A%*% ((yt - B %*% xt  - D%*% w)/w_sqrt)

@@ -6,7 +6,8 @@ importance_check <- function(sum_log){
   N <- length(sum_log)
   impt_w <- exp(sum_log - max(sum_log))
   # Threshold u
-  prop_vec <- c(0.55, 0.5, 0.4, 0.3, 0.1, 0.01)
+  #prop_vec <- c(0.55, 0.5, 0.4, 0.3, 0.1, 0.01)
+  prop_vec <- c(0.4,  0.1)
 
   test1_results <- rep(NA, length(prop_vec)) # Wald
   test2_results <- rep(NA, length(prop_vec)) # Score
@@ -27,8 +28,8 @@ importance_check <- function(sum_log){
     }
 
     #tau_init <- 1/ mean(z)
-    tau <- uniroot(f = f_tau, interval = c(0.1/ mean(z),100/mean(z) ))$root
-    #tau <- uniroot(f = f_tau, interval = c(1,1e6))$root
+    #tau <- uniroot(f = f_tau, interval = c(0.1/ mean(z),100/mean(z) ))$root
+    tau <- uniroot(f = f_tau, interval = c(1,1e9))$root
     # cat("tau = ", tau)
 
     xi <- sum(log(1+ tau * z)) / n

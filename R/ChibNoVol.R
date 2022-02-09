@@ -666,7 +666,7 @@ Chib.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     # Sample nu
     if(!fix_Nu) {
       nu_temp = nu + exp(logsigma_nu)*rnorm(1)
-      if (nu_temp > 2 && nu_temp < 100){
+      if (nu_temp > 4 && nu_temp < 100){
         num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
         denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -684,7 +684,7 @@ Chib.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
       # Denominator
       if (fix_Nu) {
         nu_temp = inits$nu + exp(logsigma_nu)*rnorm(1)
-        if (nu_temp > 2 && nu_temp < 100){
+        if (nu_temp > 4 && nu_temp < 100){
           num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
             sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
 
@@ -789,6 +789,7 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
   V_b_prior_inv <- solve(V_b_prior)
 
   nu <- inits$nu
+  mu.xi <- nu/( nu - 2 )
   logsigma_nu <- inits$logsigma_nu
   acount_nu <- 0
   acount_w <- rep(0, t_max)
@@ -818,7 +819,7 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     if(!fix_B) {
       wt <- as.vector(1/(sigma*w_sqrt))
       y.tilde <- as.vector( A %*% yt ) * wt
-      x.tilde <- kronecker( cbind( t(xt), w_sample ), A ) * wt
+      x.tilde <- kronecker( cbind( t(xt), w_sample - mu.xi ), A ) * wt
       theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
       theta <- backsolve( theta.prec.chol,
                           backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
@@ -833,7 +834,7 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
       B_star <- c(vec(inits$B), inits$gamma)
       wt <- as.vector(1/(sigma*w_sqrt))
       y.tilde <- as.vector( A %*% yt ) * wt
-      x.tilde <- kronecker( cbind( t(xt), w_sample ), A ) * wt
+      x.tilde <- kronecker( cbind( t(xt), w_sample - mu.xi ), A ) * wt
       theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
       b_star <- backsolve( theta.prec.chol,
                            backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
@@ -846,7 +847,7 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     # Sample sigma
     if(!fix_Sigma) {
       sigma2 <- rep(0,K)
-      u_ort <- A %*% ((yt - B %*% xt - D %*% w)/ w_sqrt)    # change from Gaussian
+      u_ort <- A %*% ((yt - B %*% xt - D %*% (w-mu.xi))/ w_sqrt)    # change from Gaussian
       sigma_post_a <- sigma0_T0 + rep(t_max,K)
       sigma_post_b <- sigma0_S0 + rowSums(u_ort^2)
       for (i in c(1:K)){
@@ -856,7 +857,7 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     }
 
     if (cal_Sigma & (j > burnin) & (j %% thin == 0)){
-      u_ort <- A %*% ((yt - B %*% xt - D %*% w)/ w_sqrt)    # change from Gaussian
+      u_ort <- A %*% ((yt - B %*% xt - D %*% (w-mu.xi))/ w_sqrt)    # change from Gaussian
       sigma_post_a <- prior$sigma_T0 + rep(t_max,K)
       sigma_post_b <- prior$sigma_S0 + rowSums(u_ort^2)
       lpost[(j - burnin) %/% thin] <- sum(dinvgamma(inits$sigma^2, shape = sigma_post_a * 0.5, rate = sigma_post_b * 0.5, log = T))
@@ -864,7 +865,7 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
 
     # Sample A0
     if(!fix_A) {
-      u_std <- (yt - B %*% xt - D%*% w)/ w_sqrt # change from Gaussian
+      u_std <- (yt - B %*% xt - D%*% (w-mu.xi))/ w_sqrt # change from Gaussian
       u_neg <- - u_std
       a_sample <- rep(0, K * (K - 1) /2)
       if (K > 1) {
@@ -886,7 +887,7 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     }
 
     if (cal_A & (j > burnin) & (j %% thin == 0)){
-      u_std <- (yt - B %*% xt - D%*% w)/ w_sqrt # change from Gaussian
+      u_std <- (yt - B %*% xt - D%*% (w-mu.xi))/ w_sqrt # change from Gaussian
       u_neg <- - u_std
       A_star <- inits$A0[lower.tri(A)]
       if (K > 1) {
@@ -913,7 +914,7 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
       }
     }
     # Sample w
-    q2 <- colSums( ( ( A %*% ( yt - B%*%xt ) ) / sigma )^2 )
+    q2 <- colSums( ( ( A %*% ( yt - B%*%xt + mu.xi * gamma) ) / sigma )^2 )
     p2 <- sum( ( c( A %*% gamma ) / sigma )^2 )
     w_sample <- mapply( GIGrvg::rgig, n = 1, lambda = -(nu+K)*0.5, chi = nu + q2,
                         psi = p2 )
@@ -923,7 +924,7 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     # Sample nu
     if(!fix_Nu) {
       nu_temp = nu + exp(logsigma_nu)*rnorm(1)
-      if (nu_temp > 2 && nu_temp < 100){
+      if (nu_temp > 4 && nu_temp < 100){
         num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
         denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -933,40 +934,41 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
         if (alpha > temp){
           nu = nu_temp
           acount_nu = acount_nu + 1
-          }
-
         }
-    }
-
-  if (cal_Nu & (j > burnin) & (j %% thin == 0)){
-    # Denominator
-    if (fix_Nu) {
-      nu_temp = inits$nu + exp(logsigma_nu)*rnorm(1)
-      if (nu_temp > 2 && nu_temp < 100){
-        num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-          sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
-
-        denum_mh = dgamma(inits$nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-          sum(dinvgamma(w_sample, shape = inits$nu*0.5, rate = inits$nu*0.5, log = T))
-        alpha = min(1, exp(num_mh - denum_mh))
-        temp = runif(1)
-        if (alpha > temp){
-          acount_nu = acount_nu + 1
-        }
-        lpost[(j - burnin) %/% thin] <- log(alpha) # Take a negative for denominator
 
       }
-    } else {
-      # Nominator
-      q_nu_nustar <- dnorm(inits$nu, mean = nu, sd = exp(logsigma_nu) ) # Move nu to inits$nu
-      num_mh = dgamma(inits$nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-        sum(dinvgamma(w_sample, shape = inits$nu*0.5, rate = inits$nu*0.5, log = T))
-      denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-        sum(dinvgamma(w_sample, shape = nu*0.5, rate = nu*0.5, log = T))
-      alpha = min(1, exp(num_mh - denum_mh))
-      lpost[(j - burnin) %/% thin] <- log( alpha * q_nu_nustar)
+      mu.xi <- nu/( nu - 2 )
     }
-  }
+
+    if (cal_Nu & (j > burnin) & (j %% thin == 0)){
+      # Denominator
+      if (fix_Nu) {
+        nu_temp = inits$nu + exp(logsigma_nu)*rnorm(1)
+        if (nu_temp > 4 && nu_temp < 100){
+          num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
+            sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
+
+          denum_mh = dgamma(inits$nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
+            sum(dinvgamma(w_sample, shape = inits$nu*0.5, rate = inits$nu*0.5, log = T))
+          alpha = min(1, exp(num_mh - denum_mh))
+          temp = runif(1)
+          if (alpha > temp){
+            acount_nu = acount_nu + 1
+          }
+          lpost[(j - burnin) %/% thin] <- log(alpha) # Take a negative for denominator
+
+        }
+      } else {
+        # Nominator
+        q_nu_nustar <- dnorm(inits$nu, mean = nu, sd = exp(logsigma_nu) ) # Move nu to inits$nu
+        num_mh = dgamma(inits$nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
+          sum(dinvgamma(w_sample, shape = inits$nu*0.5, rate = inits$nu*0.5, log = T))
+        denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
+          sum(dinvgamma(w_sample, shape = nu*0.5, rate = nu*0.5, log = T))
+        alpha = min(1, exp(num_mh - denum_mh))
+        lpost[(j - burnin) %/% thin] <- log( alpha * q_nu_nustar)
+      }
+    }
 
 
     if ((j > inits$burnin) & (j %% inits$thin == 0))
@@ -1209,7 +1211,7 @@ Chib.MT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     if(!fix_Nu) {
       nu_temp = nu + exp(logsigma_nu)*rnorm(K)
       for (k in c(1:K)){
-        if (nu_temp[k] > 2 && nu_temp[k] < 100){
+        if (nu_temp[k] > 4 && nu_temp[k] < 100){
           num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
             sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
           denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1230,7 +1232,7 @@ Chib.MT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
         for (k in c(1:K)){
           nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
-          if (nu_temp > 2 && nu_temp < 100){
+          if (nu_temp > 4 && nu_temp < 100){
             num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
               sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
             denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1341,6 +1343,7 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
   # Multi degrees of freedom
   nu <- inits$nu
+  mu.xi <- nu/( nu - 2 )
   logsigma_nu <- inits$logsigma_nu
   acount_nu <- rep(0,K)
   acount_w <- rep(0, t_max)
@@ -1380,7 +1383,7 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
       W.mat <- matrix(0,K*t_max,K)
       idx <- (0:(t_max-1))*K
       for ( i in 1:K ) {
-        W.mat[idx + (i-1)*t_max*K + i] <- sqrt(w[i,]) # W^(1/2)
+        W.mat[idx + (i-1)*t_max*K + i] <- (w[i,] - mu.xi[i])/sqrt(w[i,]) # W^(-1/2) * (W - bar(W))
       }
       x2 <- matrix(0,K*t_max,K)
       for ( i in 1:K ) {
@@ -1415,7 +1418,7 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
       W.mat <- matrix(0,K*t_max,K)
       idx <- (0:(t_max-1))*K
       for ( i in 1:K ) {
-        W.mat[idx + (i-1)*t_max*K + i] <- sqrt(w[i,]) # W^(1/2)
+        W.mat[idx + (i-1)*t_max*K + i] <- (w[i,] - mu.xi[i])/sqrt(w[i,]) # W^(-1/2) * (W - bar(W))
       }
       x2 <- matrix(0,K*t_max,K)
       for ( i in 1:K ) {
@@ -1435,7 +1438,7 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     # Sample sigma
     if(!fix_Sigma) {
       sigma2 <- rep(0,K)
-      u_ort <- A %*% ((yt - B %*% xt - D %*% w)/ w_sqrt)    # change from Gaussian
+      u_ort <- A %*% ((yt - B %*% xt - D %*% ( w - mu.xi ))/ w_sqrt)    # change from Gaussian
       sigma_post_a <- sigma0_T0 + rep(t_max,K)
       sigma_post_b <- sigma0_S0 + rowSums(u_ort^2)
       for (i in c(1:K)){
@@ -1445,7 +1448,7 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     }
 
     if (cal_Sigma & (j > burnin) & (j %% thin == 0)){
-      u_ort <- A %*% ((yt - B %*% xt - D %*% w)/ w_sqrt)    # change from Gaussian
+      u_ort <- A %*% ((yt - B %*% xt - D %*% ( w - mu.xi ))/ w_sqrt)    # change from Gaussian
       sigma_post_a <- prior$sigma_T0 + rep(t_max,K)
       sigma_post_b <- prior$sigma_S0 + rowSums(u_ort^2)
       lpost[(j - burnin) %/% thin] <- sum(dinvgamma(inits$sigma^2, shape = sigma_post_a * 0.5, rate = sigma_post_b * 0.5, log = T))
@@ -1453,7 +1456,7 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
     # Sample A0
     if(!fix_A) {
-      u_std <- (yt - B %*% xt - D%*% w) / w_sqrt # change from Gaussian
+      u_std <- (yt - B %*% xt - D%*% ( w - mu.xi )) / w_sqrt # change from Gaussian
       u_neg <- - u_std
       a_sample <- rep(0, K * (K - 1) /2)
       if (K > 1) {
@@ -1476,7 +1479,7 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     }
 
     if (cal_A & (j > burnin) & (j %% thin == 0)){
-      u_std <- (yt - B %*% xt - D%*% w) / w_sqrt # change from Gaussian
+      u_std <- (yt - B %*% xt - D%*% ( w - mu.xi )) / w_sqrt # change from Gaussian
       u_neg <- - u_std
       A_star <- inits$A0[lower.tri(A)]
       if (K > 1) {
@@ -1506,8 +1509,8 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     Sigma2_inv <- t(A)%*%diag(1/sigma^2)%*%A
 
     # Sample w
-    u <- (yt - B %*%xt)
-    u_proposal <- A %*% (yt - B %*%xt)
+    u <- (yt - B %*%xt + mu.xi * gamma)
+    u_proposal <- A %*% (yt - B %*%xt) + mu.xi * gamma
 
     a_target <- (nu*0.5 + 1*0.5) * 0.75 # adjust by 0.75
     b_target <- (nu*0.5 + 0.5 * u_proposal^2 / sigma^2) * 0.75 # adjust by 0.75
@@ -1533,7 +1536,7 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     if(!fix_Nu) {
       nu_temp = nu + exp(logsigma_nu)*rnorm(K)
       for (k in c(1:K)){
-        if (nu_temp[k] > 2 && nu_temp[k] < 100){
+        if (nu_temp[k] > 4 && nu_temp[k] < 100){
           num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
             sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
           denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1548,6 +1551,7 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
         }
 
       }
+      mu.xi <- nu/( nu - 2 )
     }
     if (cal_Nu & (j > burnin) & (j %% thin == 0)){
       # Denominator
@@ -1555,7 +1559,7 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
         for (k in c(1:K)){
           nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
-          if (nu_temp > 2 && nu_temp < 100){
+          if (nu_temp > 4 && nu_temp < 100){
             num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
               sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
             denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1787,7 +1791,7 @@ Chib.OT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     if(!fix_Nu) {
       nu_temp = nu + exp(logsigma_nu)*rnorm(K)
       for (k in c(1:K)){
-        if (nu_temp[k] > 2 && nu_temp[k] < 100){
+        if (nu_temp[k] > 4 && nu_temp[k] < 100){
           num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
             sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
           denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1808,7 +1812,7 @@ Chib.OT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
         for (k in c(1:K)){
           nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
-          if (nu_temp > 2 && nu_temp < 100){
+          if (nu_temp > 4 && nu_temp < 100){
             num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
               sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
             denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1917,6 +1921,7 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
   # Multi degrees of freedom
   nu <- inits$nu
+  mu.xi <- nu/( nu - 2 )
   logsigma_nu <- inits$logsigma_nu
   acount_nu <- rep(0,K)
   acount_w <- rep(0, t_max)
@@ -1949,7 +1954,7 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
       W.mat <- matrix(0,K*t_max,K)
       idx <- (0:(t_max-1))*K
       for ( i in 1:K ) {
-        W.mat[idx + (i-1)*t_max*K + i] <- w[i,]
+        W.mat[idx + (i-1)*t_max*K + i] <- w[i,] -  mu.xi[i]
       }
       x.tilde <- cbind( kronecker( t(xt), A ), W.mat ) * wt
       theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
@@ -1972,7 +1977,7 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
       W.mat <- matrix(0,K*t_max,K)
       idx <- (0:(t_max-1))*K
       for ( i in 1:K ) {
-        W.mat[idx + (i-1)*t_max*K + i] <- w[i,]
+        W.mat[idx + (i-1)*t_max*K + i] <- w[i,] -  mu.xi[i]
       }
       x.tilde <- cbind( kronecker( t(xt), A ), W.mat ) * wt
 
@@ -1987,7 +1992,7 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
     # Sample sigma
     if(!fix_Sigma) {
-      u_ort <- (A %*% (yt - B %*%xt) - D %*% w)/ w_sqrt    # change from Gaussian
+      u_ort <- (A %*% (yt - B %*%xt) - D %*% ( w - mu.xi ))/ w_sqrt    # change from Gaussian
       sigma_post_a <- sigma0_T0 + rep(t_max,K)
       sigma_post_b <- sigma0_S0 + apply(u_ort^2, 1, sum)
       for (i in c(1:K)){
@@ -1997,7 +2002,7 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     }
 
     if (cal_Sigma & (j > burnin) & (j %% thin == 0)){
-      u_ort <- (A %*% (yt - B %*%xt) - D %*% w)/ w_sqrt    # change from Gaussian
+      u_ort <- (A %*% (yt - B %*%xt) - D %*% ( w - mu.xi ))/ w_sqrt    # change from Gaussian
       sigma_post_a <- prior$sigma_T0 + rep(t_max,K)
       sigma_post_b <- prior$sigma_S0 + rowSums(u_ort^2)
       lpost[(j - burnin) %/% thin] <- sum(dinvgamma(inits$sigma^2, shape = sigma_post_a * 0.5, rate = sigma_post_b * 0.5, log = T))
@@ -2013,7 +2018,7 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
           id_start <- id_end - i + 2
           a_sub <- a_prior[id_start:id_end]
           V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
-          a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - w[i,] * gamma[i]) / sigma[i]/ w_sqrt[i,],
+          a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - (w[i,]  - mu.xi[i] ) * gamma[i]) / sigma[i]/ w_sqrt[i,],
                                                        xsub = matrix(u_neg[1:(i-1),] / sigma[i] / reprow(w_sqrt[i,], i-1), nrow = i-1),
                                                        a_sub = a_sub,
                                                        V_a_sub = V_a_sub)
@@ -2037,7 +2042,7 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
           V_a_sub <- prior$V_a_prior[id_start:id_end, id_start:id_end]
           sub_A_star <- A_star[id_start:id_end]
 
-          ysub = (u_std[i,] - w[i,] * gamma[i]) / sigma[i]/ w_sqrt[i,]
+          ysub = (u_std[i,] - (w[i,]  - mu.xi[i] ) * gamma[i]) / sigma[i]/ w_sqrt[i,]
           xsub = matrix(u_neg[1:(i-1),] / sigma[i] / reprow(w_sqrt[i,], i-1), nrow = i-1)
 
           n = nrow(xsub)
@@ -2053,7 +2058,7 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
       }
     }
     # Sample w
-    u <-  A %*% (yt - B %*%xt)
+    u <-  A %*% (yt - B %*%xt) + gamma * mu.xi
     w <- matrix( mapply( GIGrvg::rgig, n = 1, lambda = -(nu+1)*0.5, chi = nu + (u^2)/ sigma2,
                          psi = gamma^2/sigma2 ), K, t_max )
     w_sqrt <- sqrt(w)
@@ -2063,7 +2068,7 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     if(!fix_Nu) {
       nu_temp = nu + exp(logsigma_nu)*rnorm(K)
       for (k in c(1:K)){
-        if (nu_temp[k] > 2 && nu_temp[k] < 100){
+        if (nu_temp[k] > 4 && nu_temp[k] < 100){
           num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
             sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
           denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -2077,6 +2082,7 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
         }
       }
+      mu.xi <- nu/( nu - 2 )
     }
     if (cal_Nu & (j > burnin) & (j %% thin == 0)){
       # Denominator
@@ -2084,7 +2090,7 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
         for (k in c(1:K)){
           nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
-          if (nu_temp > 2 && nu_temp < 100){
+          if (nu_temp > 4 && nu_temp < 100){
             num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
               sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
             denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +

@@ -48,6 +48,7 @@ BVAR.OST.SV.center <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   acount_w <- rep(0, t_max)
   gamma <- inits$gamma
   D <- diag(gamma)
+  mu.xi <- nu/( nu - 2 )
 
   # Init w as Gaussian
   w_sample <- rep(1, t_max)
@@ -62,6 +63,9 @@ BVAR.OST.SV.center <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   theta.prior.prec[i+(1:K),i+(1:K)] <- solve( V_gamma_prior )
   theta.prior.precmean <- theta.prior.prec %*% c( b_prior, gamma_prior )
 
+  nu.prop.std <- rep(3,K)
+  nu_temp <- nu
+
   # Output
   mcmc <-  matrix(NA, nrow = m*K + 0.5*K*(K-1) + K + K + K + K + K*t_max + K*t_max,
                   ncol = (samples - inits$burnin)%/% inits$thin)
@@ -75,22 +79,22 @@ BVAR.OST.SV.center <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     W.mat <- matrix(0,K*t_max,K)
     idx <- (0:(t_max-1))*K
     for ( i in 1:K ) {
-      W.mat[idx + (i-1)*t_max*K + i] <- w[i,] -  nu[i] / (nu[i] + 2)
+      W.mat[idx + (i-1)*t_max*K + i] <- w[i,] -  mu.xi[i]
     }
     x.tilde <- cbind( kronecker( t(xt), A ), W.mat ) * wt
 
     theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
     theta <- backsolve( theta.prec.chol,
-                       backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
-                                  upper.tri = T, transpose = T )
-                       + rnorm(K*(m+1)) )
+                        backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
+                                   upper.tri = T, transpose = T )
+                        + rnorm(K*(m+1)) )
     B <- matrix(theta[1:(m*K)],K,m)
     b_sample <- as.vector(B)
     gamma <- theta[(m*K+1):((m+1)*K)]
     D <- diag(gamma)
 
     # Sample vol
-    ytilde <- (A %*% (yt - B %*% xt) - D %*% (w - nu / (nu+2)) ) / w_sqrt
+    ytilde <- (A %*% (yt - B %*% xt) - D %*% ( w - mu.xi ) ) / w_sqrt
     aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
@@ -106,7 +110,7 @@ BVAR.OST.SV.center <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
       id_start <- id_end - i + 2
       a_sub <- a_prior[id_start:id_end]
       V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
-      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - (w[i,]  - nu[i] / (nu[i] + 2) ) * gamma[i]) / sqrtvol[i,] / w_sqrt[i,],
+      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - (w[i,]  - mu.xi[i] ) * gamma[i]) / sqrtvol[i,] / w_sqrt[i,],
                                                    xsub = matrix(u_neg[1:(i-1),] / reprow(sqrtvol[i,],i-1) / reprow(w_sqrt[i,], i-1), nrow = i-1),
                                                    a_sub = a_sub,
                                                    V_a_sub = V_a_sub)
@@ -117,22 +121,43 @@ BVAR.OST.SV.center <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     diag(A) <- 1
 
     # Sample w
-    u <-  A %*% (yt - B %*%xt) + gamma * nu / (nu + 2)
+    u <-  A %*% (yt - B %*%xt) + gamma * mu.xi
     w <- matrix( mapply( GIGrvg::rgig, n = 1, lambda = -(nu+1)*0.5, chi = nu + (u^2)/exp(h),
                          psi = gamma^2/exp(h) ), K, t_max )
-
     w_sqrt <- sqrt(w)
 
     # Sample nu
-    nu_temp = nu + exp(logsigma_nu)*rnorm(K)
+    # ff <- function(nu,k) {
+    #   x <- dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
+    #               sum(dinvgamma(w[k,], shape = nu*0.5, rate = nu*0.5, log = T))
+    #   return(x)
+    # }
+    tmpx <- nu
+    for ( k in 1:K ) {
+      tmpx[k] <- (nu_gam_a - 1 + 0.5 * t_max) / ( nu_gam_b + 0.5 * (sum(1/w[k,]) + sum(log(w[k,])) - t_max) ) # mode
+
+      if ( runif(1) < 0.1 ) {
+        nu.prop.std[k] <- tmpx[k] / sqrt(nu_gam_a - 1 + 0.5 * t_max) * 4 # big move, sd at mode
+      } else {
+        nu.prop.std[k] <- tmpx[k] / sqrt(nu_gam_a - 1 + 0.5 * t_max) # sd at mode
+      }
+      nu_temp[k] <- tmpx[k] + rnorm(1)*nu.prop.std[k]
+
+    }
+    # }
+    # nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
-#      if (nu_temp[k] >= 5 && nu_temp[k] < 100){
+      if (nu_temp[k] > 8 && nu_temp[k] < 100){
+        #      if (nu_temp[k] >= 5 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu[k]*0.5, rate = nu[k]*0.5, log = T))
-        alpha = num_mh - denum_mh;
+
+        propn_mh <- dnorm(nu[k], mean = tmpx[k], sd = nu.prop.std[k], log = T)
+        propd_mh <- dnorm(nu_temp[k], mean = tmpx[k], sd = nu.prop.std[k], log = T)
+
+        alpha = num_mh - denum_mh + propn_mh - propd_mh;
         temp = log(runif(1));
         if (alpha > temp){
           nu[k] = nu_temp[k]
@@ -141,23 +166,25 @@ BVAR.OST.SV.center <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
       }
     }
+    mu.xi <- nu / ( nu - 2 )
 
-    if(j %% batchlength == 0 ){
-      for (jj in c(1:K)) {
-        if (acount_nu[jj] > batchlength * TARGACCEPT){
-          logsigma_nu[jj] = logsigma_nu[jj] + adaptamount(j %/% batchlength);
-        }
-        if (acount_nu[jj] < batchlength * TARGACCEPT){
-          logsigma_nu[jj] = logsigma_nu[jj] - adaptamount(j %/% batchlength);
-        }
-        acount_nu[jj] = 0
-      }
-    }
+    # if(j %% batchlength == 0 ){
+    #   for (jj in c(1:K)) {
+    #     if (acount_nu[jj] > batchlength * TARGACCEPT){
+    #       logsigma_nu[jj] = logsigma_nu[jj] + adaptamount(j %/% batchlength);
+    #     }
+    #     if (acount_nu[jj] < batchlength * TARGACCEPT){
+    #       logsigma_nu[jj] = logsigma_nu[jj] - adaptamount(j %/% batchlength);
+    #     }
+    #     acount_nu[jj] = 0
+    #   }
+    # }
 
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, gamma, nu, diag(sigma_h), h0, as.numeric(h), as.numeric(w))
     if (j %% 1000 == 0) {
-      cat(" Iteration- ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2) , " ", round(gamma,2) ,  " \n")
+      #      cat(" Iteration- ", j, " ", logsigma_nu," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2) , " ", round(gamma,2) ,  " \n")
+      cat(" Iteration- ", j, " ", round(acount_nu/j,2)," ", min(acount_w)," ", max(acount_w)," ", mean(acount_w), " ", round(nu,2) , " ", round(gamma,2) ,  " \n")
       acount_w <- rep(0,t_max)
     }
   }
@@ -175,6 +202,12 @@ BVAR.OST.SV.center <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
   return(as.mcmc(t(mcmc)))
 }
+
+nu.cond.post <- function(nu,lambda,alpha,n) {
+  logpost <- log(nu)*( alpha - 1 ) + log(nu/2)*n*nu/2  - nu*lambda - n*lgamma(nu/2)
+  return(logpost)
+}
+
 
 atau_post <- function(atau=a_tau,lambda2=lambda2_tau,thetas=theta,k=length(theta),rat=1){
   logpost <- sum(dgamma(thetas,atau,(atau*lambda2/2),log=TRUE))+dexp(atau,rate=rat,log=TRUE)
@@ -322,37 +355,37 @@ BVAR.Gaussian.SV.HB <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
     #Step V: Sample hyperparameter lambda from G(a,b)
     lambda_b <- rgamma(1, shape = c_tau + varsilon_b * K*m,
-                          rate = d_tau + varsilon_b/2*sum(psi_b))
+                       rate = d_tau + varsilon_b/2*sum(psi_b))
     #############
-#
-#     #Step III: Sample the prior scaling factors from GIG
-#     psi_a <- mapply(GIGrvg::rgig, n=1, lambda=varsilon_a-0.5, psi = varsilon_a * lambda_a, chi = a_sample^2)
-#     psi_a[psi_a < 1e-9] <- 1e-9
-#     # psi_a <- mapply(GIGrvg::rgig, n=1, lambda=0-0.5, psi = 0, chi = a_sample^2)
-#
-#     #Step IV: Sample varsilon_a through a simple RWMH step
-#     varsilon_a_prop <- exp(rnorm(1,0,scale2))*varsilon_a
-#
-#     # post.diff <- log(varsilon_a_prop)-log(varsilon_a) +  # Jacob
-#     #   (K * (K-1) * 0.5) * ( - lgamma(varsilon_a_prop) + lgamma(varsilon_a)) +
-#     #   (K * (K-1) * 0.5) * varsilon_a_prop * log(varsilon_a_prop * lambda_a * 0.5) -
-#     #   (K * (K-1) * 0.5) * varsilon_a * log(varsilon_a * lambda_a * 0.5) +
-#     #   (varsilon_a_prop - varsilon_a) * sum(log(psi_a)) -
-#     #   (varsilon_a_prop - varsilon_a) * (lambda_a * 0.5 * sum(psi_a) + 1)
-#     # No idea dlnorm
-#     post_a_prop <- atau_post(atau=varsilon_a_prop,thetas = psi_a,lambda2 = lambda_a)  # + dlnorm(varsilon_a,varsilon_a_prop,scale2,log=TRUE)
-#     post_a_old <- atau_post(atau=varsilon_a,thetas = psi_a,lambda2 = lambda_a)  # + dlnorm(varsilon_a_prop,varsilon_a,scale2,log=TRUE)
-#     post.diff <- post_a_prop-post_a_old+log(varsilon_a_prop)-log(varsilon_a)
-#
-#     post.diff <- ifelse(is.nan(post.diff),-Inf,post.diff)
-#     if (post.diff > log(runif(1,0,1))){
-#       varsilon_a <- varsilon_a_prop
-#       accept2 <- accept2 + 1
-#     }
-#
-#     #Step V: Sample hyperparameter lambda from G(a,b)
-#     lambda_a <- rgamma(1, shape = c_tau + varsilon_a * (K * (K-1) * 0.5),
-#                        rate = d_tau + varsilon_a/2*sum(psi_a))
+    #
+    #     #Step III: Sample the prior scaling factors from GIG
+    #     psi_a <- mapply(GIGrvg::rgig, n=1, lambda=varsilon_a-0.5, psi = varsilon_a * lambda_a, chi = a_sample^2)
+    #     psi_a[psi_a < 1e-9] <- 1e-9
+    #     # psi_a <- mapply(GIGrvg::rgig, n=1, lambda=0-0.5, psi = 0, chi = a_sample^2)
+    #
+    #     #Step IV: Sample varsilon_a through a simple RWMH step
+    #     varsilon_a_prop <- exp(rnorm(1,0,scale2))*varsilon_a
+    #
+    #     # post.diff <- log(varsilon_a_prop)-log(varsilon_a) +  # Jacob
+    #     #   (K * (K-1) * 0.5) * ( - lgamma(varsilon_a_prop) + lgamma(varsilon_a)) +
+    #     #   (K * (K-1) * 0.5) * varsilon_a_prop * log(varsilon_a_prop * lambda_a * 0.5) -
+    #     #   (K * (K-1) * 0.5) * varsilon_a * log(varsilon_a * lambda_a * 0.5) +
+    #     #   (varsilon_a_prop - varsilon_a) * sum(log(psi_a)) -
+    #     #   (varsilon_a_prop - varsilon_a) * (lambda_a * 0.5 * sum(psi_a) + 1)
+    #     # No idea dlnorm
+    #     post_a_prop <- atau_post(atau=varsilon_a_prop,thetas = psi_a,lambda2 = lambda_a)  # + dlnorm(varsilon_a,varsilon_a_prop,scale2,log=TRUE)
+    #     post_a_old <- atau_post(atau=varsilon_a,thetas = psi_a,lambda2 = lambda_a)  # + dlnorm(varsilon_a_prop,varsilon_a,scale2,log=TRUE)
+    #     post.diff <- post_a_prop-post_a_old+log(varsilon_a_prop)-log(varsilon_a)
+    #
+    #     post.diff <- ifelse(is.nan(post.diff),-Inf,post.diff)
+    #     if (post.diff > log(runif(1,0,1))){
+    #       varsilon_a <- varsilon_a_prop
+    #       accept2 <- accept2 + 1
+    #     }
+    #
+    #     #Step V: Sample hyperparameter lambda from G(a,b)
+    #     lambda_a <- rgamma(1, shape = c_tau + varsilon_a * (K * (K-1) * 0.5),
+    #                        rate = d_tau + varsilon_a/2*sum(psi_a))
 
     batchlength = 100;
     if(j < inits$burnin){
@@ -705,21 +738,21 @@ recursive_seperate.HB <- function(y, t_start = 100, t_pred = 12, K, p, dist = "M
 
   if (dist == "Gaussian") {
     mcmc <- BVAR.Gaussian.SV.HB(y = tail(y_current, time_current - p), K = K, p = p,
-                     y0 = head(y_current, p), prior = prior, inits = inits)
+                                y0 = head(y_current, p), prior = prior, inits = inits)
   }
   if (dist == "MST") {
     mcmc <- BVAR.MST.SV.HB(y = tail(y_current, time_current - p), K = K, p = p,
-                        y0 = head(y_current, p), prior = prior, inits = inits)
+                           y0 = head(y_current, p), prior = prior, inits = inits)
   }
 
   Chain <- list(mcmc = mcmc,
                 y = tail(y_current, time_current - p),
                 y0 = head(y_current, p),
-                     K = K,
-                     p = p,
-                     dist = dist,
-                     prior = prior,
-                     inits = inits)
+                K = K,
+                p = p,
+                dist = dist,
+                prior = prior,
+                inits = inits)
   y_obs_future <- matrix(y[c((time_current+1):(time_current+t_pred)), ],ncol = K)
   forecast_err <- forecast_density(Chain = Chain, y_obs_future = y_obs_future, t_current = t_current)
   out_recursive <- list(time_id = time_current+1,

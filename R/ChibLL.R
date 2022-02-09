@@ -562,7 +562,7 @@ Chibint_h_StudentSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K),
 
 #' @export
 Chibint_h_SkewSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100){
-  u <- yt - B %*% xt
+  u <- yt - B %*% xt + nu/(nu-2) * gamma
   y_tilde = A %*% (( u - reprow(w_mean,K)*gamma ) ) # Approximation multivariate Student dist
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
@@ -740,7 +740,7 @@ Chibint_h_MTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max,
 
 #' @export
 Chibint_h_MSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100){
-  u <- (yt - B %*% xt - w_mean * gamma)
+  u <- (yt - B %*% xt - w_mean * gamma + nu/(nu-2)*gamma)
   y_tilde <- (A %*% u) # Mimic Univariate Student
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
@@ -885,7 +885,7 @@ Chibint_h_OTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max,
 #' @export
 Chibint_h_OSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100){
   u <- (yt - B %*% xt)
-  y_tilde <- (A %*% u - w_mean * gamma) # Mimic univariate Student distribution
+  y_tilde <- (A %*% u - w_mean * gamma + nu/(nu-2)*gamma) # Mimic univariate Student distribution
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
   prior_var_h0 <- 4
@@ -935,7 +935,7 @@ Chibint_h_OSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_m
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
   store_llike = rep(0,R)
-  y_tilde = A %*% ( (yt - B %*% xt) ) # is ortho-Skew Student distribution
+  y_tilde = A %*% ( (yt - B %*% xt) ) + nu/(nu-2)*gamma # is ortho-Skew Student distribution
   for (i in c(1:R)){
     hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
     hnew <- matrix(hc, nrow = K)

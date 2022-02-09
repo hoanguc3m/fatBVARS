@@ -118,7 +118,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                       },
                                       mc.cores = numCores)
       } else {
-        Nu_gen_list <- Nu_Gamma_approx(Nu_mat, ndraws = ndraws)
+        Nu_gen_list <- Nu_Gamma_approx(Nu_mat, ndraws = ndraws, dist)
         Nu_gen <- Nu_gen_list$new_samples
         sum_log_prop <- sum_log_prop + Nu_gen_list$sum_log_prop
         # w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
@@ -338,7 +338,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
         #                               mc.cores = numCores)
       } else {
         # Fat tail
-        Nu_gen_list <- Nu_Gamma_approx(Nu_mat, ndraws = ndraws)
+        Nu_gen_list <- Nu_Gamma_approx(Nu_mat, ndraws = ndraws, dist)
         Nu_gen <- Nu_gen_list$new_samples
         sum_log_prop <- sum_log_prop + Nu_gen_list$sum_log_prop
 
@@ -593,11 +593,11 @@ int_w_TnonSV <- function(y, xt, A, B, sigma, nu, t_max, K, R = 100){
 int_w_STnonSV <- function(y, xt, A, B, sigma, nu, gamma, t_max, K, R = 100){
   u <- (y - t(xt) %*% t(B))
   if (K == 1){
-    allw <- ghyp::dghyp(u, object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
+    allw <- ghyp::dghyp(u, object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = -nu/(nu-2)*gamma,
                                                sigma = diag(sigma, nrow = K),
                                                gamma = gamma), logvalue = T)
   } else {
-    allw <- ghyp::dghyp(u, object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
+    allw <- ghyp::dghyp(u, object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = -nu/(nu-2)*gamma,
                                              sigma = solve(A) %*% diag(sigma^2, nrow = K) %*% t(solve(A)),
                                              gamma = gamma), logvalue = T)
   }
@@ -633,8 +633,8 @@ int_w_MTnonSV <- function(y, xt, A, B, sigma, nu, t_max, K, R = 100){
 
 #' @export
 int_w_MSTnonSV <- function(y, xt, A, B, sigma, nu, gamma = rep(0,K), t_max, K, R = 100){
-  u <- (t(y) - B %*%xt)
-  u_proposal <- A %*% (u)
+  u <- t(y) - B %*%xt + nu/(nu-2)*gamma
+  u_proposal <- A %*% (t(y) - B %*%xt) + nu/(nu-2)*gamma
 
   a_target <- (nu*0.5 + 1*0.5)
   b_target <- (nu*0.5 + 0.5 * u_proposal^2 / sigma^2)
@@ -645,11 +645,6 @@ int_w_MSTnonSV <- function(y, xt, A, B, sigma, nu, gamma = rep(0,K), t_max, K, R
 
   store_llw <- array(NA, dim = c(K,t_max,R))
   for (i in c(1:R)){
-    # w <- matrix( mapply( GIGrvg::rgig, n = 1, lambda = lambda, chi = chi,
-    #                      psi = psi), nrow = K)
-    # dens_w <- matrix( mapply( GIGrvg::dgig, x = w, lambda = lambda, chi = chi,
-    #                           psi = psi, log = T), nrow = K)
-    # Prior_dens_w <- dinvgamma(x = w, shape = nu*0.5, rate = nu*0.5, log = T)
 
     w <- matrix(rinvgamma(K * t_max, shape = a_target, rate = b_target), nrow = K)
     dens_w <- dinvgamma(x = w, shape = a_target, rate = b_target, log = T)
@@ -669,11 +664,12 @@ int_w_MSTnonSV <- function(y, xt, A, B, sigma, nu, gamma = rep(0,K), t_max, K, R
 
 #' @export
 int_w_OSTnonSV <- function(y, xt, A, B, sigma, nu, gamma = rep(0,K), t_max, K, R = 100){
-  u <- A %*% (t(y) - B %*%xt)
+  u <- A %*% (t(y) - B %*%xt) + nu/(nu-2) * gamma
   llw <- rep(0,K)
   for (j in c(1:K)){
-    llw[j] <- sum(ghyp::dghyp(u[j,], object = ghyp::ghyp(lambda = -0.5*nu[j], chi = nu[j], psi = 0, mu = 0, sigma = sigma[j],
-                                            gamma = gamma[j]), logvalue = TRUE)) # input here sigma, not sigma^2
+    llw[j] <- sum(ghyp::dghyp(u[j,], object = ghyp::ghyp(lambda = -0.5*nu[j], chi = nu[j], psi = 0,
+                                                         mu = 0, sigma = sigma[j],
+                                                        gamma = gamma[j]), logvalue = TRUE)) # input here sigma, not sigma^2
   }
   return(sum(llw))
 }
@@ -814,7 +810,7 @@ int_h_StudentSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_m
 
 #' @export
 int_h_SkewSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100){
-  u <- yt - B %*% xt
+  u <- yt - B %*% xt + nu/(nu-2) * gamma
   y_tilde = A %*% (( u - reprow(w_mean,K)*gamma ) ) # Approximation multivariate Student dist
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
@@ -990,7 +986,7 @@ int_h_MTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
 
 #' @export
 int_h_MSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100){
-  u <- (yt - B %*% xt - w_mean * gamma)
+  u <- (yt - B %*% xt - w_mean * gamma + nu/(nu-2)*gamma)
   y_tilde <- (A %*% u) # Mimic Univariate Student
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
@@ -1132,8 +1128,8 @@ int_h_OTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
 
 #' @export
 int_h_OSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100){
-  u <- (yt - B %*% xt)
-  y_tilde <- (A %*% u - w_mean * gamma) # Mimic univariate Student distribution
+  u <- (yt - B %*% xt )
+  y_tilde <- (A %*% u - w_mean * gamma + nu/(nu-2)*gamma) # Mimic univariate Student distribution
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
   Hh = sparseMatrix(i = 1:(t_max*K),
@@ -1182,7 +1178,7 @@ int_h_OSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean,
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
   store_llike = rep(0,R)
-  y_tilde = A %*% ( (yt - B %*% xt) ) # is ortho-Skew Student distribution
+  y_tilde = A %*% ( (yt - B %*% xt) ) + nu/(nu-2)*gamma # is ortho-Skew Student distribution
   for (i in c(1:R)){
     hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
     hnew <- matrix(hc, nrow = K)
@@ -1320,7 +1316,7 @@ InvGamma_approx <- function(mcmc_sample, ndraws){
 }
 
 #' @export
-Nu_Gamma_approx <- function(mcmc_sample, ndraws){
+Nu_Gamma_approx <- function(mcmc_sample, ndraws, dist){
   nElements <- ncol(mcmc_sample)
   new_samples <- matrix(NA, ncol = nElements, nrow = ndraws, dimnames = list(c(), colnames(mcmc_sample)))
   Density_prop <-  matrix(NA, ncol = nElements, nrow = ndraws)
@@ -1331,7 +1327,7 @@ Nu_Gamma_approx <- function(mcmc_sample, ndraws){
     shape_param[i] <- fit.gamma$estimate[1]
     rate_param[i] <- fit.gamma$estimate[2]
     tmp <- rgamma(ndraws*2, shape = shape_param[i], rate_param[i])
-    tmp <- tmp[tmp > 2]
+    tmp <- tmp[tmp > 4]
     tmp <- tmp[tmp < 100]
     new_samples[,i] <- head(tmp,ndraws)
     Density_prop[,i] <- dgamma(new_samples[,i], shape = shape_param[i], rate = rate_param[i], log = T)

@@ -240,11 +240,11 @@ get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
   p = (length(prior$b_prior) / K - 1) / K
 
   A = matrix(0, K, K)
-  A[upper.tri(A, diag=FALSE)] = prior$a_prior
+  A[upper.tri(A, diag=FALSE)] = prior$a_prior + 0.01 * rnorm(K*(K-1)*0.5)
   A <- t(A)
   diag(A) <- 1
 
-  B = matrix(prior$b_prior, nrow = K)
+  B = matrix(prior$b_prior, nrow = K) + 0.01 * rnorm(K + K*K*p)
   sigma = prior$sigma
 
   #Gaussian
@@ -258,7 +258,7 @@ get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
 
   #Student
   if (dist !="Gaussian"){
-    inits$nu = 6
+    inits$nu = 10
   }
   #Skew.Student
   if (dist =="Skew.Student" |
@@ -270,11 +270,11 @@ get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
   if (dist == "MT" | dist =="OT" |
       dist == "MST" | dist == "OST" |
       dist == "dynMST"| dist == "dynOST"){
-    inits$nu = rep(6,K)
+    inits$nu = rep(10,K)
   }
   #Stochastic vol
   if(SV){
-    h <- matrix(log(prior$sigma^2), ncol = prior$t_max, nrow = K)
+    h <- matrix(log(prior$sigma^2), ncol = prior$t_max, nrow = K) + 0.0001 * rnorm(prior$t_max * K)
     inits$h <- h
     inits$sigma_h <- 0.0001*diag(K)
   }

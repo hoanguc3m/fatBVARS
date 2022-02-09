@@ -255,6 +255,7 @@ sim.VAR.Skew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
   volatility <- matrix(NA, nrow = t_max, ncol = K)
   inv_A0 <- solve(A0)
 
+  mu_xi <- nu / (nu - 2)
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
     Sigma_t <-  diag(w_sqrt_t[i], nrow = K) %*% inv_A0 %*% diag(exp(0.5*h), nrow = K)
@@ -262,8 +263,8 @@ sim.VAR.Skew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
-    y_mean[i,] <- B0 %*% xt + gamma * w_t[i]
-    ysim <-  B0 %*% xt + gamma * w_t[i] + Sigma_t %*% eps[i,]
+    y_mean[i,] <- B0 %*% xt + gamma * (w_t[i] - mu_xi)
+    ysim <-  B0 %*% xt + gamma * (w_t[i] - mu_xi) + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
   }
 
@@ -392,6 +393,8 @@ sim.VAR.MST.SV <- function(K = 5, p = 2, t_max = 1000,
   D <- diag(gamma, nrow = K)
   # Tail of student
   if (length(nu) == 1) nu = rep(nu,K)
+  mu_xi <- nu / (nu - 2)
+
   w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
   w_sqrt_t <- sqrt(w_t)
 
@@ -418,8 +421,8 @@ sim.VAR.MST.SV <- function(K = 5, p = 2, t_max = 1000,
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
-    y_mean[i,] <- B0 %*% xt + gamma * w_t[i,]
-    ysim <-  B0 %*% xt + gamma * w_t[i,] + Sigma_t %*% eps[i,]
+    y_mean[i,] <- B0 %*% xt + gamma * (w_t[i,] - mu_xi)
+    ysim <-  B0 %*% xt + gamma * (w_t[i,] - mu_xi) + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
   }
 
@@ -550,6 +553,8 @@ sim.VAR.OST.SV <- function(K = 5, p = 2, t_max = 1000,
   D <- diag(gamma, nrow = K)
   # Tail of student
   if (length(nu) == 1) nu = rep(nu,K)
+  mu_xi <- nu / (nu - 2)
+
   w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
   w_sqrt_t <- sqrt(w_t)
 
@@ -576,7 +581,7 @@ sim.VAR.OST.SV <- function(K = 5, p = 2, t_max = 1000,
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
-    y_mean[i,] <- B0 %*% xt + inv_A0 %*% (gamma * w_t[i,])
+    y_mean[i,] <- B0 %*% xt + inv_A0 %*% (gamma * (w_t[i,] - mu_xi))
     ysim <-  as.numeric(y_mean[i,]) + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
   }

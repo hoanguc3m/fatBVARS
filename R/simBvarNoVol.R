@@ -229,13 +229,14 @@ sim.VAR.Skew.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   Sigma <- solve(A0) %*% diag(as.numeric(exp(0.5*h)), nrow = K)
   Sigma2 <- Sigma %*% t(Sigma)
 
+  mu_xi <- nu / (nu - 2)
   for (i in c(1:t_max)){
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
     y_mean[i,] <- B0 %*% xt + gamma * w_t[i]
     Sigma_t <- diag(w_sqrt_t[i], nrow = K) %*% Sigma
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma_t %*% t(Sigma_t))
-    ysim <-  B0 %*% xt  + gamma * w_t[i] + (Sigma_t %*% eps[i,])
+    ysim <-  B0 %*% xt  + gamma * (w_t[i] - mu_xi) + (Sigma_t %*% eps[i,])
     ystar <- rbind(ystar, t(ysim))
   }
 
@@ -354,6 +355,8 @@ sim.VAR.MST.novol <- function(K = 5, p = 2, t_max = 1000,
   D <- diag(gamma, nrow = K)
   # Tail of student
   if (length(nu) == 1) nu = rep(nu,K)
+  mu_xi <- nu / (nu - 2)
+
   w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
   w_sqrt_t <- sqrt(w_t)
 
@@ -370,11 +373,11 @@ sim.VAR.MST.novol <- function(K = 5, p = 2, t_max = 1000,
 
   for (i in c(1:t_max)){
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
-    y_mean[i,] <- B0 %*% xt + gamma * w_t[i,]
+    y_mean[i,] <- B0 %*% xt + gamma * (w_t[i,] - mu_xi)
     Sigma_t <- diag(w_sqrt_t[i,], nrow = K) %*% Sigma
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma_t %*% t(Sigma_t))
-    ysim <-  B0 %*% xt  + gamma * w_t[i,] + (Sigma_t %*% eps[i,])
+    ysim <-  B0 %*% xt  + gamma * (w_t[i,] - mu_xi) + (Sigma_t %*% eps[i,])
     ystar <- rbind(ystar, t(ysim))
   }
 
@@ -492,6 +495,8 @@ sim.VAR.OST.novol <- function(K = 5, p = 2, t_max = 1000,
   D <- diag(gamma, nrow = K)
   # Tail of student
   if (length(nu) == 1) nu = rep(nu,K)
+  mu_xi <- nu / (nu - 2)
+
   w_t <- mapply(rinvgamma, n = t_max, shape = nu/2, rate = nu/2)
   w_sqrt_t <- sqrt(w_t)
 
@@ -507,7 +512,7 @@ sim.VAR.OST.novol <- function(K = 5, p = 2, t_max = 1000,
 
   for (i in c(1:t_max)){
     xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
-    y_mean[i,] <- B0 %*% xt + inv_A0 %*% (gamma * w_t[i,])
+    y_mean[i,] <- B0 %*% xt + inv_A0 %*% (gamma * (w_t[i,] - mu_xi))
     Sigma_t <-  inv_A0 %*% diag(w_sqrt_t[i,] * exp(0.5*h), nrow = K)
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma_t %*% t(Sigma_t))

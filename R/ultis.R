@@ -473,7 +473,7 @@ PF_StudentSV <- function(ytilde, h0, sigma_h, nu, noParticles = 1000) {
 
 #' @export
 logmeanexp <- function(sum_log){
-  if (class(sum_log) == "numeric"){
+  if (is(sum_log, "numeric")){
     max_sumlog <- max(sum_log)
     out <- log( mean(exp(sum_log - max_sumlog))) + max_sumlog
   } else {

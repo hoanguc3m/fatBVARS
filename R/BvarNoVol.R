@@ -304,7 +304,7 @@ BVAR.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(1)
-    if (nu_temp > 2 && nu_temp < 100){
+    if (nu_temp > 4 && nu_temp < 100){
       num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
         sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
       denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -390,6 +390,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
   V_b_prior_inv <- solve(V_b_prior)
 
   nu <- inits$nu
+  mu.xi <- nu/( nu - 2 )
   logsigma_nu <- 0
   acount_nu <- 0
   acount_w <- rep(0, t_max)
@@ -434,7 +435,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     # Sample B and gamma
     wt <- as.vector(1/(sigma*w_sqrt))
     y.tilde <- as.vector( A %*% yt ) * wt
-    x.tilde <- kronecker( cbind( t(xt), w_sample ), A ) * wt
+    x.tilde <- kronecker( cbind( t(xt), w_sample - mu.xi ), A ) * wt
     theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
     theta <- backsolve( theta.prec.chol,
                         backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
@@ -447,7 +448,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
 
     # Sample sigma
     sigma2 <- rep(0,K)
-    u_ort <- A %*% ((yt - B %*% xt - D %*% w)/ w_sqrt)    # change from Gaussian
+    u_ort <- A %*% ((yt - B %*% xt - D %*% (w-mu.xi))/ w_sqrt)    # change from Gaussian
     sigma_post_a <- sigma0_T0 + rep(t_max,K)
 #    sigma_post_b <- sigma0_S0 + apply(u_ort^2, 1, sum)
     sigma_post_b <- sigma0_S0 + rowSums(u_ort^2)
@@ -457,7 +458,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     sigma <- sqrt(sigma2)
 
     # Sample A0
-    u_std <- (yt - B %*% xt - D%*% w)/ w_sqrt # change from Gaussian
+    u_std <- (yt - B %*% xt - D%*% (w-mu.xi))/ w_sqrt # change from Gaussian
     u_neg <- - u_std
     a_sample <- rep(0, K * (K - 1) /2)
     if (K > 1) {
@@ -477,49 +478,9 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     A <- t(A_post)
     diag(A) <- 1
 
-    # Sigma <- solve(A) %*% diag(sigma, nrow = length(sigma))
-    # Sigma2 <- Sigma %*% t(Sigma)
-    # Sigma2_inv <- solve(Sigma2)
-    # Sigma2_inv <- (Sigma2_inv + t(Sigma2_inv))*0.5
-
-#     # Sample w
-#     u <- (yt - B %*%xt)
-#     ran_stu = rt(t_max, df = 4)
-#     # a_eq <- as.numeric(-0.5* (t(gamma) %*% Sigma2_inv %*% gamma))
-#     A.gamma <- ( A %*% gamma )/sigma
-#     a_eq <- as.numeric(-0.5* crossprod(A.gamma))
-#     b_eq <- -((0.5*K + nu/2+1))
-# #    c_eq =  as.numeric(nu*0.5 + 0.5 * apply((A %*% u / sigma)^2, MARGIN = 2, FUN = sum))
-#     c_eq =  as.numeric(nu*0.5 + 0.5 * colSums((A %*% u / sigma)^2))
-#     w_mode <- (- b_eq - sqrt(b_eq^2-4*a_eq*c_eq))/(2*a_eq)
-#     mode_target <- log( w_mode )
-#     cov_target <- 1/( c_eq / w_mode - a_eq * w_mode)
-#     log_w_temp = mode_target + sqrt(cov_target)*ran_stu
-#     w_temp = exp(log_w_temp)
-#
-#     # num_mh =  dinvgamma(w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-#     #   ( - 0.5 * K * log_w_temp - 0.5 * apply((A %*% (u - gamma %x% t(w_temp)) / sigma)^2, MARGIN = 2, FUN = sum) / w_temp) - # posterior
-#     #   dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
-#     # denum_mh = dinvgamma(w_sample, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-#     #   ( - 0.5 * K * log(w_sample) - 0.5 * apply((A %*% (u - gamma %x% t(w_sample)) / sigma)^2, MARGIN = 2, FUN = sum) / w_sample) - # posterior
-#     #   dt( (log(w_sample) - mode_target)/sqrt(cov_target), df = 4, log = T) + log(w_sample) # proposal
-#     num_mh =  dinvgamma(w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-#       ( - 0.5 * K * log_w_temp - 0.5 * colSums((A %*% (u - gamma %x% t(w_temp)) / sigma)^2) / w_temp) - # posterior
-#       dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
-#
-#     denum_mh = dinvgamma(w_sample, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-#       ( - 0.5 * K * log(w_sample) - 0.5 * colSums((A %*% (u - gamma %x% t(w_sample)) / sigma)^2) / w_sample) - # posterior
-#       dt( (log(w_sample) - mode_target)/sqrt(cov_target), df = 4, log = T) + log(w_sample) # proposal
-#     alpha = as.numeric(num_mh - denum_mh)
-#     temp = log(runif(t_max))
-#     acre = alpha > temp
-#     w_sample <- ifelse(acre, w_temp, w_sample)
-#     w <- reprow(w_sample, K)
-#     w_sqrt <- reprow(sqrt(w_sample), K)
-#     acount_w <- acount_w + acre
 
     # Sample w
-    q2 <- colSums( ( ( A %*% ( yt - B%*%xt ) ) / sigma )^2 )
+    q2 <- colSums( ( ( A %*% ( yt - B%*%xt + mu.xi * gamma) ) / sigma )^2 )
     p2 <- sum( ( c( A %*% gamma ) / sigma )^2 )
     w_sample <- mapply( GIGrvg::rgig, n = 1, lambda = -(nu+K)*0.5, chi = nu + q2,
                         psi = p2 )
@@ -528,7 +489,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
 
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(1)
-    if (nu_temp > 2 && nu_temp < 100){
+    if (nu_temp > 4 && nu_temp < 100){
       num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
         sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
       denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -541,6 +502,7 @@ BVAR.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
       }
 
     }
+    mu.xi <- nu/( nu - 2 )
 
     if(j %% batchlength == 0 ){
       if (acount_nu > batchlength * TARGACCEPT){
@@ -738,7 +700,7 @@ BVAR.MT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+      if (nu_temp[k] > 4 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -828,6 +790,7 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
   # Multi degrees of freedom
   nu <- inits$nu
+  mu.xi <- nu/( nu - 2 )
   logsigma_nu <- rep(0,K)
   acount_nu <- rep(0,K)
   acount_w <- rep(0, t_max)
@@ -851,37 +814,6 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   mcmc <- matrix(NA, nrow = m*K + 0.5*K*(K-1) + K + K + K + K*t_max,
                  ncol = (samples - inits$burnin)%/% inits$thin)
   for (j in c(1:samples)){
-    # # Sample B
-    # # V_b_post_inv <- V_b_prior_inv +
-    # #   Reduce( f = "+",
-    # #           x = lapply(1:t_max, function(i) kronecker(xt[,i] %*% t(xt[,i]), diag(w_sqrt_inv[,i]) %*% Sigma2_inv %*% diag(w_sqrt_inv[,i]) )),
-    # #           accumulate = FALSE)
-    # V_b_post_inv <- V_b_prior_inv +
-    #   Reduce( f = "+",
-    #           x = lapply(1:t_max, function(i) kronecker(xt[,i] %*% t(xt[,i]), (w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i]))) ),
-    #           accumulate = FALSE) * (kronecker(matrix(1,m,m), Sigma2_inv))
-    #
-    # b_post <- Reduce(f = "+",
-    #                  x = lapply(1:t_max, function(i) kronecker(xt[,i], ((w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv) %*% (yt[,i] - gamma * w[,i]))),
-    #                  accumulate = FALSE)
-    #
-    #
-    # V_b_post <- solve(V_b_post_inv)
-    # b_post <- V_b_post %*% ( solve(V_b_prior) %*% b_prior + b_post)
-    # b_sample <- b_post + t(chol(V_b_post)) %*% rnorm(m*K)
-    # B <- Vec_to_Mat(b_sample, K,p)
-    #
-    # gamma_post = rep(0, K)
-    # V_gamma_post_inv = solve(V_gamma_prior)
-    # for (i in c(1:t_max)){
-    #   V_gamma_post_inv <- V_gamma_post_inv +  (w_sqrt[,i] %*% t(w_sqrt[,i])) * Sigma2_inv # ww' sqrt(w_inv) Signma_inv sqrt(w_inv)
-    #   gamma_post <- gamma_post + ((w_sqrt[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv) %*% (yt[,i] - B %*% xt[,i] )
-    # }
-    #
-    # V_gamma_post <- solve(V_gamma_post_inv)
-    # gamma_post <- V_gamma_post %*% ( solve(V_gamma_prior) %*% gamma_prior + gamma_post)
-    # gamma <- as.numeric(gamma_post + t(chol(V_gamma_post)) %*% rnorm(K))
-    # D <- diag(gamma)
 
     # Sample B and gamma
     wt <- rep(1/sigma,t_max)
@@ -897,7 +829,7 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     W.mat <- matrix(0,K*t_max,K)
     idx <- (0:(t_max-1))*K
     for ( i in 1:K ) {
-      W.mat[idx + (i-1)*t_max*K + i] <- sqrt(w[i,]) # W^(1/2)
+      W.mat[idx + (i-1)*t_max*K + i] <- (w[i,] - mu.xi[i])/sqrt(w[i,]) # W^(-1/2) * (W - bar(W))
     }
     x2 <- matrix(0,K*t_max,K)
     for ( i in 1:K ) {
@@ -917,7 +849,7 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
     # Sample sigma
     sigma2 <- rep(0,K)
-    u_ort <- A %*% ((yt - B %*% xt - D %*% w)/ w_sqrt)    # change from Gaussian
+    u_ort <- A %*% ((yt - B %*% xt - D %*% ( w - mu.xi ))/ w_sqrt)    # change from Gaussian
     sigma_post_a <- sigma0_T0 + rep(t_max,K)
     sigma_post_b <- sigma0_S0 + rowSums(u_ort^2)
     for (i in c(1:K)){
@@ -926,7 +858,7 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     sigma <- sqrt(sigma2)
 
     # Sample A0
-    u_std <- (yt - B %*% xt - D%*% w) / w_sqrt # change from Gaussian
+    u_std <- (yt - B %*% xt - D%*% ( w - mu.xi )) / w_sqrt # change from Gaussian
     u_neg <- - u_std
     a_sample <- rep(0, K * (K - 1) /2)
     if (K > 1) {
@@ -953,8 +885,8 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     Sigma2_inv <- t(A)%*%diag(1/sigma2)%*%A
 
     # Sample w
-    u <- (yt - B %*%xt)
-    u_proposal <- A %*% (yt - B %*%xt)
+    u <- (yt - B %*%xt + mu.xi * gamma)
+    u_proposal <- A %*% (yt - B %*%xt) + mu.xi * gamma
 
     a_target <- (nu*0.5 + 1*0.5) * 0.75 # adjust by 0.75
     b_target <- (nu*0.5 + 0.5 * u_proposal^2 / sigma^2) * 0.75 # adjust by 0.75
@@ -980,26 +912,26 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     acount_w[acc] <- acount_w[acc] + 1
 
 
-#     num_mh <- prior_num - proposal_num -
-#       0.5 * colSums(log_w_temp) -
-#       0.5 * sapply(1:t_max, function(i) { u.gw <- w_temp_sqrt_inv[,i]*(u[,i]- gamma*w_temp[,i]); t(u.gw) %*% Sigma2_inv %*% u.gw } )
-#     #  0.5 * sapply(1:t_max, function(i) t(u[,i]- gamma*w_temp[,i]) %*% ((w_temp_sqrt_inv[,i] %*% t(w_temp_sqrt_inv[,i])) * Sigma2_inv) %*% (u[,i]- gamma*w_temp[,i]))
-#     denum_mh <- prior_denum - proposal_denum -
-#       0.5 * colSums(log(w)) -
-#       0.5 * sapply(1:t_max, function(i) { u.gw <- (u[,i] - gamma*w[,i]) / w_sqrt[,i]; t(u.gw) %*% Sigma2_inv %*%  u.gw } )
-#     #  0.5 * sapply(1:t_max, function(i) t(u[,i] - gamma*w[,i]) %*% ((w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv) %*% (u[,i] - gamma*w[,i]))
-#     alpha = num_mh - denum_mh
-#     temp = log(runif(t_max))
-#     acre = alpha > temp
-#     w[,acre] <- w_temp[,acre]
-#     w_sqrt <- sqrt(w)
-# #    w_sqrt_inv <- 1/w_sqrt
-#     acount_w[acre] <- acount_w[acre] + 1
+    #     num_mh <- prior_num - proposal_num -
+    #       0.5 * colSums(log_w_temp) -
+    #       0.5 * sapply(1:t_max, function(i) { u.gw <- w_temp_sqrt_inv[,i]*(u[,i]- gamma*w_temp[,i]); t(u.gw) %*% Sigma2_inv %*% u.gw } )
+    #     #  0.5 * sapply(1:t_max, function(i) t(u[,i]- gamma*w_temp[,i]) %*% ((w_temp_sqrt_inv[,i] %*% t(w_temp_sqrt_inv[,i])) * Sigma2_inv) %*% (u[,i]- gamma*w_temp[,i]))
+    #     denum_mh <- prior_denum - proposal_denum -
+    #       0.5 * colSums(log(w)) -
+    #       0.5 * sapply(1:t_max, function(i) { u.gw <- (u[,i] - gamma*w[,i]) / w_sqrt[,i]; t(u.gw) %*% Sigma2_inv %*%  u.gw } )
+    #     #  0.5 * sapply(1:t_max, function(i) t(u[,i] - gamma*w[,i]) %*% ((w_sqrt_inv[,i] %*% t(w_sqrt_inv[,i])) * Sigma2_inv) %*% (u[,i] - gamma*w[,i]))
+    #     alpha = num_mh - denum_mh
+    #     temp = log(runif(t_max))
+    #     acre = alpha > temp
+    #     w[,acre] <- w_temp[,acre]
+    #     w_sqrt <- sqrt(w)
+    # #    w_sqrt_inv <- 1/w_sqrt
+    #     acount_w[acre] <- acount_w[acre] + 1
 
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+      if (nu_temp[k] > 4 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1014,6 +946,7 @@ BVAR.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
       }
 
     }
+    mu.xi <- nu/( nu - 2 )
 
     if(j %% batchlength == 0 ){
       for (jj in c(1:K)) {
@@ -1170,7 +1103,7 @@ BVAR.OT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+      if (nu_temp[k] > 4 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1258,6 +1191,7 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
   # Multi degrees of freedom
   nu <- inits$nu
+  mu.xi <- nu/( nu - 2 )
   logsigma_nu <- rep(0,K)
   acount_nu <- rep(0,K)
   acount_w <- rep(0, t_max)
@@ -1314,7 +1248,7 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     W.mat <- matrix(0,K*t_max,K)
     idx <- (0:(t_max-1))*K
     for ( i in 1:K ) {
-      W.mat[idx + (i-1)*t_max*K + i] <- w[i,]
+      W.mat[idx + (i-1)*t_max*K + i] <- w[i,] -  mu.xi[i]
     }
     x.tilde <- cbind( kronecker( t(xt), A ), W.mat ) * wt
     theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
@@ -1328,7 +1262,7 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     D <- diag(gamma)
 
     # Sample sigma
-    u_ort <- (A %*% (yt - B %*%xt) - D %*% w)/ w_sqrt    # change from Gaussian
+    u_ort <- (A %*% (yt - B %*%xt) - D %*% ( w - mu.xi ))/ w_sqrt    # change from Gaussian
     sigma_post_a <- sigma0_T0 + rep(t_max,K)
     sigma_post_b <- sigma0_S0 + apply(u_ort^2, 1, sum)
     for (i in c(1:K)){
@@ -1346,7 +1280,7 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
         id_start <- id_end - i + 2
         a_sub <- a_prior[id_start:id_end]
         V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
-        a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - w[i,] * gamma[i]) / sigma[i]/ w_sqrt[i,],
+        a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - (w[i,]  - mu.xi[i] )  * gamma[i]) / sigma[i]/ w_sqrt[i,],
                                                      xsub = matrix(u_neg[1:(i-1),] / sigma[i] / reprow(w_sqrt[i,], i-1), nrow = i-1),
                                                      a_sub = a_sub,
                                                      V_a_sub = V_a_sub)
@@ -1358,7 +1292,7 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     diag(A) <- 1
 
     # Sample w
-    u <-  A %*% (yt - B %*%xt)
+    u <-  A %*% (yt - B %*%xt) + gamma * mu.xi
     w <- matrix( mapply( GIGrvg::rgig, n = 1, lambda = -(nu+1)*0.5, chi = nu + (u^2)/ sigma2,
                          psi = gamma^2/sigma2 ), K, t_max )
     # w <- matrix( rinvgamma( n = K*t_max, shape = (nu+1)*0.5, rate = 0.5*( nu + (u^2)/sigma2 ) ), K, t_max )
@@ -1397,7 +1331,7 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+      if (nu_temp[k] > 4 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1411,6 +1345,7 @@ BVAR.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
       }
     }
+    mu.xi <- nu/( nu - 2 )
 
     if(j %% batchlength == 0 ){
       for (jj in c(1:K)) {
@@ -1619,7 +1554,7 @@ BVAR.dynSkew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits =
 
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(1)
-    if (nu_temp > 2 && nu_temp < 100){
+    if (nu_temp > 4 && nu_temp < 100){
       num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
         sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
       denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1810,7 +1745,7 @@ BVAR.OrthSkewNorm1.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = N
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+      if (nu_temp[k] > 4 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +

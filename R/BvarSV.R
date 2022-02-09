@@ -337,7 +337,7 @@ BVAR.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(1)
-    if (nu_temp > 2 && nu_temp < 100){
+    if (nu_temp > 4 && nu_temp < 100){
       num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
         sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
       denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -425,6 +425,7 @@ BVAR.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
   V_b_prior_inv <- solve(V_b_prior)
 
   nu <- inits$nu
+  mu.xi <- nu/( nu - 2 )
   logsigma_nu <- 0
   acount_nu <- 0
   acount_w <- rep(0, t_max)
@@ -435,13 +436,6 @@ BVAR.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
   w_sample <- rep(1, t_max)
   w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
-
-  # svdraw <- list()
-  # paravol <- matrix(0, ncol = 3, nrow = K)
-  # for (i in c(1:K)){
-  #   svdraw[[i]] <- list(para = c(mu = 0, phi = 0.95, sigma = 0.2),
-  #                       latent = h[i,])
-  # }
 
   # new precompute
   i <- K*m
@@ -483,7 +477,7 @@ BVAR.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
     # Sample B and gamma
     wt <- as.vector(1/(exp(h/2)*w_sqrt))
     y.tilde <- as.vector( A %*% yt ) * wt
-    x.tilde <- kronecker( cbind( t(xt), w_sample ), A ) * wt
+    x.tilde <- kronecker( cbind( t(xt), w_sample - mu.xi ), A ) * wt
     theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
     theta <- backsolve( theta.prec.chol,
                         backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
@@ -495,24 +489,15 @@ BVAR.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
     D <- diag(gamma, K)
 
     # Sample vol
-    ytilde <- A%*% ((yt - B %*% xt  - D%*% w)/w_sqrt)
+    ytilde <- A%*% ((yt - B %*% xt  - D%*% (w-mu.xi) )/w_sqrt)
     aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
     sigma_h <- aux$sigma_h
 
-    # for (i in c(1:K)){
-    #   svdraw[[i]] <- svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
-    #                            startlatent = latent(svdraw[[i]]), priormu = priormu,
-    #                            priorphi = priorphi, priorsigma = priorsigma)
-    #   paravol[i,] <- para(svdraw[[i]])
-    #   h[i,] <- as.numeric(latent(svdraw[[i]]))
-    # }
-    # sqrtvol <- exp(h/2)
-
     # Sample A0
-    u_std <- (yt - B %*% xt - D%*% w)/ w_sqrt # change from Gaussian
+    u_std <- (yt - B %*% xt - D%*% (w-mu.xi))/ w_sqrt # change from Gaussian
     u_neg <- - u_std
     a_sample <- rep(0, K * (K - 1) /2)
     if (K > 1) {
@@ -532,79 +517,18 @@ BVAR.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
     A <- t(A_post)
     diag(A) <- 1
 
-    # # Sample w
-    # u <- (yt - B %*%xt)
-    # for (i in c(1:t_max)){
-    #   w_sample[i] <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A) %*% u[,i])
-    # }
-    # w <- reprow(w_sample, K)
-    # w_sqrt <- sqrt(w)
-
-    # # Sample w
-    # u <- (yt - B %*%xt)
-    # for (i in c(1:t_max)){
-    #   Sigma2_inv_t = (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A)
-    #   w_temp <- rinvgamma(1, shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% Sigma2_inv_t %*% u[,i])
-    #   num_mh =  dinvgamma(w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-    #     ( - 0.5 * K * log(w_temp) - 0.5 * t((u[,i] - gamma*w_temp)) %*% Sigma2_inv_t %*% (u[,i] - gamma*w_temp) / w_temp) - # posterior
-    #      dinvgamma(w_temp,  shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% Sigma2_inv_t %*% u[,i] ,log = T) # proposal
-    #   denum_mh = dinvgamma(w_sample[i], shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-    #     ( - 0.5 * K * log(w_sample[i]) - 0.5 * t((u[,i] - gamma*w_sample[i])) %*% Sigma2_inv_t %*% (u[,i] - gamma*w_sample[i]) / w_sample[i]) - # posterior
-    #     dinvgamma(w_sample[i],  shape = nu*0.5 + K*0.5, rate = nu*0.5 + 0.5 * t(u[,i]) %*% Sigma2_inv_t %*% u[,i] ,log = T) # proposal
-    #   alpha = num_mh - denum_mh;
-    #   temp = log(runif(1))
-    #   if (alpha > temp){
-    #     w_sample[i] <- w_temp
-    #     w[,i] <- w_temp
-    #     w_sqrt[,i] <- sqrt(w_temp)
-    #     acount_w[i] <- acount_w[i] + 1
-    #   }
-    #
-    # }
-
 
     # Sample w
-    q2 <- colSums( ( ( A %*% ( yt - B%*%xt ) ) / sqrtvol )^2 )
+    q2 <- colSums( ( ( A %*% ( yt - B%*%xt + mu.xi * gamma ) ) / sqrtvol )^2 )
     p2 <- colSums( ( c( A %*% gamma ) / sqrtvol )^2 )
     w_sample <- mapply( GIGrvg::rgig, n = 1, lambda = -(nu+K)*0.5, chi = nu + q2,
                          psi = p2 )
     w <- reprow(w_sample, K)
     w_sqrt <- sqrt(w)
 
-    # # Sample w
-    # u <- (yt - B %*%xt)
-    # for (i in c(1:t_max)){
-    #   ran_stu = rt(1, df = 4)
-    #   Sigma2_inv_t = (t(A)%*% diag(1/exp(h[,i]), nrow = K) %*% A)
-    #   a_eq <- -0.5* (t(gamma) %*% Sigma2_inv_t %*% gamma)
-    #   b_eq <- -((0.5*K + nu/2+1))
-    #   c_eq =  0.5 * t(u[,i]) %*% Sigma2_inv_t %*% u[,i] + nu/2
-    #   w_mode <- (- b_eq - sqrt(b_eq^2-4*a_eq*c_eq))/(2*a_eq)
-    #   mode_target <- log( w_mode )
-    #   cov_target <- 1/( c_eq / w_mode - a_eq * w_mode) * 1.2 # scale by 1.2
-    #
-    #   log_w_temp = mode_target + sqrt(cov_target)*ran_stu
-    #   w_temp = c(exp(log_w_temp)) # avoid warning about "Recycling array of length 1 in vector-array arithmetic is deprecated"
-    #
-    #   num_mh =  dinvgamma(w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-    #     ( - 0.5 * K * log_w_temp - 0.5 * t((u[,i] - gamma*w_temp)) %*% Sigma2_inv_t %*% (u[,i] - gamma*w_temp) / w_temp) - # posterior
-    #     dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
-    #   denum_mh = dinvgamma(w_sample[i], shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-    #     ( - 0.5 * K * log(w_sample[i]) - 0.5 * t((u[,i] - gamma*w_sample[i])) %*% Sigma2_inv_t %*% (u[,i] - gamma*w_sample[i]) / w_sample[i]) - # posterior
-    #     dt( (log(w_sample[i]) - mode_target)/sqrt(cov_target), df = 4, log = T) + log(w_sample[i]) # proposal
-    #   alpha = num_mh - denum_mh;
-    #   temp = log(runif(1))
-    #   if (alpha > temp){
-    #     w_sample[i] <- w_temp
-    #     w[,i] <- w_temp
-    #     w_sqrt[,i] <- sqrt(w_temp)
-    #     acount_w[i] <- acount_w[i] + 1
-    #   }
-    # }
-
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(1)
-    if (nu_temp > 2 && nu_temp < 100){
+    if (nu_temp > 4 && nu_temp < 100){
       num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
         sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
       denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -617,6 +541,7 @@ BVAR.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL)
       }
 
     }
+    mu.xi <- nu/( nu - 2 )
 
     if(j %% batchlength == 0 ){
       if (acount_nu > batchlength * TARGACCEPT){
@@ -849,7 +774,7 @@ BVAR.MT.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+      if (nu_temp[k] > 4 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -942,6 +867,7 @@ BVAR.MST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
   # Multi degrees of freedom
   nu <- inits$nu
+  mu.xi <- nu/( nu - 2 )
   logsigma_nu <- rep(0,K)
   acount_nu <- rep(0,K)
   acount_w <- rep(0, t_max)
@@ -952,14 +878,6 @@ BVAR.MST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   w_sample <- rep(1, t_max)
   w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
-  #w_sqrt_inv <- 1/w_sqrt
-
-  # svdraw <- list()
-  # paravol <- matrix(0, ncol = 3, nrow = K)
-  # for (i in c(1:K)){
-  #   svdraw[[i]] <- list(para = c(mu = 0, phi = 0.95, sigma = 0.2),
-  #                       latent = h[i,])
-  # }
 
   # new precompute
   i <- K*m
@@ -1012,7 +930,7 @@ BVAR.MST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     W.mat <- matrix(0,K*t_max,K)
     idx <- (0:(t_max-1))*K
     for ( i in 1:K ) {
-      W.mat[idx + (i-1)*t_max*K + i] <- sqrt(w[i,]) # W^(1/2)
+      W.mat[idx + (i-1)*t_max*K + i] <- (w[i,] - mu.xi[i])/sqrt(w[i,]) # W^(-1/2) * (W - bar(W))
     }
     x2 <- matrix(0,K*t_max,K)
     for ( i in 1:K ) {
@@ -1030,24 +948,15 @@ BVAR.MST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     D <- diag(gamma)
 
     # Sample vol
-    ytilde <- A%*% ((yt - B %*%xt - D %*% w)/ w_sqrt)
+    ytilde <- A%*% ((yt - B %*%xt - D %*% ( w - mu.xi ))/ w_sqrt)
     aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
     sqrtvol <- aux$sigt
     sigma_h <- aux$sigma_h
 
-    # for (i in c(1:K)){
-    #   svdraw[[i]] <- svsample2(ytilde[i,], startpara = para(svdraw[[i]]),
-    #                            startlatent = latent(svdraw[[i]]), priormu = priormu,
-    #                            priorphi = priorphi, priorsigma = priorsigma)
-    #   paravol[i,] <- para(svdraw[[i]])
-    #   h[i,] <- as.numeric(latent(svdraw[[i]]))
-    # }
-    # sqrtvol <- exp(h/2)
-
     # Sample A0
-    u_std <- (yt - B %*% xt - D%*% w) / w_sqrt # change from Gaussian
+    u_std <- (yt - B %*% xt - D%*% ( w - mu.xi )) / w_sqrt # change from Gaussian
     u_neg <- - u_std
     a_sample <- rep(0, K * (K - 1) /2)
     for (i in c(2:K)){
@@ -1066,25 +975,14 @@ BVAR.MST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     diag(A) <- 1
 
     # Sample w
-    u <- (yt - B %*%xt)
-    u_proposal <- A %*% (yt - B %*%xt)
+    u <- (yt - B %*%xt + mu.xi * gamma  )
+    u_proposal <- A %*% (yt - B %*%xt) + mu.xi * gamma
     a_target <- (nu*0.5 + 1*0.5) * 0.75
     b_target <- (nu*0.5 + 0.5 * u_proposal^2 / sqrtvol^2)*0.75  # adjust by 0.75
     w_temp <- matrix( rinvgamma( n = K*t_max, shape = a_target, rate = b_target ), K, t_max ) # rinvgamma recycles arguments
     log_w_temp <- log(w_temp)
     w_temp_sqrt <- sqrt(w_temp)
-    # num_mh <- sapply(1:t_max, function (i) { Sigma2_inv_t = t(A)%*% diag(1/exp(h[,i])) %*% A; u.gw <- w_temp_sqrt_inv[,i] * (u[,i] - gamma*w_temp[,i])
-    #                                          sum(dinvgamma(w_temp[,i], shape = nu*0.5, rate = nu*0.5, log = T)) + #prior
-    #                                          ( - 0.5 * sum(log_w_temp[,i]) - 0.5 * t(u.gw) %*% Sigma2_inv_t %*% u.gw ) - # posterior
-    #                                          sum( dinvgamma(w_temp[,i], shape = a_target, rate = b_target[,i], log = T)) # proposal
-    #                                        }
-    #                  )
-    # denum_mh <- sapply(1:t_max, function (i) { Sigma2_inv_t = t(A)%*% diag(1/exp(h[,i])) %*% A; u.gw <- (u[,i] - gamma*w[,i])/sqrt(w[,i])
-    #                                           sum(dinvgamma(w[,i], shape = nu*0.5, rate = nu*0.5, log = T)) + #prior
-    #                                           ( - 0.5 * sum(log(w[,i])) - 0.5 * t(u.gw) %*% Sigma2_inv_t %*% u.gw ) - # posterior
-    #                                           sum( dinvgamma(w[,i], shape = a_target, rate = b_target[,i], log = T)) # proposal
-    #                                         }
-    #                 )
+
     A.w.u.s.prop <- ( A %*% ( u/w_temp_sqrt - w_temp_sqrt*gamma ) )/sqrtvol
     num_mh <- colSums(dinvgamma(w_temp, shape = nu*0.5, rate = nu*0.5, log = T)) - #prior
       0.5*( colSums(log(w_temp)) + colSums(A.w.u.s.prop^2) ) - # posterior
@@ -1098,41 +996,10 @@ BVAR.MST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     w_sqrt[,acc] <- w_temp_sqrt[,acc]
     acount_w[acc] <- acount_w[acc] + 1
 
-    # # Sample w
-    # u <- (yt - B %*%xt)
-    # u_proposal <- A %*% (yt - B %*%xt)
-    # for (i in c(1:t_max)){
-    #   a_target <- (nu*0.5 + 1*0.5) * 0.75
-    #   b_target <- (nu*0.5 + 0.5 * u_proposal[,i]^2 / sqrtvol[,i]^2)*0.75  # adjust by 0.75
-    #   w_temp = w[,i]
-    #   for (k in c(1:K)){
-    #     w_temp[k] <- rinvgamma(1, shape = a_target[k], rate = b_target[k])
-    #   }
-    #   log_w_temp <- log(w_temp)
-    #   w_temp_sqrt_inv = 1 / sqrt(w_temp)
-    #
-    #   #total_log_dens <- (-0.5) * sum(log(w[,i])) - 0.5 * t(u[,i]) %*% diag(w_sqrt_inv[,i]) %*% Sigma2_inv %*% diag(w_sqrt_inv[,i]) %*% u[,i]  + sum(dinvgamma(w[,i], shape = nu*0.5, rate = nu*0.5, log = T))
-    #   Sigma2_inv_t = t(A)%*% diag(1/exp(h[,i])) %*% A
-    #   num_mh =  sum(dinvgamma(w_temp, shape = nu*0.5, rate = nu*0.5, log = T)) +  # prior
-    #     ( - 0.5 * sum(log_w_temp) - 0.5 * t(u[,i] - gamma*w_temp) %*% diag(w_temp_sqrt_inv) %*% Sigma2_inv_t %*% diag(w_temp_sqrt_inv) %*% (u[,i] - gamma*w_temp)) - # posterior
-    #     sum( dinvgamma(w_temp, shape = a_target, rate = b_target, log = T)) # proposal
-    #   denum_mh = sum(dinvgamma(w[,i], shape = nu*0.5, rate = nu*0.5, log = T)) + # prior
-    #     (-0.5) * sum(log(w[,i])) - 0.5 * t(u[,i] - gamma*w[,i]) %*% diag(w_sqrt_inv[,i]) %*% Sigma2_inv_t %*% diag(w_sqrt_inv[,i]) %*% (u[,i] - gamma*w[,i])  - # posterior
-    #     sum( dinvgamma(w[,i], shape = a_target, rate = b_target, log = T))
-    #   alpha = num_mh - denum_mh;
-    #   temp = log(runif(1))
-    #   if (alpha > temp){
-    #     w[,i] <- w_temp
-    #     w_sqrt[,i] <- sqrt(w_temp)
-    #     w_sqrt_inv[,i] <- 1/sqrt(w_temp)
-    #     acount_w[i] <- acount_w[i] + 1
-    #   }
-    # }
-
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+      if (nu_temp[k] > 4 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1147,6 +1014,7 @@ BVAR.MST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
       }
 
     }
+    mu.xi <- nu / ( nu - 2 )
 
     if(j %% batchlength == 0 ){
       for (jj in c(1:K)) {
@@ -1323,7 +1191,7 @@ BVAR.OT.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+      if (nu_temp[k] > 4 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1417,6 +1285,7 @@ BVAR.OST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
   # Multi degrees of freedom
   nu <- inits$nu
+  mu.xi <- nu/( nu - 2 )
   logsigma_nu <- rep(0,K)
   acount_nu <- rep(0,K)
   acount_w <- rep(0, t_max)
@@ -1427,13 +1296,6 @@ BVAR.OST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
   w_sample <- rep(1, t_max)
   w <- reprow(w_sample, K)
   w_sqrt <- sqrt(w)
-
-  # svdraw <- list()
-  # paravol <- matrix(0, ncol = 3, nrow = K)
-  # for (i in c(1:K)){
-  #   svdraw[[i]] <- list(para = c(mu = 0, phi = 0.95, sigma = 0.2),
-  #                       latent = h[i,])
-  # }
 
   # new precompute
   i <- K*m
@@ -1480,21 +1342,21 @@ BVAR.OST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     W.mat <- matrix(0,K*t_max,K)
     idx <- (0:(t_max-1))*K
     for ( i in 1:K ) {
-      W.mat[idx + (i-1)*t_max*K + i] <- w[i,]
+      W.mat[idx + (i-1)*t_max*K + i] <- w[i,] -  mu.xi[i]
     }
     x.tilde <- cbind( kronecker( t(xt), A ), W.mat ) * wt
     theta.prec.chol <- chol( theta.prior.prec + crossprod(x.tilde) )
     theta <- backsolve( theta.prec.chol,
-                       backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
-                                  upper.tri = T, transpose = T )
-                       + rnorm(K*(m+1)) )
+                        backsolve( theta.prec.chol, theta.prior.precmean + crossprod( x.tilde, y.tilde ),
+                                   upper.tri = T, transpose = T )
+                        + rnorm(K*(m+1)) )
     B <- matrix(theta[1:(m*K)],K,m)
     b_sample <- as.vector(B)
     gamma <- theta[(m*K+1):((m+1)*K)]
     D <- diag(gamma)
 
     # Sample vol
-    ytilde <- (A %*% (yt - B %*% xt) - D %*% w) / w_sqrt
+    ytilde <- (A %*% (yt - B %*% xt) - D %*% ( w - mu.xi ) ) / w_sqrt
     aux <- sample_h_ele(ytilde = ytilde, sigma_h = sigma_h, h0_mean = h0_mean, h = h, K = K, t_max = t_max, prior = prior)
     h <- aux$Sigtdraw
     h0 <- as.numeric(aux$h0)
@@ -1510,7 +1372,7 @@ BVAR.OST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
       id_start <- id_end - i + 2
       a_sub <- a_prior[id_start:id_end]
       V_a_sub <- V_a_prior[id_start:id_end, id_start:id_end]
-      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - w[i,] * gamma[i]) / sqrtvol[i,] / w_sqrt[i,],
+      a_sample[c(id_start:id_end)] <- sample_A_ele(ysub = (u_std[i,] - (w[i,]  - mu.xi[i] ) * gamma[i]) / sqrtvol[i,] / w_sqrt[i,],
                                                    xsub = matrix(u_neg[1:(i-1),] / reprow(sqrtvol[i,],i-1) / reprow(w_sqrt[i,], i-1), nrow = i-1),
                                                    a_sub = a_sub,
                                                    V_a_sub = V_a_sub)
@@ -1521,61 +1383,15 @@ BVAR.OST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     diag(A) <- 1
 
     # Sample w
-    u <-  A %*% (yt - B %*%xt)
+    u <-  A %*% (yt - B %*%xt) + gamma * mu.xi
     w <- matrix( mapply( GIGrvg::rgig, n = 1, lambda = -(nu+1)*0.5, chi = nu + (u^2)/exp(h),
                          psi = gamma^2/exp(h) ), K, t_max )
-
-#    for (i in c(1:t_max)){
-#      w[,i] <- mapply( GIGrvg::rgig, n = 1, lambda = -(nu+1)*0.5, chi = nu + (u[,i]^2)/exp(h[,i]),
-#                       psi = gamma^2/exp(h[,i]))
-#      for (jj in 1:K) {
-#        w[jj,i] <- GIGrvg::rgig( n = 1, lambda = -(nu[jj]+1)*0.5, chi = nu[jj] + (u[jj,i]^2)/exp(h[jj,i]),
-#                                 psi = gamma[jj]^2/exp(h[jj,i]) )
-#        w[jj,i] <- 1/GIGrvg::rgig( n = 1, lambda = (nu[jj]-1)*0.5, psi = nu[jj] + (u[jj,i]^2)/exp(h[jj,i]),
-#                                 chi = gamma[jj]^2/exp(h[jj,i]) )
-#        w[jj,i] <- GeneralizedHyperbolic::rgig( n = 1, lambda = -(nu[jj]-1)*0.5, chi = nu[jj] + (u[jj,i]^2)/exp(h[jj,i]),
-#                                                psi = gamma[jj]^2/exp(h[jj,i]) )
-#        if (w[jj,i] > 200 ) {
-#          cat( j, i, jj, w[jj,i], -(nu[jj]-1)*0.5, nu[jj] + (u[jj,i]^2)/exp(h[jj,i]), gamma[jj]^2/exp(h[jj,i]), "\n" )
-#        }
-#      }
-#    }
     w_sqrt <- sqrt(w)
-
-#     # Sample w
-#     u <- A %*% (yt - B %*%xt)
-#     for (i in c(1:t_max)){
-#       ran_stu = rt(K, df = 4)
-#       Sigma2_inv_t = 1/exp(h[,i])
-#       a_eq <- -0.5* (gamma^2 * Sigma2_inv_t)
-#       b_eq <- -((0.5*1 + nu/2+1))
-#       c_eq =  0.5 * (u[,i]^2 * Sigma2_inv_t) + nu/2
-#       w_mode <- (- b_eq - sqrt(b_eq^2-4*a_eq*c_eq))/(2*a_eq)
-#       w_mode <- ifelse(abs(w_mode)<1e-5, - c_eq/b_eq, w_mode)
-#       mode_target <- log( w_mode )
-#       cov_target <- 1/( c_eq / w_mode - a_eq * w_mode) * 1.2 # scale by 1.2
-#
-#       log_w_temp = mode_target + sqrt(cov_target)*ran_stu
-#       w_temp = exp(log_w_temp)
-#       num_mh =  mapply( dinvgamma, x = w_temp, shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-#         ( - 0.5 * 1 * log_w_temp - 0.5 * (u[,i] - gamma*w_temp)^2 * Sigma2_inv_t / w_temp) - # posterior
-#         dt( (log_w_temp - mode_target)/sqrt(cov_target), df = 4, log = T) + log_w_temp # proposal
-#       denum_mh = mapply( dinvgamma, x = w[,i], shape = nu*0.5, rate = nu*0.5, log = T) +  # prior
-#         ( - 0.5 * 1 * log(w[,i]) - 0.5 * (u[,i] - gamma*w[,i])^2 * Sigma2_inv_t / w[,i]) - # posterior
-#         dt( (log(w[,i]) - mode_target)/sqrt(cov_target), df = 4, log = T) + log(w[,i]) # proposal
-#       alpha = num_mh - denum_mh
-#       temp = log(runif(K))
-#       acre = alpha > temp
-#       w[,i] <- ifelse(acre, w_temp, w[,i])
-#       w_sqrt[,i] <- sqrt(w[,i])
-#       acount_w[i] <- acount_w[i] + mean(acre)
-#     }
 
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
-#      if (nu_temp[k] >= 5 && nu_temp[k] < 100){
+      if (nu_temp[k] > 4 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1589,6 +1405,7 @@ BVAR.OST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
 
       }
     }
+    mu.xi <- nu / ( nu - 2 )
 
     if(j %% batchlength == 0 ){
       for (jj in c(1:K)) {
@@ -1817,7 +1634,7 @@ BVAR.dynSkew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
 
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(1)
-    if (nu_temp > 2 && nu_temp < 100){
+    if (nu_temp > 4 && nu_temp < 100){
       num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
         sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
       denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -2060,7 +1877,7 @@ BVAR.dynMST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+      if (nu_temp[k] > 4 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -2296,7 +2113,7 @@ BVAR.dynOST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL){
     # Sample nu
     nu_temp = nu + exp(logsigma_nu)*rnorm(K)
     for (k in c(1:K)){
-      if (nu_temp[k] > 2 && nu_temp[k] < 100){
+      if (nu_temp[k] > 4 && nu_temp[k] < 100){
         num_mh = dgamma(nu_temp[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w[k,], shape = nu_temp[k]*0.5, rate = nu_temp[k]*0.5, log = T))
         denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +

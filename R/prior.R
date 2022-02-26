@@ -40,7 +40,7 @@ get_prior_minnesota <- function(y, p, intercept=TRUE, ...){
     Ylagi         <- stats::embed(y[,ii],dimension = p + 1)[,-1]
     Yi            <- y[(p + 1):t_max,ii]
     arest         <- stats::lm(Yi~Ylagi)
-    sigmasq[ii] <- summary(arest)$sigma # the square root of the estimated variance of the random error sigma^2 = 1/(n-p) Sum(w[i] R[i]^2)
+    sigmasq[ii] <- summary(arest)$sigma^2 # the square root of the estimated variance of the random error sigma^2 = 1/(n-p) Sum(w[i] R[i]^2)
   }
 
   #print(sigmasq)
@@ -240,12 +240,12 @@ get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
   p = (length(prior$b_prior) / K - 1) / K
 
   A = matrix(0, K, K)
-  A[upper.tri(A, diag=FALSE)] = prior$a_prior + 0.01 * rnorm(K*(K-1)*0.5)
+  A[upper.tri(A, diag=FALSE)] = prior$a_prior + sqrt(diag(prior$V_a_prior)) * rnorm(K*(K-1)*0.5)
   A <- t(A)
   diag(A) <- 1
 
-  B = matrix(prior$b_prior, nrow = K) + 0.01 * rnorm(K + K*K*p)
-  sigma = prior$sigma
+  B = matrix(prior$b_prior, nrow = K) + sqrt(diag(prior$V_b_prior)) * rnorm(K + K*K*p)
+  sigma = prior$sigma + rnorm(K, 0,1)^2
 
   #Gaussian
   inits <- list(samples = samples,
@@ -258,19 +258,19 @@ get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
 
   #Student
   if (dist !="Gaussian"){
-    inits$nu = 10
+    inits$nu = 4 + rgamma(1, shape = 2, rate = 0.1)
   }
   #Skew.Student
   if (dist =="Skew.Student" |
       dist =="MST" | dist =="OST"|
       dist =="dynSkew.Student" | dist =="OrthSkewNorm"| dist =="dynOST"){
-    inits$gamma = rep(0.001,K)
+    inits$gamma = rep(0.001,K) + 0.1 *rnorm(K)
   }
   #MT
   if (dist == "MT" | dist =="OT" |
       dist == "MST" | dist == "OST" |
       dist == "dynMST"| dist == "dynOST"){
-    inits$nu = rep(10,K)
+    inits$nu = 4 + rgamma(K, shape = 2, rate = 0.1)
   }
   #Stochastic vol
   if(SV){

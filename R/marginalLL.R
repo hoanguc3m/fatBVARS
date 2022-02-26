@@ -82,11 +82,15 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
     H_mat <- get_post(mcmc, element = "h")
     H0_mat <- get_post(mcmc, element = "lh0")
+
     Nu_mat <- as.matrix(get_post(mcmc, element = "nu"))
     if (ncol(Nu_mat) == 1) colnames(Nu_mat) <- "nu"
     W_mat <- get_post(mcmc, element = "w")
 
-    sum_log <- rep(0, ndraws)
+    sum_log_intll <- rep(0, ndraws)
+    sum_log_prior <- rep(0, ndraws)
+    ah0 <- log(prior$sigma^2) # Prior of h0
+    Vh0 <- 4 # Prior of h0
 
     if (is.null(numCores)) numCores <- parallel::detectCores()*0.5
 
@@ -100,8 +104,31 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
       if (dist == "Gaussian") {
         # param <- cbind(B_gen, A_gen, Sigma_gen)
+        # for (j in c(1:ndraws)){
+        #   B <- matrix(B_gen[j,], nrow = K)
+        #   A <- a0toA(A_gen[j,], K)
+        #   sigma_h <- Sigma_gen[j,]
+        #   h0 <- H0_gen[j,]
+        #   # mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+        #   #   mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+        #   #   sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
+        #   #   sum(dnorm(h0, mean = ah0, sd = Vh0, log = T))
+        #
+        # }
 
-        sum_log <- parallel::mclapply(1:ndraws,
+        sum_log_prior <- parallel::mclapply(1:ndraws,
+                                            FUN = function(j) {
+                                              B <- matrix(B_gen[j,], nrow = K)
+                                              A <- a0toA(A_gen[j,], K)
+                                              sigma_h <- Sigma_gen[j,]
+                                              h0 <- H0_gen[j,]
+                                                mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+                                                mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+                                                sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
+                                                sum(dnorm(h0, mean = ah0, sd = Vh0, log = T))
+                                            },
+                                            mc.cores = numCores)
+        sum_log_intll <- parallel::mclapply(1:ndraws,
                                       FUN = function(j) {
                                         B <- matrix(B_gen[j,], nrow = K)
                                         A <- a0toA(A_gen[j,], K)
@@ -113,8 +140,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                           mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                           sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                          #sum(dnorm(sqrt(sigma_h), log = T)) +
-                                          sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T))
+                                          sum(dnorm(h0, mean = ah0, sd = Vh0, log = T))
                                       },
                                       mc.cores = numCores)
       } else {
@@ -125,7 +151,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
         if (dist == "Student") {
           w_mean <- apply(W_mat, MARGIN = 2, mean)
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -140,8 +166,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            #sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)
                                         },
                                         mc.cores = numCores)
@@ -150,7 +175,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
         if (dist == "Skew.Student") {
           w_mean <- apply(W_mat, MARGIN = 2, mean)
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -168,8 +193,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            #sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },
@@ -178,7 +202,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
         if (dist == "MT") {
           w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -194,8 +218,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            #sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
                                         },
                                         mc.cores = numCores)
@@ -205,7 +228,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
         if (dist == "MST") {
           w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -222,8 +245,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            #sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },
@@ -232,8 +254,24 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
         }
 
         if (dist == "OT") {
+          sum_log_prior <- parallel::mclapply(1:ndraws,
+                                              FUN = function(j) {
+                                                B <- matrix(B_gen[j,], nrow = K)
+                                                A <- a0toA(A_gen[j,], K)
+                                                sigma_h <- Sigma_gen[j,]
+                                                h0 <- H0_gen[j,]
+                                                nu <- Nu_gen[j,]
+
+                                                mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+                                                  mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+                                                  sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
+                                                  sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
+                                                  sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
+                                              },
+                                              mc.cores = numCores)
+
           w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -255,8 +293,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            #sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
                                         },
                                         mc.cores = numCores)
@@ -266,7 +303,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
         if (dist == "OST") {
           w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -291,8 +328,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            #sum(dnorm(sqrt(sigma_h), log = T)) +
-                                            sum(dnorm(h0, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
+                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },
@@ -309,7 +345,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
 
       if (dist == "Gaussian") {
-        sum_log <- parallel::mclapply(1:ndraws,
+        sum_log_intll <- parallel::mclapply(1:ndraws,
                                        FUN = function(j) {
                                          B <- matrix(B_gen[j,], nrow = K)
                                          A <- a0toA(A_gen[j,], K)
@@ -343,7 +379,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
         sum_log_prop <- sum_log_prop + Nu_gen_list$sum_log_prop
 
         if (dist == "Student") {
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -365,7 +401,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
           }
 
         if (dist == "Skew.Student") {
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -389,7 +425,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
           }
 
         if (dist == "MT") {
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -410,7 +446,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
           }
 
         if (dist == "MST") {
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -433,7 +469,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
           }
 
         if (dist == "OT") {
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -454,7 +490,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
         }
 
         if (dist == "OST") {
-          sum_log <- parallel::mclapply(1:ndraws,
+          sum_log_intll <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
@@ -481,7 +517,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
     } # end SV
 
-    sum_log <- unlist(sum_log)
+    sum_log <- unlist(sum_log_intll)
     sum_log <- sum_log - sum_log_prop # log posterior - log proposal
 
     short_sumlog = matrix(sum_log, nrow = ndraws/20, ncol = 20)
@@ -493,7 +529,11 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
     # ml_est <- TrimmedML_est(sum_log)
   return( list( LL = ml,
                 std = mlstd,
-                sum_log = sum_log))
+                sum_log = sum_log,
+                sum_log_intll = unlist(sum_log_intll),
+                sum_log_prior = unlist(sum_log_prior),
+                sum_log_prop = sum_log_prop
+                ))
   } else {
     return( marginalLLSing(Chain, ndraws) )
   }

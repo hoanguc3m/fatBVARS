@@ -95,7 +95,8 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
                     mvnfast::dmvn(X = A_gen, mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                     sum(dgamma(Sigma_gen, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
                     # sum(dnorm(H0_gen, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
-                    dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)
+                    dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T) +
+                    log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) # Truncated
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen, nrow = K)
@@ -122,6 +123,7 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
                     sum(dgamma(Sigma_gen, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
                     # sum(dnorm(H0_gen, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
                     dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T) +
+                    log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) + # Truncated
                     mvnfast::dmvn(X = Gamma_gen, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
 
           sum_log <- parallel::mclapply(1:ndraws,
@@ -152,7 +154,8 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
                     mvnfast::dmvn(X = A_gen, mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                     sum(dgamma(Sigma_gen, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
                     # sum(dnorm(H0_gen, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
-                    sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
+                    sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
+                    K * log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) # Truncated
 
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
@@ -180,6 +183,7 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
                     sum(dgamma(Sigma_gen, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
                     # sum(dnorm(H0_gen, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
                     sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
+                    K * log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) + # Truncated
                     mvnfast::dmvn(X = Gamma_gen, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
@@ -207,7 +211,8 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
                     mvnfast::dmvn(X = A_gen, mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                     sum(dgamma(Sigma_gen, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
                     # sum(dnorm(H0_gen, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
-                    sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
+                    sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
+                    K * log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) # Truncated
 
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
@@ -235,6 +240,7 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
                     sum(dgamma(Sigma_gen, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
                     # sum(dnorm(H0_gen, mean = log(prior$sigma), sd = sqrt(4), log = T)) +
                     sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
+                    K * log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) + # Truncated
                     mvnfast::dmvn(X = Gamma_gen, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
@@ -287,7 +293,8 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
           lprior <- mvnfast::dmvn(X = B_gen, mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                     mvnfast::dmvn(X = A_gen, mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                     sum(invgamma::dinvgamma(Sigma_gen^2, shape = prior$sigma_T0 * 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                    dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)
+                    dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T) +
+                    log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) # Truncated
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen, nrow = K)
@@ -307,6 +314,7 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
                     mvnfast::dmvn(X = A_gen, mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                     sum(invgamma::dinvgamma(Sigma_gen^2, shape = prior$sigma_T0 * 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
                     sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
+                    log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) + # Truncated
                     mvnfast::dmvn(X = Gamma_gen, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
@@ -327,7 +335,8 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
           lprior <- mvnfast::dmvn(X = B_gen, mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                     mvnfast::dmvn(X = A_gen, mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                     sum(invgamma::dinvgamma(Sigma_gen^2, shape = prior$sigma_T0 * 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                    sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
+                    sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
+                    K * log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) # Truncated
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen, nrow = K)
@@ -348,6 +357,7 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
                     mvnfast::dmvn(X = A_gen, mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                     sum(invgamma::dinvgamma(Sigma_gen^2, shape = prior$sigma_T0 * 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
                     sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
+                    K * log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) + # Truncated
                     mvnfast::dmvn(X = Gamma_gen, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
@@ -369,7 +379,8 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
           lprior <- mvnfast::dmvn(X = B_gen, mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                     mvnfast::dmvn(X = A_gen, mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                     sum(invgamma::dinvgamma(Sigma_gen^2, shape = prior$sigma_T0 * 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                    sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
+                    sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
+                    K * log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) # Truncated
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {
                                           B <- matrix(B_gen, nrow = K)
@@ -390,6 +401,7 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
                     mvnfast::dmvn(X = A_gen, mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                     sum(invgamma::dinvgamma(Sigma_gen^2, shape = prior$sigma_T0 * 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
                     sum(dgamma(Nu_gen, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
+                    K * log( 1/(pgamma(100, shape = 2, rate = 0.1) - pgamma(4, shape = 2, rate = 0.1) ) ) + # Truncated
                     mvnfast::dmvn(X = Gamma_gen, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
           sum_log <- parallel::mclapply(1:ndraws,
                                         FUN = function(j) {

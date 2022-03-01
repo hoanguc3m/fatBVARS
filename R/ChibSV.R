@@ -48,7 +48,7 @@ Chib.LML.SV <- function(Chain,
     if (dist == "Gaussian") {
 
       ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
-      RhpcBLASctl::blas_set_num_threads(RhpcBLASctl::get_num_cores())
+      RhpcBLASctl::blas_set_num_threads(numCores)
 
       cat("Pi( B* | y, A*, Sigma*) \n ")
       P1 <- Chib.Gaussian.SV(y, K = K, p = p, y0 = y0, prior = prior, inits = inits,
@@ -75,7 +75,7 @@ Chib.LML.SV <- function(Chain,
     if (dist == "Student") {
       inits$w <- W_med
       ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
-      RhpcBLASctl::blas_set_num_threads(RhpcBLASctl::get_num_cores())
+      RhpcBLASctl::blas_set_num_threads(numCores)
 
       cat("Pi( B* | y, A*, Sigma*, Nu*) \n ")
       P1 <- Chib.Student.SV(y, K = K, p = p, y0 = y0, prior = prior, inits = inits,
@@ -113,7 +113,7 @@ Chib.LML.SV <- function(Chain,
     if (dist == "Skew.Student") {
       inits$w <- W_med
       ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
-      RhpcBLASctl::blas_set_num_threads(RhpcBLASctl::get_num_cores())
+      RhpcBLASctl::blas_set_num_threads(numCores)
 
       cat("Pi( B* | y, A*, Sigma*, Nu*) \n ")
       P1 <- Chib.Skew.Student.SV(y, K = K, p = p, y0 = y0, prior = prior, inits = inits,
@@ -152,7 +152,7 @@ Chib.LML.SV <- function(Chain,
     if (dist == "MT") {
       inits$w <- matrix(W_med, nrow = K)
       ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
-      RhpcBLASctl::blas_set_num_threads(RhpcBLASctl::get_num_cores())
+      RhpcBLASctl::blas_set_num_threads(numCores)
 
 
       cat("Pi( B* | y, A*, Sigma*, Nu*) \n ")
@@ -191,7 +191,7 @@ Chib.LML.SV <- function(Chain,
     if (dist == "MST") {
       inits$w <- matrix(W_med, nrow = K)
       ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
-      RhpcBLASctl::blas_set_num_threads(RhpcBLASctl::get_num_cores())
+      RhpcBLASctl::blas_set_num_threads(numCores)
 
 
       cat("Pi( B* | y, A*, Sigma*, Nu*) \n ")
@@ -230,7 +230,7 @@ Chib.LML.SV <- function(Chain,
     if (dist == "OT") {
       inits$w <- matrix(W_med, nrow = K)
       ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
-      RhpcBLASctl::blas_set_num_threads(RhpcBLASctl::get_num_cores())
+      RhpcBLASctl::blas_set_num_threads(numCores)
 
 
       cat("Pi( B* | y, A*, Sigma*, Nu*) \n ")
@@ -269,7 +269,7 @@ Chib.LML.SV <- function(Chain,
     if (dist == "OST") {
       inits$w <- matrix(W_med, nrow = K)
       ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
-      RhpcBLASctl::blas_set_num_threads(RhpcBLASctl::get_num_cores())
+      RhpcBLASctl::blas_set_num_threads(numCores)
 
 
       cat("Pi( B* | y, A*, Sigma*, Nu*) \n ")
@@ -710,8 +710,13 @@ Chib.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     if (cal_Nu & (j > burnin) & (j %% thin == 0)){
       # Denominator
       if (fix_Nu) {
-        nu_temp = inits$nu + exp(logsigma_nu)*rnorm(1)
-        if (nu_temp > 4 && nu_temp < 100){
+        # Move from nu_star to nu, using truncated proposal
+        while (TRUE){
+          nu_temp = inits$nu + exp(logsigma_nu)*rnorm(1)
+          if (nu_temp > 4 && nu_temp < 100){
+            break
+          }
+        }
           num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
             sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
 
@@ -724,7 +729,7 @@ Chib.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
           }
           lpost[(j - burnin) %/% thin] <- log(alpha) # Take a negative for denominator
 
-        }
+
       } else {
         # Nominator
         q_nu_nustar <- dnorm(inits$nu, mean = nu, sd = exp(logsigma_nu) ) # Move nu to inits$nu
@@ -736,16 +741,6 @@ Chib.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
         lpost[(j - burnin) %/% thin] <- log( alpha * q_nu_nustar)
       }
     }
-
-    # if(j %% batchlength == 0 ){
-    #   if (acount_nu > batchlength * TARGACCEPT){
-    #     logsigma_nu = logsigma_nu + adaptamount(j %/% batchlength);
-    #   }
-    #   if (acount_nu < batchlength * TARGACCEPT){
-    #     logsigma_nu = logsigma_nu - adaptamount(j %/% batchlength);
-    #   }
-    #   acount_nu = 0
-    # }
 
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, nu, diag(sigma_h), h0, as.numeric(h), as.numeric(w_sample))
@@ -986,8 +981,14 @@ Chib.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
     if (cal_Nu & (j > burnin) & (j %% thin == 0)){
       # Denominator
       if (fix_Nu) {
-        nu_temp = inits$nu + exp(logsigma_nu)*rnorm(1)
-        if (nu_temp > 4 && nu_temp < 100){
+        # Move from nu_star to nu, using truncated proposal
+        while (TRUE){
+          nu_temp = inits$nu + exp(logsigma_nu)*rnorm(1)
+          if (nu_temp > 4 && nu_temp < 100){
+            break
+          }
+        }
+
           num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
             sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
 
@@ -1000,7 +1001,7 @@ Chib.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
           }
           lpost[(j - burnin) %/% thin] <- log(alpha) # Take a negative for denominator
 
-        }
+
       } else {
         # Nominator
         q_nu_nustar <- dnorm(inits$nu, mean = nu, sd = exp(logsigma_nu) ) # Move nu to inits$nu
@@ -1012,16 +1013,6 @@ Chib.Skew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
         lpost[(j - burnin) %/% thin] <- log( alpha * q_nu_nustar)
       }
     }
-
-    # if(j %% batchlength == 0 ){
-    #   if (acount_nu > batchlength * TARGACCEPT){
-    #     logsigma_nu = logsigma_nu + adaptamount(j %/% batchlength);
-    #   }
-    #   if (acount_nu < batchlength * TARGACCEPT){
-    #     logsigma_nu = logsigma_nu - adaptamount(j %/% batchlength);
-    #   }
-    #   acount_nu = 0
-    # }
 
     if ((j > inits$burnin) & (j %% inits$thin == 0))
       mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, gamma, nu, diag(sigma_h), h0, as.numeric(h), as.numeric(w_sample))
@@ -1348,8 +1339,13 @@ Chib.MT.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
           # nu up nu_id only
           k <- nu_id
-          nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
-          if (nu_temp > 4 && nu_temp < 100){
+          # Move from nu_star to nu, using truncated proposal
+          while (TRUE){
+            nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
+            if (nu_temp > 4 && nu_temp < 100){
+              break
+            }
+          }
             num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
               sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
             denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1360,10 +1356,6 @@ Chib.MT.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
               acount_nu[k] = acount_nu[k] + 1
             }
             lpost[(j - burnin) %/% thin,k] <- log(alpha) # Take a negative for denominator
-
-          }
-
-
 
         } else {
           # Nominator
@@ -1378,17 +1370,7 @@ Chib.MT.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
         }
 
       }
-      # if(j %% batchlength == 0 ){
-      #   for (jj in c(1:K)) {
-      #     if (acount_nu[jj] > batchlength * TARGACCEPT){
-      #       logsigma_nu[jj] = logsigma_nu[jj] + adaptamount(j %/% batchlength);
-      #     }
-      #     if (acount_nu[jj] < batchlength * TARGACCEPT){
-      #       logsigma_nu[jj] = logsigma_nu[jj] - adaptamount(j %/% batchlength);
-      #     }
-      #     acount_nu[jj] = 0
-      #   }
-      # }
+
 
       if ((j > inits$burnin) & (j %% inits$thin == 0))
         mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, nu, diag(sigma_h), h0, as.numeric(h), as.numeric(w))
@@ -1756,8 +1738,13 @@ Chib.MST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
           # nu up nu_id only
           k <- nu_id
-          nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
-          if (nu_temp > 4 && nu_temp < 100){
+          # Move from nu_star to nu, using truncated proposal
+          while (TRUE){
+            nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
+            if (nu_temp > 4 && nu_temp < 100){
+              break
+            }
+          }
             num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
               sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
             denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1768,10 +1755,6 @@ Chib.MST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
               acount_nu[k] = acount_nu[k] + 1
             }
             lpost[(j - burnin) %/% thin,k] <- log(alpha) # Take a negative for denominator
-
-          }
-
-
 
         } else {
           # Nominator
@@ -1787,17 +1770,6 @@ Chib.MST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
       }
 
-      # if(j %% batchlength == 0 ){
-      #   for (jj in c(1:K)) {
-      #     if (acount_nu[jj] > batchlength * TARGACCEPT){
-      #       logsigma_nu[jj] = logsigma_nu[jj] + adaptamount(j %/% batchlength);
-      #     }
-      #     if (acount_nu[jj] < batchlength * TARGACCEPT){
-      #       logsigma_nu[jj] = logsigma_nu[jj] - adaptamount(j %/% batchlength);
-      #     }
-      #     acount_nu[jj] = 0
-      #   }
-      # }
       if ((j > inits$burnin) & (j %% inits$thin == 0))
         mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, gamma, nu, diag(sigma_h), h0, as.numeric(h), as.numeric(w))
       if (j %% 1000 == 0) {
@@ -2099,8 +2071,13 @@ Chib.OT.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
           # nu up nu_id only
           k <- nu_id
-          nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
-          if (nu_temp > 4 && nu_temp < 100){
+          # Move from nu_star to nu, using truncated proposal
+          while (TRUE){
+            nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
+            if (nu_temp > 4 && nu_temp < 100){
+              break
+            }
+          }
             num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
               sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
             denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -2111,10 +2088,6 @@ Chib.OT.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
               acount_nu[k] = acount_nu[k] + 1
             }
             lpost[(j - burnin) %/% thin,k] <- log(alpha) # Take a negative for denominator
-
-          }
-
-
 
         } else {
           # Nominator
@@ -2129,18 +2102,6 @@ Chib.OT.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
         }
 
       }
-
-      # if(j %% batchlength == 0 ){
-      #   for (jj in c(1:K)) {
-      #     if (acount_nu[jj] > batchlength * TARGACCEPT){
-      #       logsigma_nu[jj] = logsigma_nu[jj] + adaptamount(j %/% batchlength);
-      #     }
-      #     if (acount_nu[jj] < batchlength * TARGACCEPT){
-      #       logsigma_nu[jj] = logsigma_nu[jj] - adaptamount(j %/% batchlength);
-      #     }
-      #     acount_nu[jj] = 0
-      #   }
-      # }
 
       if ((j > inits$burnin) & (j %% inits$thin == 0))
         mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, nu, diag(sigma_h), h0, as.numeric(h), as.numeric(w))
@@ -2473,8 +2434,13 @@ Chib.OST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
           # nu up nu_id only
           k <- nu_id
-          nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
-          if (nu_temp > 4 && nu_temp < 100){
+          # Move from nu_star to nu, using truncated proposal
+          while (TRUE){
+            nu_temp = inits$nu[k] + exp(logsigma_nu[k])*rnorm(1)
+            if (nu_temp > 4 && nu_temp < 100){
+              break
+            }
+          }
             num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
               sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
             denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -2485,10 +2451,6 @@ Chib.OST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
               acount_nu[k] = acount_nu[k] + 1
             }
             lpost[(j - burnin) %/% thin,k] <- log(alpha) # Take a negative for denominator
-
-          }
-
-
 
         } else {
           # Nominator
@@ -2503,18 +2465,6 @@ Chib.OST.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
         }
 
       }
-      # if(j %% batchlength == 0 ){
-      #   for (jj in c(1:K)) {
-      #     if (acount_nu[jj] > batchlength * TARGACCEPT){
-      #       logsigma_nu[jj] = logsigma_nu[jj] + adaptamount(j %/% batchlength);
-      #     }
-      #     if (acount_nu[jj] < batchlength * TARGACCEPT){
-      #       logsigma_nu[jj] = logsigma_nu[jj] - adaptamount(j %/% batchlength);
-      #     }
-      #     acount_nu[jj] = 0
-      #   }
-      # }
-
       if ((j > inits$burnin) & (j %% inits$thin == 0))
         mcmc[, (j - inits$burnin) %/% inits$thin] <- c(b_sample, a_sample, gamma, nu, diag(sigma_h), h0, as.numeric(h), as.numeric(w))
       if (j %% 1000 == 0) {

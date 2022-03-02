@@ -691,10 +691,13 @@ Chib.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
           }
         }
           num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-            sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
+            sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T)) -
+            log( pnorm(100, inits$nu, exp(logsigma_nu)) - pnorm(4, inits$nu, exp(logsigma_nu)) ) # truncation proposal
 
           denum_mh = dgamma(inits$nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-            sum(dinvgamma(w_sample, shape = inits$nu*0.5, rate = inits$nu*0.5, log = T))
+            sum(dinvgamma(w_sample, shape = inits$nu*0.5, rate = inits$nu*0.5, log = T)) -
+            log( pnorm(100, nu_temp,  exp(logsigma_nu)) - pnorm(4, nu_temp, exp(logsigma_nu)) )  # truncation proposal
+
           alpha = min(1, exp(num_mh - denum_mh))
           temp = runif(1)
           if (alpha > temp){
@@ -705,7 +708,8 @@ Chib.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
 
       } else {
         # Nominator
-        q_nu_nustar <- dnorm(inits$nu, mean = nu, sd = exp(logsigma_nu) ) # Move nu to inits$nu
+        q_nu_nustar <- dnorm(inits$nu, mean = nu, sd = exp(logsigma_nu) ) /
+          ( pnorm(100, nu,  exp(logsigma_nu)) - pnorm(4, nu, exp(logsigma_nu)) ) # Move nu to inits$nu
         num_mh = dgamma(inits$nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w_sample, shape = inits$nu*0.5, rate = inits$nu*0.5, log = T))
         denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -948,10 +952,12 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
         }
 
           num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-            sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
+            sum(dinvgamma(w_sample, shape = nu_temp*0.5, rate = nu_temp*0.5, log = T)) -
+            log( pnorm(100, inits$nu, exp(logsigma_nu)) - pnorm(4, inits$nu, exp(logsigma_nu)) ) # truncation proposal
 
           denum_mh = dgamma(inits$nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-            sum(dinvgamma(w_sample, shape = inits$nu*0.5, rate = inits$nu*0.5, log = T))
+            sum(dinvgamma(w_sample, shape = inits$nu*0.5, rate = inits$nu*0.5, log = T)) -
+            log( pnorm(100, nu_temp,  exp(logsigma_nu)) - pnorm(4, nu_temp, exp(logsigma_nu)) )  # truncation proposal
           alpha = min(1, exp(num_mh - denum_mh))
           temp = runif(1)
           if (alpha > temp){
@@ -962,7 +968,8 @@ Chib.Skew.Student.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
 
       } else {
         # Nominator
-        q_nu_nustar <- dnorm(inits$nu, mean = nu, sd = exp(logsigma_nu) ) # Move nu to inits$nu
+        q_nu_nustar <- dnorm(inits$nu, mean = nu, sd = exp(logsigma_nu) ) /
+          ( pnorm(100, nu,  exp(logsigma_nu)) - pnorm(4, nu, exp(logsigma_nu)) ) # Move nu to inits$nu
         num_mh = dgamma(inits$nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
           sum(dinvgamma(w_sample, shape = inits$nu*0.5, rate = inits$nu*0.5, log = T))
         denum_mh = dgamma(nu, shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1292,9 +1299,11 @@ Chib.MT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
             }
           }
               num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-                sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
+                sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T)) -
+                log( pnorm(100, inits$nu[k], exp(logsigma_nu[k])) - pnorm(4, inits$nu[k], exp(logsigma_nu[k])) ) # truncation proposal
               denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
-                sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T))
+                sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T)) -
+                log( pnorm(100, nu_temp,  exp(logsigma_nu[k])) - pnorm(4, nu_temp, exp(logsigma_nu[k])) )  # truncation proposal
               alpha = min(1, exp(num_mh - denum_mh))
               temp = runif(1)
               if (alpha > temp){
@@ -1307,7 +1316,8 @@ Chib.MT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
         } else {
           # Nominator
           k <- nu_id
-            q_nu_nustar <- dnorm(inits$nu[k], mean = nu[k], sd = exp(logsigma_nu[k]) ) # Move nu to inits$nu
+            q_nu_nustar <- dnorm(inits$nu[k], mean = nu[k], sd = exp(logsigma_nu[k]) ) /
+              ( pnorm(100, nu[k],  exp(logsigma_nu[k])) - pnorm(4, nu[k], exp(logsigma_nu[k])) ) # Move nu to inits$nu
             num_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
               sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T))
             denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -1688,9 +1698,12 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
           }
 
             num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-              sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
+              sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T)) -
+              log( pnorm(100, inits$nu[k], exp(logsigma_nu[k])) - pnorm(4, inits$nu[k], exp(logsigma_nu[k])) ) # truncation proposal
             denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
-              sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T))
+              sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T)) -
+              log( pnorm(100, nu_temp,  exp(logsigma_nu[k])) - pnorm(4, nu_temp, exp(logsigma_nu[k])) )  # truncation proposal
+
             alpha = min(1, exp(num_mh - denum_mh))
             temp = runif(1)
             if (alpha > temp){
@@ -1705,7 +1718,8 @@ Chib.MST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
         } else {
           # Nominator
           k <- nu_id
-          q_nu_nustar <- dnorm(inits$nu[k], mean = nu[k], sd = exp(logsigma_nu[k]) ) # Move nu to inits$nu
+          q_nu_nustar <- dnorm(inits$nu[k], mean = nu[k], sd = exp(logsigma_nu[k]) ) /
+            ( pnorm(100, nu[k],  exp(logsigma_nu[k])) - pnorm(4, nu[k], exp(logsigma_nu[k])) ) # Move nu to inits$nu
           num_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
             sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T))
           denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -2006,9 +2020,13 @@ Chib.OT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
           }
 
             num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-              sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
+              sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T)) -
+              log( pnorm(100, inits$nu[k], exp(logsigma_nu[k])) - pnorm(4, inits$nu[k], exp(logsigma_nu[k])) ) # truncation proposal
+
             denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
-              sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T))
+              sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T)) -
+              log( pnorm(100, nu_temp,  exp(logsigma_nu[k])) - pnorm(4, nu_temp, exp(logsigma_nu[k])) )  # truncation proposal
+
             alpha = min(1, exp(num_mh - denum_mh))
             temp = runif(1)
             if (alpha > temp){
@@ -2019,7 +2037,8 @@ Chib.OT.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
         } else {
           # Nominator
           k <- nu_id
-          q_nu_nustar <- dnorm(inits$nu[k], mean = nu[k], sd = exp(logsigma_nu[k]) ) # Move nu to inits$nu
+          q_nu_nustar <- dnorm(inits$nu[k], mean = nu[k], sd = exp(logsigma_nu[k]) ) /
+            ( pnorm(100, nu[k],  exp(logsigma_nu[k])) - pnorm(4, nu[k], exp(logsigma_nu[k])) ) # Move nu to inits$nu
           num_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
             sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T))
           denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
@@ -2354,9 +2373,13 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
             }
           }
             num_mh = dgamma(nu_temp, shape = nu_gam_a, rate = nu_gam_b, log = T) +
-              sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T))
+              sum(dinvgamma(w[k,], shape = nu_temp*0.5, rate = nu_temp*0.5, log = T)) -
+              log( pnorm(100, inits$nu[k], exp(logsigma_nu[k])) - pnorm(4, inits$nu[k], exp(logsigma_nu[k])) ) # truncation proposal
+
             denum_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
-              sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T))
+              sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T)) -
+              log( pnorm(100, nu_temp,  exp(logsigma_nu[k])) - pnorm(4, nu_temp, exp(logsigma_nu[k])) )  # truncation proposal
+
             alpha = min(1, exp(num_mh - denum_mh))
             temp = runif(1)
             if (alpha > temp){
@@ -2367,7 +2390,8 @@ Chib.OST.novol <- function(y, K, p, y0 = NULL, prior = NULL, inits = NULL,
         } else {
           # Nominator
           k <- nu_id
-          q_nu_nustar <- dnorm(inits$nu[k], mean = nu[k], sd = exp(logsigma_nu[k]) ) # Move nu to inits$nu
+          q_nu_nustar <- dnorm(inits$nu[k], mean = nu[k], sd = exp(logsigma_nu[k]) ) /
+            ( pnorm(100, nu[k],  exp(logsigma_nu[k])) - pnorm(4, nu[k], exp(logsigma_nu[k])) ) # Move nu to inits$nu
           num_mh = dgamma(inits$nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +
             sum(dinvgamma(w[k,], shape = inits$nu[k]*0.5, rate = inits$nu[k]*0.5, log = T))
           denum_mh = dgamma(nu[k], shape = nu_gam_a, rate = nu_gam_b, log = T) +

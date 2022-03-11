@@ -272,6 +272,8 @@ get_init <- function(prior, samples = 1100, burnin = 100, thin = 1){
       dist == "dynMST"| dist == "dynOST"){
     inits$nu = 4 + rgamma(K, shape = 2, rate = 0.1)
   }
+  inits$nu <- ifelse(inits$nu > 100, 50, inits$nu)
+
   #Stochastic vol
   if(SV){
     h <- matrix(log(prior$sigma^2), ncol = prior$t_max, nrow = K) + 0.0001 * rnorm(prior$t_max * K)

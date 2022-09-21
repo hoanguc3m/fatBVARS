@@ -20,9 +20,6 @@ Imports: \tab Rcpp \cr
 Suggests: \tab  \cr
 LazyLoad: \tab yes }
 }
-\references{
-
-}
 \author{
 Hoang Nguyen
 }

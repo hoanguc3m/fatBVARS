@@ -57,9 +57,13 @@ sim.VAR.Gaussian.novol <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
@@ -98,7 +102,11 @@ sim.VAR.Gaussian.novol <- function(K = 5, p = 2, t_max = 1000,
   volatility <- reprow(diag(Sigma2), t_max)
 
   for (i in c(1:t_max)){
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt
     ysim <-  B0 %*% xt + Sigma %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
@@ -120,9 +128,13 @@ sim.VAR.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
@@ -160,7 +172,11 @@ sim.VAR.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   Sigma2 <- Sigma %*% t(Sigma)
 
   for (i in c(1:t_max)){
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt
     Sigma_t <- diag(w_sqrt_t[i], nrow = K) %*% Sigma
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
@@ -186,9 +202,13 @@ sim.VAR.Skew.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
@@ -231,7 +251,11 @@ sim.VAR.Skew.Student.novol <- function(K = 5, p = 2, t_max = 1000,
 
   mu_xi <- nu / (nu - 2)
   for (i in c(1:t_max)){
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt + gamma * w_t[i]
     Sigma_t <- diag(w_sqrt_t[i], nrow = K) %*% Sigma
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
@@ -258,9 +282,13 @@ sim.VAR.MT.novol <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
@@ -299,7 +327,11 @@ sim.VAR.MT.novol <- function(K = 5, p = 2, t_max = 1000,
   Sigma2 <- Sigma %*% t(Sigma)
 
   for (i in c(1:t_max)){
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt
     Sigma_t <- diag(w_sqrt_t[i,],nrow = K) %*% Sigma
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
@@ -325,9 +357,13 @@ sim.VAR.MST.novol <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
@@ -372,7 +408,11 @@ sim.VAR.MST.novol <- function(K = 5, p = 2, t_max = 1000,
   Sigma2 <- Sigma %*% t(Sigma)
 
   for (i in c(1:t_max)){
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt + gamma * (w_t[i,] - mu_xi)
     Sigma_t <- diag(w_sqrt_t[i,], nrow = K) %*% Sigma
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
@@ -399,9 +439,13 @@ sim.VAR.OT.novol <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
@@ -439,7 +483,11 @@ sim.VAR.OT.novol <- function(K = 5, p = 2, t_max = 1000,
   inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt
     Sigma_t <-  inv_A0 %*% diag(w_sqrt_t[i,] * exp(0.5*h), nrow = K)
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
@@ -465,9 +513,13 @@ sim.VAR.OST.novol <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
@@ -511,7 +563,11 @@ sim.VAR.OST.novol <- function(K = 5, p = 2, t_max = 1000,
   inv_A0 <- solve(A0)
 
   for (i in c(1:t_max)){
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt + inv_A0 %*% (gamma * (w_t[i,] - mu_xi))
     Sigma_t <-  inv_A0 %*% diag(w_sqrt_t[i,] * exp(0.5*h), nrow = K)
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
@@ -538,9 +594,13 @@ sim.VAR.dynSkew.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
@@ -588,7 +648,11 @@ sim.VAR.dynSkew.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   Sigma2 <- Sigma %*% t(Sigma)
 
   for (i in c(1:t_max)){
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt + gamma * w_t[i]
     Sigma_t <- diag(w_sqrt_t[i], nrow = K) %*% Sigma
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
@@ -620,9 +684,13 @@ sim.VAR.OrthSkewNorm.novol <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
@@ -666,7 +734,11 @@ sim.VAR.OrthSkewNorm.novol <- function(K = 5, p = 2, t_max = 1000,
   volatility <- reprow(diag(Sigma2), t_max)
 
   for (i in c(1:t_max)){
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt +  solve(A0) %*% (  D %*% z_t[,i])
     ysim <-  B0 %*% xt  + solve(A0) %*% (  D %*% z_t[,i] + exp(0.5*h) * eps[i,] )
     ystar <- rbind(ystar, t(ysim))

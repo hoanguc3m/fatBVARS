@@ -36,15 +36,22 @@ makeRegressor <- function(y, y0, t_max, K, p){
 
   if (is.null(y0)){
     y0 <- matrix(0, ncol = K, nrow = p)
+  } else {
+    y0 <- tail(y0, p)
+  }
 
+  if (p > 0){
+    y0 <- rbind(y0, y)
+    for (i in c(1:p)){
+      xt <- cbind(xt, rbind(1, vec( as.matrix( t(y0)[,(p+i-1):i]))) )
+    }
+    for (i in c( p:(t_max-1))){
+      xt <- cbind(xt, rbind(1, vec( as.matrix( yt[,i:(i-p+1)]))) )
+    }
+  } else {
+    xt <- matrix(1, nrow = 1, ncol = t_max)
   }
-  y0 <- rbind(y0, y)
-  for (i in c(1:p)){
-    xt <- cbind(xt, rbind(1, vec( as.matrix( t(y0)[,(p+i-1):i]))) )
-  }
-  for (i in c( p:(t_max-1))){
-    xt <- cbind(xt, rbind(1, vec( as.matrix( yt[,i:(i-p+1)]))) )
-  }
+
   return(xt)
 }
 

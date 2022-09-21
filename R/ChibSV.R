@@ -47,7 +47,7 @@ Chib.LML.SV <- function(Chain,
     Start = Sys.time()
     if (dist == "Gaussian") {
 
-      ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
+      ChibLLP_chain <- ChibLLP(Chain, inits, ndraws = 1000, numCores = numCores)
       RhpcBLASctl::blas_set_num_threads(numCores)
 
       cat("Pi( B* | y, A*, Sigma*) \n ")
@@ -74,7 +74,7 @@ Chib.LML.SV <- function(Chain,
     }
     if (dist == "Student") {
       inits$w <- W_med
-      ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
+      ChibLLP_chain <- ChibLLP(Chain, inits, ndraws = 1000, numCores = numCores)
       RhpcBLASctl::blas_set_num_threads(numCores)
 
       cat("Pi( B* | y, A*, Sigma*, Nu*) \n ")
@@ -112,7 +112,7 @@ Chib.LML.SV <- function(Chain,
     }
     if (dist == "Skew.Student") {
       inits$w <- W_med
-      ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
+      ChibLLP_chain <- ChibLLP(Chain, inits, ndraws = 1000, numCores = numCores)
       RhpcBLASctl::blas_set_num_threads(numCores)
 
       cat("Pi( B* | y, A*, Sigma*, Nu*) \n ")
@@ -151,7 +151,7 @@ Chib.LML.SV <- function(Chain,
     }
     if (dist == "MT") {
       inits$w <- matrix(W_med, nrow = K)
-      ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
+      ChibLLP_chain <- ChibLLP(Chain, inits, ndraws = 1000, numCores = numCores)
       RhpcBLASctl::blas_set_num_threads(numCores)
 
 
@@ -190,7 +190,7 @@ Chib.LML.SV <- function(Chain,
     }
     if (dist == "MST") {
       inits$w <- matrix(W_med, nrow = K)
-      ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
+      ChibLLP_chain <- ChibLLP(Chain, inits, ndraws = 1000, numCores = numCores)
       RhpcBLASctl::blas_set_num_threads(numCores)
 
 
@@ -229,7 +229,7 @@ Chib.LML.SV <- function(Chain,
     }
     if (dist == "OT") {
       inits$w <- matrix(W_med, nrow = K)
-      ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
+      ChibLLP_chain <- ChibLLP(Chain, inits, ndraws = 1000, numCores = numCores)
       RhpcBLASctl::blas_set_num_threads(numCores)
 
 
@@ -268,7 +268,7 @@ Chib.LML.SV <- function(Chain,
     }
     if (dist == "OST") {
       inits$w <- matrix(W_med, nrow = K)
-      ChibLLP_chain <- ChibLLP(Chain, ndraws = 1000, numCores = numCores)
+      ChibLLP_chain <- ChibLLP(Chain, inits, ndraws = 1000, numCores = numCores)
       RhpcBLASctl::blas_set_num_threads(numCores)
 
 

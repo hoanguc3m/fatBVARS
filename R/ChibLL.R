@@ -10,7 +10,7 @@
 #' }
 #'
 #' @export
-ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
+ChibLLP <- function(Chain, inits, ndraws = NULL, numCores = NULL){
     RhpcBLASctl::blas_set_num_threads(1)
 
     K <- Chain$K
@@ -41,13 +41,16 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
     A_mat <- get_post(mcmc, element = "a")
     Gamma_mat <- get_post(mcmc, element = "gamma")
 
-    B_gen <- apply(B_mat, MARGIN = 2, FUN = mean)
-    A_gen <- apply(A_mat, MARGIN = 2, FUN = mean)
-    Gamma_gen <- apply(Gamma_mat, MARGIN = 2, FUN = mean)
-
+    # B_gen <- apply(B_mat, MARGIN = 2, FUN = mean)
+    # A_gen <- apply(A_mat, MARGIN = 2, FUN = mean)
+    # Gamma_gen <- apply(Gamma_mat, MARGIN = 2, FUN = mean)
+    B_gen <- as.numeric(inits$B0)
+    A_gen <- as.numeric(inits$A0[lower.tri(inits$A0)])
+    Gamma_gen <- inits$gamma
 
     Sigma_mat <- get_post(mcmc, element = "sigma") # No SV is sigma / SV is sigma^2
-    Sigma_gen <- apply(Sigma_mat, MARGIN = 2, FUN = mean)
+    # Sigma_gen <- apply(Sigma_mat, MARGIN = 2, FUN = mean)
+    Sigma_gen <- inits$sigma
 
     H_mat <- get_post(mcmc, element = "h")
     H0_mat <- get_post(mcmc, element = "lh0")
@@ -55,9 +58,11 @@ ChibLLP <- function(Chain, ndraws = NULL, numCores = NULL){
 
     W_mat <- get_post(mcmc, element = "w")
 
-    H_gen <- apply(H_mat, MARGIN = 2, FUN = mean)
-    H0_gen <- apply(H0_mat, MARGIN = 2, FUN = mean)
-    Nu_gen <- apply(Nu_mat, MARGIN = 2, FUN = mean)
+    # H_gen <- apply(H_mat, MARGIN = 2, FUN = mean)
+    # H0_gen <- apply(H0_mat, MARGIN = 2, FUN = mean)
+    # Nu_gen <- apply(Nu_mat, MARGIN = 2, FUN = mean)
+    H_gen <- as.numeric(inits$h)
+    Nu_gen <- inits$nu
 
 
     sum_log <- rep(0, ndraws)

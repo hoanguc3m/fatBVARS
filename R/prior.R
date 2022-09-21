@@ -22,7 +22,7 @@ get_prior_minnesota <- function(y, p, intercept=TRUE, ...){
     B0 <- cbind(rep(0,K))
   }
 
-  B0 <- cbind(B0, diag(K))
+  if (p > 0) B0 <- cbind(B0, diag(K))
   if (p > 1){
     for (i in c(2:p)){
       B0 <- cbind(B0, matrix(0,K,K))
@@ -36,12 +36,18 @@ get_prior_minnesota <- function(y, p, intercept=TRUE, ...){
 
   sigmasq <- rep(0,K)
 
-  for(ii in 1:K){
-    Ylagi         <- stats::embed(y[,ii],dimension = p + 1)[,-1]
-    Yi            <- y[(p + 1):t_max,ii]
-    arest         <- stats::lm(Yi~Ylagi)
-    sigmasq[ii] <- summary(arest)$sigma^2 # the square root of the estimated variance of the random error sigma^2 = 1/(n-p) Sum(w[i] R[i]^2)
+  if (p > 0){
+    for(ii in 1:K){
+      Ylagi         <- stats::embed(y[,ii],dimension = p + 1)[,-1]
+      Yi            <- y[(p + 1):t_max,ii]
+      arest         <- stats::lm(Yi~Ylagi)
+      sigmasq[ii] <- summary(arest)$sigma^2 # the square root of the estimated variance of the random error sigma^2 = 1/(n-p) Sum(w[i] R[i]^2)
+    }
+  } else {
+    sigmasq <- apply(y, MARGIN = 2, FUN = var)
   }
+
+
 
   #print(sigmasq)
 
@@ -63,6 +69,8 @@ get_prior_minnesota <- function(y, p, intercept=TRUE, ...){
     }
   }
 
+  if (p > 0){
+
   # without intercept
   for(jj in 1:p){ #loop over the jj-th lag
 
@@ -81,9 +89,10 @@ get_prior_minnesota <- function(y, p, intercept=TRUE, ...){
     }
   }
 
+  }
   # Vec_to_Mat(Vi, K, p)
 
-  V_b_prior = diag(Vi)
+  V_b_prior = diag(Vi, nrow = K * M, ncol = K * M)
 
   pr <- list(type = "Minnesota",
              p = p,

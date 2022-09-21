@@ -56,14 +56,18 @@ sim.VAR.Gaussian.SV <- function(K = 5, p = 2, t_max = 1000,
   t_max = t_max + burn_in
   set.seed(seednum)
   # Sample matrix coefficient B
-  B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
   }
+
 
   # Sample matrix corr A0
   if (length(a0) == 1) {
@@ -104,7 +108,11 @@ sim.VAR.Gaussian.SV <- function(K = 5, p = 2, t_max = 1000,
     Sigma2_t <- Sigma_t %*% t(Sigma_t)
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt
     ysim <-  B0 %*% xt + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
@@ -128,13 +136,18 @@ sim.VAR.Student.SV <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
   }
+
 
   # Sample matrix corr A0
   if (length(a0) == 1) {
@@ -178,7 +191,11 @@ sim.VAR.Student.SV <- function(K = 5, p = 2, t_max = 1000,
     Sigma2_t <- Sigma_t %*% t(Sigma_t)
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt
     ysim <-  B0 %*% xt + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
@@ -203,13 +220,18 @@ sim.VAR.Skew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
   }
+
 
   # Sample matrix corr A0
   if (length(a0) == 1) {
@@ -262,7 +284,11 @@ sim.VAR.Skew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
     Sigma2_t <- Sigma_t %*% t(Sigma_t)
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt + gamma * (w_t[i] - mu_xi)
     ysim <-  B0 %*% xt + gamma * (w_t[i] - mu_xi) + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
@@ -286,13 +312,18 @@ sim.VAR.MT.SV <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
   }
+
 
   # Sample matrix corr A0
   if (length(a0) == 1) {
@@ -338,7 +369,11 @@ sim.VAR.MT.SV <- function(K = 5, p = 2, t_max = 1000,
     Sigma2_t <- Sigma_t %*% t(Sigma_t)
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt
     ysim <-  B0 %*% xt + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
@@ -362,13 +397,18 @@ sim.VAR.MST.SV <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
   }
+
 
   # Sample matrix corr A0
   if (length(a0) == 1) {
@@ -420,7 +460,11 @@ sim.VAR.MST.SV <- function(K = 5, p = 2, t_max = 1000,
     Sigma2_t <- Sigma_t %*% t(Sigma_t)
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt + gamma * (w_t[i,] - mu_xi)
     ysim <-  B0 %*% xt + gamma * (w_t[i,] - mu_xi) + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
@@ -446,13 +490,18 @@ sim.VAR.OT.SV <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
   }
+
 
   # Sample matrix corr A0
   if (length(a0) == 1) {
@@ -498,7 +547,11 @@ sim.VAR.OT.SV <- function(K = 5, p = 2, t_max = 1000,
     Sigma2_t <- Sigma_t %*% t(Sigma_t)
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt
     ysim <-  B0 %*% xt + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
@@ -521,14 +574,18 @@ sim.VAR.OST.SV <- function(K = 5, p = 2, t_max = 1000,
   t_max = t_max + burn_in
   set.seed(seednum)
   # Sample matrix coefficient B
-  B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
   }
+
 
   # Sample matrix corr A0
   if (length(a0) == 1) {
@@ -580,7 +637,11 @@ sim.VAR.OST.SV <- function(K = 5, p = 2, t_max = 1000,
     Sigma2_t <- Sigma_t %*% t(Sigma_t)
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt + inv_A0 %*% (gamma * (w_t[i,] - mu_xi))
     ysim <-  as.numeric(y_mean[i,]) + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
@@ -604,14 +665,18 @@ sim.VAR.dynSkew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
   t_max = t_max + burn_in
   set.seed(seednum)
   # Sample matrix coefficient B
-  B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
   }
+
 
   # Sample matrix corr A0
   if (length(a0) == 1) {
@@ -674,7 +739,11 @@ sim.VAR.dynSkew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
 
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt + gamma * w_t[i]
     ysim <-  B0 %*% xt + gamma * w_t[i] + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
@@ -701,13 +770,18 @@ sim.VAR.dynMST.SV <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
   }
+
 
   # Sample matrix corr A0
   if (length(a0) == 1) {
@@ -768,7 +842,11 @@ sim.VAR.dynMST.SV <- function(K = 5, p = 2, t_max = 1000,
     Sigma2_t <- Sigma_t %*% t(Sigma_t)
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt + gamma * w_t[i,]
     ysim <-  B0 %*% xt + gamma * w_t[i,] + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
@@ -797,13 +875,18 @@ sim.VAR.dynOST.SV <- function(K = 5, p = 2, t_max = 1000,
   set.seed(seednum)
   # Sample matrix coefficient B
   B0 <- cbind(rep(0,K))
-  if (length(b0) == 1) {
-    for (i in c(1:p)){
-      B0 <- cbind(B0, b0^i*diag(K))
+  if (p > 0){
+    if (length(b0) == 1) {
+      for (i in c(1:p)){
+        B0 <- cbind(B0, b0^i*diag(K))
+      }
+    } else {
+      B0 <- matrix(b0, nrow = K)
     }
   } else {
     B0 <- matrix(b0, nrow = K)
   }
+
 
   # Sample matrix corr A0
   if (length(a0) == 1) {
@@ -865,7 +948,11 @@ sim.VAR.dynOST.SV <- function(K = 5, p = 2, t_max = 1000,
 
     y_var[i,] <- Sigma_t[lower.tri(Sigma_t, diag = T)]
     volatility[i,] <- diag(Sigma2_t)
-    xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    if (p > 0){
+      xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
+    } else {
+      xt <- matrix(1,nrow = K)
+    }
     y_mean[i,] <- B0 %*% xt + inv_A0 %*% (gamma * w_t[i,])
     ysim <-  as.numeric(y_mean[i,]) + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))

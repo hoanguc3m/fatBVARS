@@ -28,10 +28,9 @@ Depends:
     truncnorm,
     magic,
     tmvnsim,
-    gPdtest,
     GIGrvg
 LinkingTo: Rcpp, RcppArmadillo
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
 Suggests: knitr,
     rmarkdown
 VignetteBuilder: knitr

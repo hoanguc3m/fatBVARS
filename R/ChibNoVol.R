@@ -7,7 +7,7 @@ Chib.LML.nonSV <- function(Chain,
   P1 <- P2 <- P3 <- P4 <- P5 <- 0
 
   prior <- Chain$prior
-  inits <- Chain$inits
+  inits <- list()
   dist <- prior$dist
 
   B_mat <- get_post(Chain, element = "B")

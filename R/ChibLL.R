@@ -50,7 +50,12 @@ ChibLLP <- function(Chain, inits, ndraws = NULL, numCores = NULL){
 
     Sigma_mat <- get_post(mcmc, element = "sigma") # No SV is sigma / SV is sigma^2
     # Sigma_gen <- apply(Sigma_mat, MARGIN = 2, FUN = mean)
-    Sigma_gen <- inits$sigma
+    if (SV) {
+      Sigma_gen <- diag(inits$sigma_h)
+    } else {
+      Sigma_gen <- inits$sigma
+    }
+
 
     H_mat <- get_post(mcmc, element = "h")
     H0_mat <- get_post(mcmc, element = "lh0")

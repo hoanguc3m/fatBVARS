@@ -4,7 +4,7 @@
 \alias{ChibLLP}
 \title{Marginal log likelihood of BVAR model}
 \usage{
-ChibLLP(Chain, ndraws = NULL, numCores = NULL)
+ChibLLP(Chain, inits, ndraws = NULL, numCores = NULL)
 }
 \arguments{
 \item{Chain}{The fatBVARSV object from command BVAR.}

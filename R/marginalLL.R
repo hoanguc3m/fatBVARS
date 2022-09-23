@@ -96,51 +96,40 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
     if (SV){
       h_mean <- matrix(apply(H_mat, MARGIN = 2, mean), nrow = K)
-      H0_gen_list <- Normal_approx(H0_mat, ndraws = ndraws)
-      H0_gen <- H0_gen_list$new_samples
-      sum_log_prop <- sum_log_prop + H0_gen_list$sum_log_prop
+      # Take integral over H0
+      # H0_gen_list <- Normal_approx(H0_mat, ndraws = ndraws)
+      # H0_gen <- H0_gen_list$new_samples
+      # sum_log_prop <- sum_log_prop + H0_gen_list$sum_log_prop
 
       #################### End prior ###########################
 
       if (dist == "Gaussian") {
-        # param <- cbind(B_gen, A_gen, Sigma_gen)
-        # for (j in c(1:ndraws)){
-        #   B <- matrix(B_gen[j,], nrow = K)
-        #   A <- a0toA(A_gen[j,], K)
-        #   sigma_h <- Sigma_gen[j,]
-        #   h0 <- H0_gen[j,]
-        #   # mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
-        #   #   mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-        #   #   sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-        #   #   sum(dnorm(h0, mean = ah0, sd = Vh0, log = T))
-        #
-        # }
 
-        sum_log_prior <- parallel::mclapply(1:ndraws,
-                                            FUN = function(j) {
-                                              B <- matrix(B_gen[j,], nrow = K)
-                                              A <- a0toA(A_gen[j,], K)
-                                              sigma_h <- Sigma_gen[j,]
-                                              h0 <- H0_gen[j,]
-                                                mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
-                                                mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                                sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                                sum(dnorm(h0, mean = ah0, sd = Vh0, log = T))
-                                            },
-                                            mc.cores = numCores)
+        # sum_log_prior <- parallel::mclapply(1:ndraws,
+        #                                     FUN = function(j) {
+        #                                       B <- matrix(B_gen[j,], nrow = K)
+        #                                       A <- a0toA(A_gen[j,], K)
+        #                                       sigma_h <- Sigma_gen[j,]
+        #                                       # h0 <- 2 * log(prior$sigma)
+        #                                         mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+        #                                         mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+        #                                         sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T))
+        #                                         # sum(dnorm(h0, mean = ah0, sd = Vh0, log = T))
+        #                                     },
+        #                                     mc.cores = numCores)
         sum_log_intll <- parallel::mclapply(1:ndraws,
                                       FUN = function(j) {
                                         B <- matrix(B_gen[j,], nrow = K)
                                         A <- a0toA(A_gen[j,], K)
                                         sigma_h <- Sigma_gen[j,]
-                                        h0 <- H0_gen[j,]
+                                        h0 <- 2 * log(prior$sigma)
 
                                         ytilde <- as.numeric(A %*% (yt - B %*% xt)) # from dim K * t_max to (Kt_max) * 1
                                         int_h_Gaussian(ytilde = ytilde, h0 = h0, sigma_h = sigma_h, t_max = t_max, K = K) +
                                           mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                           mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                          sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                          sum(dnorm(h0, mean = ah0, sd = Vh0, log = T))
+                                          sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T))
+                                          # sum(dnorm(h0, mean = ah0, sd = Vh0, log = T))
                                       },
                                       mc.cores = numCores)
       } else {
@@ -156,7 +145,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
                                           sigma_h <- Sigma_gen[j,]
-                                          h0 <- H0_gen[j,]
+                                          h0 <- 2 * log(prior$sigma)
                                           nu <- Nu_gen[j]
 
                                           llw <- int_h_StudentSV(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
@@ -166,7 +155,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
+                                            # sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)
                                         },
                                         mc.cores = numCores)
@@ -182,7 +171,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           gamma <- Gamma_gen[j,]
 
                                           sigma_h <- Sigma_gen[j,]
-                                          h0 <- H0_gen[j,]
+                                          h0 <- 2 * log(prior$sigma)
                                           nu <- Nu_gen[j]
 
 
@@ -193,7 +182,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
+                                            # sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },
@@ -207,7 +196,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
                                           sigma_h <- Sigma_gen[j,]
-                                          h0 <- H0_gen[j,]
+                                          h0 <- 2 * log(prior$sigma)
                                           nu <- Nu_gen[j,]
 
 
@@ -218,7 +207,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
+                                            # sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
                                         },
                                         mc.cores = numCores)
@@ -235,7 +224,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           gamma <- Gamma_gen[j,]
 
                                           sigma_h <- Sigma_gen[j,]
-                                          h0 <- H0_gen[j,]
+                                          h0 <- 2 * log(prior$sigma)
                                           nu <- Nu_gen[j,]
 
                                           llw <- int_h_MSTSV(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
@@ -245,7 +234,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
+                                            # sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },
@@ -254,21 +243,21 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
         }
 
         if (dist == "OT") {
-          sum_log_prior <- parallel::mclapply(1:ndraws,
-                                              FUN = function(j) {
-                                                B <- matrix(B_gen[j,], nrow = K)
-                                                A <- a0toA(A_gen[j,], K)
-                                                sigma_h <- Sigma_gen[j,]
-                                                h0 <- H0_gen[j,]
-                                                nu <- Nu_gen[j,]
-
-                                                mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
-                                                  mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
-                                                  sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                                  sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
-                                                  sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
-                                              },
-                                              mc.cores = numCores)
+          # sum_log_prior <- parallel::mclapply(1:ndraws,
+          #                                     FUN = function(j) {
+          #                                       B <- matrix(B_gen[j,], nrow = K)
+          #                                       A <- a0toA(A_gen[j,], K)
+          #                                       sigma_h <- Sigma_gen[j,]
+          #                                       # h0 <- 2 * log(prior$sigma)
+          #                                       nu <- Nu_gen[j,]
+          #
+          #                                       mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
+          #                                         mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
+          #                                         sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
+          #                                         # sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
+          #                                         sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
+          #                                     },
+          #                                     mc.cores = numCores)
 
           w_mean <- matrix(apply(W_mat, MARGIN = 2, mean), nrow = K)
           sum_log_intll <- parallel::mclapply(1:ndraws,
@@ -276,7 +265,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           B <- matrix(B_gen[j,], nrow = K)
                                           A <- a0toA(A_gen[j,], K)
                                           sigma_h <- Sigma_gen[j,]
-                                          h0 <- H0_gen[j,]
+                                          h0 <- 2 * log(prior$sigma)
                                           nu <- Nu_gen[j,]
 
 
@@ -293,7 +282,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
+                                            # sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T))
                                         },
                                         mc.cores = numCores)
@@ -310,7 +299,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           gamma <- Gamma_gen[j,]
 
                                           sigma_h <- Sigma_gen[j,]
-                                          h0 <- H0_gen[j,]
+                                          h0 <- 2 * log(prior$sigma)
                                           nu <- Nu_gen[j,]
 
 
@@ -328,7 +317,7 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
                                             sum(dgamma(sigma_h, shape = 0.5, rate = 0.5 * prior$sigma_S0, log = T)) +
-                                            sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
+                                            # sum(dnorm(h0, mean = ah0, sd = Vh0, log = T)) +
                                             sum(dgamma(nu, shape = prior$nu_gam_a, rate = prior$nu_gam_b, log = T)) +
                                             mvnfast::dmvn(X = gamma, mu = prior$gamma_prior, sigma = prior$V_gamma_prior, log = T)
                                         },
@@ -717,55 +706,57 @@ int_w_OSTnonSV <- function(y, xt, A, B, sigma, nu, gamma = rep(0,K), t_max, K, R
 
 # This function evaluates the integrated likelihood of the VAR-SV model in
 # Chan and Eisenstat (2018)
+# With a modification of integrating over h0
 #' @export
 int_h_Gaussian <- function(ytilde, h0, sigma_h, t_max, K, R = 100){
-    s2 = ytilde^2
-    max_loop = 100
-    Hh = sparseMatrix(i = 1:(t_max*K),
-                      j = 1:(t_max*K),
-                      x = rep(1,t_max*K)) -
-      sparseMatrix( i = (K+1):(t_max*K),
-                    j = 1:((t_max-1)*K),
-                    x = rep(1,(t_max-1)*K),
-                    dims =  c(t_max*K, t_max*K))
-    SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = rep(1./sigma_h, t_max))
-    HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
-    alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
+  s2 = ytilde^2
+  max_loop = 100
+  prior_var_h0 <- 4
+  Hh = sparseMatrix(i = 1:(t_max*K),
+                    j = 1:(t_max*K),
+                    x = rep(1,t_max*K)) -
+    sparseMatrix( i = (K+1):(t_max*K),
+                  j = 1:((t_max-1)*K),
+                  x = rep(1,(t_max-1)*K),
+                  dims =  c(t_max*K, t_max*K))
+  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = c(1./ (sigma_h + prior_var_h0), rep(1./sigma_h, t_max-1))) # Prior for h1 \sim N(2 log sigma, sigmah^2 + 4 )
+  HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
+  alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
 
-    e_h = 1
-    ht = log(s2+0.001)
-    count = 0
-    while ( e_h> .01 & count < max_loop){
-      einvhts2 = exp(-ht)*s2
-      gh = - HinvSH_h %*% (ht-alph) - 0.5 * (1-einvhts2)
-      Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
-      newht = ht - Matrix::solve(Gh,gh)
-      e_h = max(abs(newht-ht));
-      ht = newht;
-      count = count + 1;
-    }
-    if (count == max_loop){
-      ht = rep(h0,t_max)
-      einvhts2 = exp(-ht)*s2
-      Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
-    }
+  e_h = 1
+  ht = log(s2+0.001)
+  count = 0
+  while ( e_h> .01 & count < max_loop){
+    einvhts2 = exp(-ht)*s2
+    gh = - HinvSH_h %*% (ht-alph) - 0.5 * (1-einvhts2)
+    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+    newht = ht - Matrix::solve(Gh,gh)
+    e_h = max(abs(newht-ht));
+    ht = newht;
+    count = count + 1;
+  }
+  if (count == max_loop){
+    ht = rep(h0,t_max)
+    einvhts2 = exp(-ht)*s2
+    Gh = - HinvSH_h -.5*sparseMatrix(i = 1:(t_max*K),j = 1:(t_max*K), x = einvhts2)
+  }
 
-    Kh = -Gh
-    CKh = Matrix::t(Matrix::chol(Kh))
+  Kh = -Gh
+  CKh = Matrix::t(Matrix::chol(Kh))
 
-    c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
-    c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
+  c_pri = -t_max*K*0.5*log(2*pi) -.5*(t_max-1)*sum(log(sigma_h)) -.5*sum(log(sigma_h + prior_var_h0))
+  c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
-    store_llike = rep(0,R)
-    for (i in c(1:R)){
-      hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
+  store_llike = rep(0,R)
+  for (i in c(1:R)){
+    hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
 
 
-      llike = -t_max*K*0.5*log(2*pi) - 0.5*sum(hc) - 0.5 * sum(ytilde^2 * exp(-hc))
-      store_llike[i] = as.numeric(llike + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
-                                    (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
+    llike = -t_max*K*0.5*log(2*pi) - 0.5*sum(hc) - 0.5 * sum(ytilde^2 * exp(-hc))
+    store_llike[i] = as.numeric(llike + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
+                                  (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
 
-    }
+  }
 
   maxllike = max(store_llike)
   llk = log(mean(exp(store_llike-maxllike))) + maxllike
@@ -777,6 +768,7 @@ int_h_StudentSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_m
   y_tilde = A %*% ( (yt - B %*% xt) )  # Student dist with Identity correlation matrix
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
+  prior_var_h0 <- 4
   Hh = sparseMatrix(i = 1:(t_max*K),
                     j = 1:(t_max*K),
                     x = rep(1,t_max*K)) -
@@ -784,7 +776,7 @@ int_h_StudentSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_m
                   j = 1:((t_max-1)*K),
                   x = rep(1,(t_max-1)*K),
                   dims =  c(t_max*K, t_max*K))
-  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = rep(1./sigma_h, t_max))
+  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = c(1./ (sigma_h + prior_var_h0), rep(1./sigma_h, t_max-1))) # Prior for h1 \sim N(2 log sigma, sigmah^2 + 4 )
   HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
   alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
 
@@ -822,7 +814,7 @@ int_h_StudentSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_m
   CKh = Matrix::t(Matrix::chol(Kh))
 
 
-  c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
+  c_pri = -t_max*K*0.5*log(2*pi) -.5*(t_max-1)*sum(log(sigma_h)) -.5*sum(log(sigma_h + prior_var_h0))
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
   store_llike = rep(0,R)
@@ -854,6 +846,7 @@ int_h_SkewSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean
   y_tilde = A %*% (( u - reprow(w_mean,K)*gamma ) ) # Approximation multivariate Student dist
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
+  prior_var_h0 <- 4
   Hh = sparseMatrix(i = 1:(t_max*K),
                     j = 1:(t_max*K),
                     x = rep(1,t_max*K)) -
@@ -861,7 +854,7 @@ int_h_SkewSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean
                   j = 1:((t_max-1)*K),
                   x = rep(1,(t_max-1)*K),
                   dims =  c(t_max*K, t_max*K))
-  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = rep(1./sigma_h, t_max))
+  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = c(1./ (sigma_h + prior_var_h0), rep(1./sigma_h, t_max-1))) # Prior for h1 \sim N(2 log sigma, sigmah^2 + 4 )
   HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
   alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
 
@@ -898,7 +891,7 @@ int_h_SkewSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean
   Kh = HinvSH_h + sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = Gh)
   CKh = Matrix::t(Matrix::chol(Kh))
 
-  c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
+  c_pri = -t_max*K*0.5*log(2*pi) -.5*(t_max-1)*sum(log(sigma_h)) -.5*sum(log(sigma_h + prior_var_h0))
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
   store_llike = rep(0,R)
@@ -917,27 +910,27 @@ int_h_SkewSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean
     #   })) )
     #
     # } else {
-#
-#     allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
-#       ghyp::dghyp(u[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
-#                                              sigma = solve(A) %*% diag(exp(hnew[,t]), nrow = K) %*% t(solve(A)),
-#                                              gamma = gamma), logvalue = T) # use Sigma = AA' for multivariable
-#     })) )
+    #
+    #     allw <-sum( unlist(lapply(1:t_max, FUN = function(t) {
+    #       ghyp::dghyp(u[,t], object = ghyp::ghyp(lambda = -0.5*nu, chi = nu, psi = 0, mu = rep(0,K),
+    #                                              sigma = solve(A) %*% diag(exp(hnew[,t]), nrow = K) %*% t(solve(A)),
+    #                                              gamma = gamma), logvalue = T) # use Sigma = AA' for multivariable
+    #     })) )
     # }
-      lambda = -0.5*nu; chi = nu; psi = 0;
-      inv.vola <- exp(-0.5*hnew)
-      xtilde <- A %*% u * inv.vola
-      gtilde <- as.vector(A %*% gamma) * inv.vola
-      Q.vec <- colSums(xtilde^2)
-      skewnorm.vec <- colSums(gtilde^2)
-      skewness.scaled.vec <- colSums(xtilde*gtilde)
-      interm.vec <- sqrt((chi + Q.vec) * skewnorm.vec)
-      lambda.min.d.2 <- lambda - K/2
-      log.const.top <- -lambda * log(chi) - lambda.min.d.2 * log(skewnorm.vec)
-      log.const.bottom <- K/2 * log(2 * pi) + 0.5 * colSums(hnew) + lgamma(-lambda) - (lambda + 1) * log(2)
-      log.top <- log(besselK(interm.vec, lambda.min.d.2, expon.scaled = TRUE)) - interm.vec + skewness.scaled.vec
-      log.bottom <- - lambda.min.d.2 * log(interm.vec)
-      allw <- sum(log.const.top + log.top - log.const.bottom - log.bottom)
+    lambda = -0.5*nu; chi = nu; psi = 0;
+    inv.vola <- exp(-0.5*hnew)
+    xtilde <- A %*% u * inv.vola
+    gtilde <- as.vector(A %*% gamma) * inv.vola
+    Q.vec <- colSums(xtilde^2)
+    skewnorm.vec <- colSums(gtilde^2)
+    skewness.scaled.vec <- colSums(xtilde*gtilde)
+    interm.vec <- sqrt((chi + Q.vec) * skewnorm.vec)
+    lambda.min.d.2 <- lambda - K/2
+    log.const.top <- -lambda * log(chi) - lambda.min.d.2 * log(skewnorm.vec)
+    log.const.bottom <- K/2 * log(2 * pi) + 0.5 * colSums(hnew) + lgamma(-lambda) - (lambda + 1) * log(2)
+    log.top <- log(besselK(interm.vec, lambda.min.d.2, expon.scaled = TRUE)) - interm.vec + skewness.scaled.vec
+    log.bottom <- - lambda.min.d.2 * log(interm.vec)
+    allw <- sum(log.const.top + log.top - log.const.bottom - log.bottom)
 
 
 
@@ -964,6 +957,7 @@ int_h_MTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
   y_tilde <- (A %*% u) # Mimic univariate Student
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
+  prior_var_h0 <- 4
   Hh = sparseMatrix(i = 1:(t_max*K),
                     j = 1:(t_max*K),
                     x = rep(1,t_max*K)) -
@@ -971,7 +965,7 @@ int_h_MTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
                   j = 1:((t_max-1)*K),
                   x = rep(1,(t_max-1)*K),
                   dims =  c(t_max*K, t_max*K))
-  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = rep(1./sigma_h, t_max))
+  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = c(1./ (sigma_h + prior_var_h0), rep(1./sigma_h, t_max-1))) # Prior for h1 \sim N(2 log sigma, sigmah^2 + 4 )
   HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
   alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
 
@@ -1006,7 +1000,7 @@ int_h_MTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
   Kh = HinvSH_h + sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = Gh)
   CKh = Matrix::t(Matrix::chol(Kh))
 
-  c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
+  c_pri = -t_max*K*0.5*log(2*pi) -.5*(t_max-1)*sum(log(sigma_h)) -.5*sum(log(sigma_h + prior_var_h0))
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
   store_llw = rep(0,R)
@@ -1014,7 +1008,7 @@ int_h_MTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
     hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
     hnew <- matrix(hc, nrow = K)
     allw <- int_w_MTnonSV(y = t(yt), xt = xt, A = A, B = B, sigma = exp(hnew/2), nu = nu,
-                           t_max = t_max, K = K, R = 100)
+                          t_max = t_max, K = K, R = 100)
     store_llw[i] = as.numeric(allw + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
                                 (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
   }
@@ -1030,6 +1024,7 @@ int_h_MSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean,
   y_tilde <- (A %*% u) # Mimic Univariate Student
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
+  prior_var_h0 <- 4
   Hh = sparseMatrix(i = 1:(t_max*K),
                     j = 1:(t_max*K),
                     x = rep(1,t_max*K)) -
@@ -1037,7 +1032,7 @@ int_h_MSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean,
                   j = 1:((t_max-1)*K),
                   x = rep(1,(t_max-1)*K),
                   dims =  c(t_max*K, t_max*K))
-  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = rep(1./sigma_h, t_max))
+  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = c(1./ (sigma_h + prior_var_h0), rep(1./sigma_h, t_max-1))) # Prior for h1 \sim N(2 log sigma, sigmah^2 + 4 )
   HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
   alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
 
@@ -1072,7 +1067,7 @@ int_h_MSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean,
   Kh = HinvSH_h + sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = Gh)
   CKh = Matrix::t(Matrix::chol(Kh))
 
-  c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
+  c_pri = -t_max*K*0.5*log(2*pi) -.5*(t_max-1)*sum(log(sigma_h)) -.5*sum(log(sigma_h + prior_var_h0))
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
   store_llw = rep(0,R)
@@ -1080,7 +1075,7 @@ int_h_MSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean,
     hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
     hnew <- matrix(hc, nrow = K)
     allw <- int_w_MSTnonSV(y = t(yt), xt = xt, A = A, B = B, sigma = exp(hnew/2), nu = nu, gamma = gamma,
-                                t_max = t_max, K = K, R = 100)
+                           t_max = t_max, K = K, R = 100)
     store_llw[i] = as.numeric(allw + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
                                 (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
   }
@@ -1096,6 +1091,7 @@ int_h_OTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
   y_tilde <- (A %*% u) # Univarite Student
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
+  prior_var_h0 <- 4
   Hh = sparseMatrix(i = 1:(t_max*K),
                     j = 1:(t_max*K),
                     x = rep(1,t_max*K)) -
@@ -1103,7 +1099,7 @@ int_h_OTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
                   j = 1:((t_max-1)*K),
                   x = rep(1,(t_max-1)*K),
                   dims =  c(t_max*K, t_max*K))
-  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = rep(1./sigma_h, t_max))
+  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = c(1./ (sigma_h + prior_var_h0), rep(1./sigma_h, t_max-1))) # Prior for h1 \sim N(2 log sigma, sigmah^2 + 4 )
   HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
   alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
 
@@ -1141,7 +1137,7 @@ int_h_OTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
   CKh = Matrix::t(Matrix::chol(Kh))
 
 
-  c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
+  c_pri = -t_max*K*0.5*log(2*pi) -.5*(t_max-1)*sum(log(sigma_h)) -.5*sum(log(sigma_h + prior_var_h0))
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
   store_llike = rep(0,R)
@@ -1155,7 +1151,7 @@ int_h_OTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
     #   allw[k] <- sum(dt(y_tilde[k,]/exp(hnew[k,]/2), df = nu[k], log = T)) - 0.5 * sum(hnew[k,])
     # }
     store_llike[i] = as.numeric( sum(c_LL - 0.5 * (nu_vec+1) * log(1 + y_tilde^2*exp(-hnew) / nu_vec ) - 0.5 * hnew ) +
-                                  (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
+                                   (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
                                    (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
 
   }
@@ -1172,6 +1168,7 @@ int_h_OSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean,
   y_tilde <- (A %*% u - w_mean * gamma + nu/(nu-2)*gamma) # Mimic univariate Student distribution
   s2 = as.numeric(y_tilde)^2
   max_loop = 10000
+  prior_var_h0 <- 4
   Hh = sparseMatrix(i = 1:(t_max*K),
                     j = 1:(t_max*K),
                     x = rep(1,t_max*K)) -
@@ -1179,7 +1176,7 @@ int_h_OSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean,
                   j = 1:((t_max-1)*K),
                   x = rep(1,(t_max-1)*K),
                   dims =  c(t_max*K, t_max*K))
-  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = rep(1./sigma_h, t_max))
+  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = c(1./ (sigma_h + prior_var_h0), rep(1./sigma_h, t_max-1))) # Prior for h1 \sim N(2 log sigma, sigmah^2 + 4 )
   HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
   alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
 
@@ -1214,7 +1211,7 @@ int_h_OSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean,
   Kh = HinvSH_h + sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = Gh)
   CKh = Matrix::t(Matrix::chol(Kh))
 
-  c_pri = -t_max*K*0.5*log(2*pi) -.5*t_max*sum(log(sigma_h))
+  c_pri = -t_max*K*0.5*log(2*pi) -.5*(t_max-1)*sum(log(sigma_h)) -.5*sum(log(sigma_h + prior_var_h0))
   c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
 
   store_llike = rep(0,R)

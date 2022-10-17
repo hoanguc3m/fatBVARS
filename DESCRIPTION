@@ -1,7 +1,7 @@
 Package: fatBVARS
 Type: Package
 Title: Bayesian VAR with Stochastic volatility and fat tails
-Version: 0.4.0
+Version: 0.5.0
 Author: c(
     person("Nguyen", "Hoang", role = c("aut", "cre"), email = "hoang.nguyen@oru.se"),
     person("Karlsson", "Sune", role = "aut" , email = "Sune.Karlsson@oru.se") )

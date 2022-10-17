@@ -22,7 +22,7 @@ get_prior_minnesota <- function(y, p, intercept=TRUE, ...){
     B0 <- cbind(rep(0,K))
   }
 
-  if (p > 0) B0 <- cbind(B0, diag(K))
+  if (p > 0) B0 <- cbind(B0, diag(1, nrow = K, ncol = K))
   if (p > 1){
     for (i in c(2:p)){
       B0 <- cbind(B0, matrix(0,K,K))

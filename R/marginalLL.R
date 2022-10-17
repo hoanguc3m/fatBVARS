@@ -227,8 +227,10 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                                           h0 <- 2 * log(prior$sigma)
                                           nu <- Nu_gen[j,]
 
-                                          llw <- int_h_MSTSV(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                          llw <- int_h_MSTSV2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
                                                                     gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+                                          # llw <- int_h_MSTSV(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                          #                    gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
 
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
@@ -305,14 +307,9 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
 
                                           llw <- int_h_OSTSV(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
                                                                     gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+                                          # llw <- int_h_OSTSV2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                                          #                    gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
 
-                                          # ytilde <- A %*% (yt - B %*% xt) # dim K * t_max
-                                          # lluni <- rep(0,K)
-                                          # for (i in c(1:K)){
-                                          #   lluni[i] <- PF_uniSkewSV(ytilde = ytilde[i,], h0 = h0[i], sigma_h = sigma_h[i], nu = nu[i], gamma = gamma[i], noParticles = 1000)$logLikelihood
-                                          #   #PF_StudentSV(ytilde = ytilde[i,], h0 = h0[i], sigma_h = sigma_h[i], nu = nu[i], noParticles = 1000)$logLikelihood
-                                          # }
-                                          # sum(lluni) +
                                           llw +
                                             mvnfast::dmvn(X = B_gen[j,], mu = prior$b_prior, sigma = prior$V_b_prior, log = T) +
                                             mvnfast::dmvn(X = A_gen[j,], mu = prior$a_prior, sigma = prior$V_a_prior, log = T) +
@@ -928,7 +925,7 @@ int_h_SkewSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean
     lambda.min.d.2 <- lambda - K/2
     log.const.top <- -lambda * log(chi) - lambda.min.d.2 * log(skewnorm.vec)
     log.const.bottom <- K/2 * log(2 * pi) + 0.5 * colSums(hnew) + lgamma(-lambda) - (lambda + 1) * log(2)
-    log.top <- log(besselK(interm.vec, lambda.min.d.2, expon.scaled = TRUE)) - interm.vec + skewness.scaled.vec
+    log.top <- log(besselK(interm.vec, lambda.min.d.2, expon.scaled = FALSE)) + skewness.scaled.vec
     log.bottom <- - lambda.min.d.2 * log(interm.vec)
     allw <- sum(log.const.top + log.top - log.const.bottom - log.bottom)
 
@@ -1021,8 +1018,8 @@ int_h_MTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
 #' @export
 int_h_MSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100){
   u <- (yt - B %*% xt - w_mean * gamma + nu/(nu-2)*gamma)
-  y_tilde <- (A %*% u) # Mimic Univariate Student
-  s2 = as.numeric(y_tilde)^2
+  y_temp <- (A %*% u) # Mimic Univariate Student
+  s2 = as.numeric(y_temp)^2
   max_loop = 10000
   prior_var_h0 <- 4
   Hh = sparseMatrix(i = 1:(t_max*K),
@@ -1082,6 +1079,122 @@ int_h_MSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean,
 
   maxllike = max(store_llw)
   llk = log(mean(exp(store_llw-maxllike))) + maxllike
+  return(llk)
+}
+
+#' @export
+int_h_MSTSV2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100){
+  u <- (yt - B %*% xt + nu/(nu-2)*gamma)
+  y_tilde <- (A %*% u) # Mimic Univariate skew Student
+  s2 = as.numeric(y_tilde)^2 # + 0.001
+  nu_vec <- rep(nu, t_max)
+  gamma_vec <- rep(gamma, t_max)
+  yga = as.numeric(y_tilde) * gamma_vec
+
+  max_loop = 10000
+  prior_var_h0 <- 4
+  Hh = sparseMatrix(i = 1:(t_max*K),
+                    j = 1:(t_max*K),
+                    x = rep(1,t_max*K)) -
+    sparseMatrix( i = (K+1):(t_max*K),
+                  j = 1:((t_max-1)*K),
+                  x = rep(1,(t_max-1)*K),
+                  dims =  c(t_max*K, t_max*K))
+  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = c(1./ (sigma_h + prior_var_h0), rep(1./sigma_h, t_max-1))) # Prior for h1 \sim N(2 log sigma, sigmah^2 + 4 )
+  HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
+  alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
+
+  ht = as.numeric(h_mean) # better starting points
+
+  errh_out = 1; count = 0;
+
+  while (errh_out> 0.001){
+
+    s2_mod <- s2 * exp(-ht)
+    g2_mod <- gamma_vec^2 * exp(-ht)
+    sg_mod <- as.numeric(y_tilde) * gamma_vec * exp(-ht)
+
+    In = sqrt( (nu_vec + s2_mod ) * g2_mod  )
+    dIn = -.5* (nu_vec * g2_mod +2*sg_mod^2)  / In
+    ddIn <- 0.5 * (nu_vec*g2_mod + 4 * sg_mod^2) / In - dIn^2 / In
+
+
+    K_ratio = - .5*(besselK(In, - 0.5 * nu_vec - 1.5) + besselK(In, - 0.5 * nu_vec + 0.5)) / besselK(In, - 0.5 * nu_vec - 0.5)
+    dK_ratio =  0.25*(besselK(In, - 0.5 * nu_vec - 2.5) +
+                        2 * besselK(In, - 0.5 * nu_vec - 0.5) +
+                        besselK(In, - 0.5 * nu_vec + 1.5)) / besselK(In, - 0.5 * nu_vec - 0.5)
+
+
+    fh = -.5* nu_vec - 1 + K_ratio * dIn -  sg_mod - 0.5 *(nu_vec+1) * dIn/ In
+    # gh = - HinvSH_h %*% (ht-alph) + fh
+    dfh = K_ratio * ddIn + dIn * (dK_ratio - K_ratio^2) * dIn +
+      sg_mod - 0.5* (nu_vec+1) * (ddIn * In - dIn^2) / In^2
+    Kh = HinvSH_h + sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = - dfh)
+
+    tmp <- tryCatch(expr = {newht = Matrix::solve(Kh, fh - dfh * ht + HinvSH_h %*% alph)},
+                    error = function(e){ return(NULL)})
+    if (is.null(tmp)) {
+      ht = as.numeric(h_mean)
+      llk <- int_h_MSTSV(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                         gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+      return(llk)
+      break
+    }
+    # newht = Matrix::solve(Kh, fh - dfh * ht + HinvSH_h %*% alph)
+
+    errh_out = max(abs(newht-ht))
+    ht = as.numeric(newht)
+    count = count + 1
+    # dlden(x = y_tilde[2], nu = nu[2], gamma = gamma[2], sigma = exp(ht[2]/2))
+    # ddlden(x = y_tilde[1], nu = nu[1], gamma = gamma[1], sigma = exp(ht[1]/2))
+    # sum(lden(as.numeric(y_tilde), nu_vec, gamma_vec, sigma = exp(ht/2)))
+  }
+
+  # compute negative Hessian
+  s2_mod <- s2 * exp(-ht)
+  g2_mod <- gamma_vec^2 * exp(-ht)
+  sg_mod <- as.numeric(y_tilde) * gamma_vec * exp(-ht)
+
+  In = sqrt( (nu_vec + s2_mod ) * g2_mod  )
+  dIn = -.5* (nu_vec * g2_mod +2*sg_mod^2)  / In
+  ddIn <- 0.5 * (nu_vec*g2_mod + 4 * sg_mod^2) / In - dIn^2 / In
+
+
+  K_ratio = - .5*(besselK(In, - 0.5 * nu_vec - 1.5) + besselK(In, - 0.5 * nu_vec + 0.5)) / besselK(In, - 0.5 * nu_vec - 0.5)
+  dK_ratio =  0.25*(besselK(In, - 0.5 * nu_vec - 2.5) +
+                      2 * besselK(In, - 0.5 * nu_vec - 0.5) +
+                      besselK(In, - 0.5 * nu_vec + 1.5)) / besselK(In, - 0.5 * nu_vec - 0.5)
+
+
+  fh = -.5* nu_vec - 1 + K_ratio * dIn -  sg_mod - 0.5 *(nu_vec+1) * dIn/ In
+  gh = - HinvSH_h %*% (ht-alph) + fh
+
+  dfh = K_ratio * ddIn + dIn * (dK_ratio - K_ratio^2) * dIn +
+    sg_mod - 0.5* (nu_vec+1) * (ddIn * In - dIn^2) / In^2
+
+  Kh = HinvSH_h + sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = - dfh)
+  CKh = Matrix::t(Matrix::chol(Kh))
+
+  c_pri = -t_max*K*0.5*log(2*pi) -.5*(t_max-1)*sum(log(sigma_h)) -.5*sum(log(sigma_h + prior_var_h0))
+  c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
+
+  store_llw = rep(0,R)
+  for (i in c(1:R)){
+    hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
+    hnew <- matrix(hc, nrow = K)
+    allw <- int_w_MSTnonSV(y = t(yt), xt = xt, A = A, B = B, sigma = exp(hnew/2), nu = nu, gamma = gamma,
+                           t_max = t_max, K = K, R = 100)
+    store_llw[i] = as.numeric(allw + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
+                                (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
+  }
+
+  maxllike = max(store_llw)
+  llk = log(mean(exp(store_llw-maxllike))) + maxllike
+
+  if (is.na(llk)){
+    return(int_h_MSTSV(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                       gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100))
+  }
   return(llk)
 }
 
@@ -1165,8 +1278,8 @@ int_h_OTSV <- function(yt, xt, B, A, h0, sigma_h, nu, h_mean, w_mean, t_max, K, 
 #' @export
 int_h_OSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100){
   u <- (yt - B %*% xt )
-  y_tilde <- (A %*% u - w_mean * gamma + nu/(nu-2)*gamma) # Mimic univariate Student distribution
-  s2 = as.numeric(y_tilde)^2
+  y_temp <- (A %*% u - w_mean * gamma + nu/(nu-2)*gamma) # Mimic univariate Student distribution
+  s2 = as.numeric(y_temp)^2
   max_loop = 10000
   prior_var_h0 <- 4
   Hh = sparseMatrix(i = 1:(t_max*K),
@@ -1246,7 +1359,7 @@ int_h_OSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean,
     interm <- sqrt((chi + Q) * as.vector(skewness.norm))
     log.const.top <- -lambda * log(chi) - lambda.min.0.5 * log(as.vector(skewness.norm))
     log.const.bottom <- 0.5 * log(2 * pi) + log(sigma) + lgamma(-lambda) - (lambda + 1) * log(2)
-    log.top <- log(besselK(interm, lambda.min.0.5, expon.scaled = TRUE)) - interm + skewness.scaled
+    log.top <- log(besselK(interm, lambda.min.0.5, expon.scaled = FALSE)) + skewness.scaled
     log.bottom <- -lambda.min.0.5 * log(interm)
     allw <- log.const.top + log.top - log.const.bottom - log.bottom
 
@@ -1260,6 +1373,161 @@ int_h_OSTSV <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean,
 
   return(llk)
 }
+
+# int_h_OSTSV(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+#                        gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+#
+# int_h_OSTSV2(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+#             gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+
+#' @export
+int_h_OSTSV2 <- function(yt, xt, B, A, h0, sigma_h, nu, gamma = rep(0,K), h_mean, w_mean, t_max, K, R = 100){
+  u <- (yt - B %*% xt )
+  y_tilde <- (A %*% u + nu/(nu-2)*gamma) # univariate Skew-Student distribution
+  s2 = as.numeric(y_tilde)^2 # + 0.001
+  nu_vec <- rep(nu, t_max)
+  gamma_vec <- rep(gamma, t_max)
+  yga = as.numeric(y_tilde) * gamma_vec
+
+  max_loop = 10000
+  prior_var_h0 <- 4
+  Hh = sparseMatrix(i = 1:(t_max*K),
+                    j = 1:(t_max*K),
+                    x = rep(1,t_max*K)) -
+    sparseMatrix( i = (K+1):(t_max*K),
+                  j = 1:((t_max-1)*K),
+                  x = rep(1,(t_max-1)*K),
+                  dims =  c(t_max*K, t_max*K))
+  SH = sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = c(1./ (sigma_h + prior_var_h0), rep(1./sigma_h, t_max-1))) # Prior for h1 \sim N(2 log sigma, sigmah^2 + 4 )
+  HinvSH_h = Matrix::t(Hh) %*% SH %*% Hh
+  alph = Matrix::solve(Hh, sparseMatrix(i = 1:K, j = rep(1,K), x = h0, dims = c(t_max*K,1)))
+
+  #ht = log(s2)
+  ht = as.numeric(h_mean) # better starting points
+
+  errh_out = 1; count = 0;
+
+  while (errh_out> 0.001){
+
+    s2_mod <- s2 * exp(-ht)
+    g2_mod <- gamma_vec^2 * exp(-ht)
+    sg_mod <- as.numeric(y_tilde) * gamma_vec * exp(-ht)
+
+    In = sqrt( (nu_vec + s2_mod ) * g2_mod  )
+    dIn = -.5* (nu_vec * g2_mod +2*sg_mod^2)  / In
+    ddIn <- 0.5 * (nu_vec*g2_mod + 4 * sg_mod^2) / In - dIn^2 / In
+
+
+    K_ratio = - .5*(besselK(In, - 0.5 * nu_vec - 1.5) + besselK(In, - 0.5 * nu_vec + 0.5)) / besselK(In, - 0.5 * nu_vec - 0.5)
+    dK_ratio =  0.25*(besselK(In, - 0.5 * nu_vec - 2.5) +
+                        2 * besselK(In, - 0.5 * nu_vec - 0.5) +
+                        besselK(In, - 0.5 * nu_vec + 1.5)) / besselK(In, - 0.5 * nu_vec - 0.5)
+
+
+    fh = -.5* nu_vec - 1 + K_ratio * dIn -  sg_mod - 0.5 *(nu_vec+1) * dIn/ In
+    # gh = - HinvSH_h %*% (ht-alph) + fh
+    dfh = K_ratio * ddIn + dIn * (dK_ratio - K_ratio^2) * dIn +
+              sg_mod - 0.5* (nu_vec+1) * (ddIn * In - dIn^2) / In^2
+    Kh = HinvSH_h + sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = - dfh)
+
+    tmp <- tryCatch(expr = {newht = Matrix::solve(Kh, fh - dfh * ht + HinvSH_h %*% alph)},
+             error = function(e){ return(NULL)})
+    if (is.null(tmp)) {
+      ht = as.numeric(h_mean)
+      llk <- int_h_OSTSV(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                          gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100)
+      return(llk)
+      break
+      }
+    # newht = Matrix::solve(Kh, fh - dfh * ht + HinvSH_h %*% alph)
+
+    errh_out = max(abs(newht-ht))
+    ht = as.numeric(newht)
+    count = count + 1
+    # dlden(x = y_tilde[2], nu = nu[2], gamma = gamma[2], sigma = exp(ht[2]/2))
+    # ddlden(x = y_tilde[1], nu = nu[1], gamma = gamma[1], sigma = exp(ht[1]/2))
+    # sum(lden(as.numeric(y_tilde), nu_vec, gamma_vec, sigma = exp(ht/2)))
+  }
+
+  # compute negative Hessian
+  s2_mod <- s2 * exp(-ht)
+  g2_mod <- gamma_vec^2 * exp(-ht)
+  sg_mod <- as.numeric(y_tilde) * gamma_vec * exp(-ht)
+
+  In = sqrt( (nu_vec + s2_mod ) * g2_mod  )
+  dIn = -.5* (nu_vec * g2_mod +2*sg_mod^2)  / In
+  ddIn <- 0.5 * (nu_vec*g2_mod + 4 * sg_mod^2) / In - dIn^2 / In
+
+
+  K_ratio = - .5*(besselK(In, - 0.5 * nu_vec - 1.5) + besselK(In, - 0.5 * nu_vec + 0.5)) / besselK(In, - 0.5 * nu_vec - 0.5)
+  dK_ratio =  0.25*(besselK(In, - 0.5 * nu_vec - 2.5) +
+                      2 * besselK(In, - 0.5 * nu_vec - 0.5) +
+                      besselK(In, - 0.5 * nu_vec + 1.5)) / besselK(In, - 0.5 * nu_vec - 0.5)
+
+
+  fh = -.5* nu_vec - 1 + K_ratio * dIn -  sg_mod - 0.5 *(nu_vec+1) * dIn/ In
+  gh = - HinvSH_h %*% (ht-alph) + fh
+
+  dfh = K_ratio * ddIn + dIn * (dK_ratio - K_ratio^2) * dIn +
+    sg_mod - 0.5* (nu_vec+1) * (ddIn * In - dIn^2) / In^2
+
+  Kh = HinvSH_h + sparseMatrix(i = 1:(t_max*K), j = 1:(t_max*K), x = - dfh)
+  CKh = Matrix::t(Matrix::chol(Kh))
+
+  c_pri = -t_max*K*0.5*log(2*pi) -.5*(t_max-1)*sum(log(sigma_h)) -.5*sum(log(sigma_h + prior_var_h0))
+  c_IS = -t_max*K*0.5*log(2*pi) + sum(log(Matrix::diag(CKh)))
+
+  store_llike = rep(0,R)
+  y_tilde = A %*% ( (yt - B %*% xt) ) + nu/(nu-2)*gamma # is ortho-Skew Student distribution
+  for (i in c(1:R)){
+    hc = ht + Matrix::solve(Matrix::t(CKh), rnorm(t_max*K))
+    hnew <- matrix(hc, nrow = K)
+    # allw <- matrix(NA, nrow = K, ncol = t_max)
+    # for (k in c(1:K)){
+    #   for (t in c(1:t_max)){
+    #     allw[k,t] <- ghyp::dghyp(y_tilde[k,t], object = ghyp::ghyp(lambda = -0.5*nu[k], chi = nu[k], psi = 0, mu = 0,
+    #                                                                gamma = gamma[k], sigma = exp(hnew[k,t]/2)),
+    #                              logvalue = T)
+    #   }
+    # }
+
+    # Skew Student density
+    lambda = -0.5*nu; chi = nu; psi = 0;
+    sigma = exp(hnew/2);
+    x = as.vector(y_tilde)
+
+    sigma <- as.vector(sigma)
+
+    Q <- (x/sigma)^2
+    d <- 1
+    n <- length(x)
+    inv.sigma <- 1/sigma^2
+
+    skewness.scaled <- x * (inv.sigma * gamma)
+    skewness.norm <- gamma^2 * inv.sigma
+    lambda.min.0.5 <- lambda - 0.5
+    interm <- sqrt((chi + Q) * as.vector(skewness.norm))
+    log.const.top <- -lambda * log(chi) - lambda.min.0.5 * log(as.vector(skewness.norm))
+    log.const.bottom <- 0.5 * log(2 * pi) + log(sigma) + lgamma(-lambda) - (lambda + 1) * log(2)
+    log.top <- log(besselK(interm, lambda.min.0.5, expon.scaled = FALSE)) + skewness.scaled
+    log.bottom <- -lambda.min.0.5 * log(interm)
+    allw <- log.const.top + log.top - log.const.bottom - log.bottom
+
+    store_llike[i] = as.numeric( sum(allw) + (c_pri -.5*Matrix::t(hc-alph)%*%HinvSH_h%*%(hc-alph)) -
+                                   (c_IS -.5*Matrix::t(hc-ht)%*%Kh%*%(hc-ht)))
+
+  }
+
+  maxllike = max(store_llike)
+  llk = log(mean(exp(store_llike-maxllike))) + maxllike
+
+  if (is.na(llk)){
+    return(int_h_OSTSV(yt = yt, xt = xt, B = B, A = A, h0 = h0, sigma_h = sigma_h, nu = nu,
+                gamma = gamma, h_mean = h_mean, w_mean = w_mean, t_max = t_max, K = K, R = 100))
+  }
+  return(llk)
+}
+
 
 #' @export
 Normal_approx <- function(mcmc_sample, ndraws){

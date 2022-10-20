@@ -521,7 +521,8 @@ marginalLL <- function(Chain, ndraws = NULL, numCores = NULL){
                 sum_log_prop = sum_log_prop
                 ))
   } else {
-    return( marginalLLSing(Chain, ndraws) )
+    cat("Can not be run in Windows. Try Linux instead!")
+    return( NULL )
   }
 }
 

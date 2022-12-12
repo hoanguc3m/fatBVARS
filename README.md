@@ -19,3 +19,39 @@ Chain1 <- BVAR.novol(y, K = 5, p = 2, dist = "Gaussian", y0 = NULL, prior = prio
 # plot(Chain1)
 ```
 
+### Empirical illustration
+See **vignettes** folder for more examples
+
+```
+library(fatBVARS)
+data(MonthlyData)
+view(datafin)
+
+K <- ncol(datafin)
+p <- 4
+Time <- Monthly$sasdate[133:732]
+numCores = 16
+ndraws = 100000
+
+###########################################################################
+
+path = ""
+paste(path, "MonthlyData.RData",sep = "")
+#save.image(paste(path, "MonthlyData.RData",sep = ""))
+
+time_id = nrow(datafin)
+y0 = datafin[c(1:p),]
+time_id <- nrow(datafin)
+y <- datafin[c((p+1):time_id),]
+
+cat("time_id", time_id, "\n")
+###########################################################################
+prior <- get_prior(y, p = p, dist="Gaussian", SV = F)
+inits <- get_init(prior, samples = 110000, burnin = 10000, thin = 10)
+Chain1 <- BVAR.novol(y, K = K, p = p, dist = "Gaussian", y0 = y0, prior = prior, inits = inits)
+paste(path, "MonthlyData_Chain1.RData",sep = "")
+save.image(paste(path, "MonthlyData_Chain1.RData",sep = ""))
+
+###########################################################################
+
+```

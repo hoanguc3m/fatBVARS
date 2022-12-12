@@ -55,3 +55,6 @@ save.image(paste(path, "MonthlyData_Chain1.RData",sep = ""))
 ###########################################################################
 
 ```
+### References
+
+Karlsson, S., Mazur, S., & Nguyen, H. (2022). Vector autoregression models with skewness and heavy tails. Journal of Economic Dynamics and Control, 104580.

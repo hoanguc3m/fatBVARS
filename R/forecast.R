@@ -44,6 +44,8 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, t_current, Nfsample = NU
   A_mat <- get_post(mcmc, element = "a")
   Sigma_mat <- get_post(mcmc, element = "sigma") # No SV
   Sigma_H <- sqrt(get_post(mcmc, element = "sigma_h")) # SV
+  Sigma_G <- sqrt(get_post(mcmc, element = "sigma_G")) # SV of gamma
+
   H_mat <- get_post(mcmc, element = "h")
   if (ncol(H_mat)>0) H_mat <- H_mat[,( (t_current - 1) * K +1):(t_current * K)]
   Nu_mat <- get_post(mcmc, element = "nu")
@@ -115,6 +117,15 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, t_current, Nfsample = NU
                                                     y0 = y0, nu = nu, gamma = gamma,
                                                     seednum = seed_set[count_id], burn_in = 0)
         }
+        if (dist == "dynSkew.Student") {
+          nu <- Nu_mat[i]
+          gamma <- tail(Gamma_mat[i,], K)
+          sigma_G <- Sigma_G[i,]
+          pred_tmp <- sim.VAR.dynSkew.Student.SV(K = K, p = p, t_max = t_pred,
+                                                    b0 = b0, a0 = a0, h = h,
+                                                    y0 = y0, nu = nu, gamma = gamma, sigma_G = sigma_G,
+                                                    seednum = seed_set[count_id], burn_in = 0)
+        }
       } else {
         sigma <- Sigma_mat[i,]
         h <- log(sigma)
@@ -168,6 +179,15 @@ get_forecast <- function(Chain, y0 = NULL, t_pred = 12, t_current, Nfsample = NU
                                                        b0 = b0, a0 = a0, h = h,
                                                        y0 = y0, nu = nu, gamma = gamma,
                                                        seednum = seed_set[count_id], burn_in = 0)
+        }
+        if (dist == "dynSkew.Student") {
+          nu <- Nu_mat[i]
+          gamma <- tail(Gamma_mat[i,], K)
+          sigma_G <- Sigma_G[i,]
+          pred_tmp <- sim.VAR.dynSkew.Student.novol(K = K, p = p, t_max = t_pred,
+                                                 b0 = b0, a0 = a0, h = h,
+                                                 y0 = y0, nu = nu, gamma = gamma, sigma_G = sigma_G,
+                                                 seednum = seed_set[count_id], burn_in = 0)
         }
       }
 

@@ -587,9 +587,9 @@ sim.VAR.OST.novol <- function(K = 5, p = 2, t_max = 1000,
 }
 #' @export
 sim.VAR.dynSkew.Student.novol <- function(K = 5, p = 2, t_max = 1000,
-                                           b0 = 0.5, a0 = 0.5, h = 0,
-                                           y0 = matrix(0, ncol = K, nrow = p),
-                                           nu = 6, gamma = 0, sigma_G = NULL, seednum = 0, burn_in = 0){
+                                          b0 = 0.5, a0 = 0.5, h = 0,
+                                          y0 = matrix(0, ncol = K, nrow = p),
+                                          nu = 6, gamma = 0, sigma_G = NULL, seednum = 0, burn_in = 0){
   t_max = t_max + burn_in
   set.seed(seednum)
   # Sample matrix coefficient B
@@ -647,6 +647,7 @@ sim.VAR.dynSkew.Student.novol <- function(K = 5, p = 2, t_max = 1000,
   Sigma <- solve(A0) %*% diag(as.numeric(exp(0.5*h)), nrow = K)
   Sigma2 <- Sigma %*% t(Sigma)
 
+  mu_xi <- nu / (nu - 2)
   for (i in c(1:t_max)){
     if (p > 0){
       xt <- rbind(1, vec( t(ystar[(p+i-1):i,])))
@@ -660,7 +661,7 @@ sim.VAR.dynSkew.Student.novol <- function(K = 5, p = 2, t_max = 1000,
     gamma <- gamma +  sigma_G * rnorm(K)
     Gamma_T[i,] <- gamma
 
-    ysim <-  B0 %*% xt  + gamma * w_t[i] + (Sigma_t %*% eps[i,])
+    ysim <-  B0 %*% xt  + gamma * (w_t[i] - mu_xi) + (Sigma_t %*% eps[i,])
     ystar <- rbind(ystar, t(ysim))
   }
 

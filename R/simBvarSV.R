@@ -659,12 +659,13 @@ sim.VAR.OST.SV <- function(K = 5, p = 2, t_max = 1000,
 }
 #' @export
 sim.VAR.dynSkew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
-                                        b0 = 0.5, a0 = 0.5, h = 0, sigma_h = NULL,
-                                        y0 = matrix(0, ncol = K, nrow = p),
-                                        nu = 6, gamma = 0.5, sigma_G = NULL, seednum = 0, burn_in = 0){
+                                       b0 = 0.5, a0 = 0.5, h = 0, sigma_h = NULL,
+                                       y0 = matrix(0, ncol = K, nrow = p),
+                                       nu = 6, gamma = 0.5, sigma_G = NULL, seednum = 0, burn_in = 0){
   t_max = t_max + burn_in
   set.seed(seednum)
   # Sample matrix coefficient B
+  B0 <- cbind(rep(0,K))
   if (p > 0){
     if (length(b0) == 1) {
       for (i in c(1:p)){
@@ -729,6 +730,7 @@ sim.VAR.dynSkew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
   volatility <- matrix(NA, nrow = t_max, ncol = K)
   inv_A0 <- solve(A0)
 
+  mu_xi <- nu / (nu - 2)
   for (i in c(1:t_max)){
     h <- h +  Vh * rnorm(K)
     h_true[i,] <- h
@@ -744,8 +746,8 @@ sim.VAR.dynSkew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
     } else {
       xt <- matrix(1,nrow = K)
     }
-    y_mean[i,] <- B0 %*% xt + gamma * w_t[i]
-    ysim <-  B0 %*% xt + gamma * w_t[i] + Sigma_t %*% eps[i,]
+    y_mean[i,] <- B0 %*% xt + gamma * (w_t[i] - mu_xi)
+    ysim <-  B0 %*% xt + gamma * (w_t[i] - mu_xi) + Sigma_t %*% eps[i,]
     ystar <- rbind(ystar, t(ysim))
   }
 
@@ -761,6 +763,7 @@ sim.VAR.dynSkew.Student.SV <- function(K = 5, p = 2, t_max = 1000,
        sigma_G = sigma_G,
        dist = "dynSkew.Student", SV = TRUE)
 }
+
 #' @export
 sim.VAR.dynMST.SV <- function(K = 5, p = 2, t_max = 1000,
                                              b0 = 0.5, a0 = 0.5, h = 0, sigma_h = NULL,

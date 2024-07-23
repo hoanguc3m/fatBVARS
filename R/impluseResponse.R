@@ -43,7 +43,7 @@ get_irf <- function(Chain, impulse.variable = 1, response.variable = 2,
     sig <- get_post(Chain$mcmc, element = "sigma")
   }
   if (!(dist == "Gaussian")){
-    if (dist == "Student" || dist == "Skew.Student"){
+    if (dist == "Student" || dist == "Skew.Student" || dist == "dynSkew.Student"){
       W <- sqrt(get_post(Chain$mcmc, element = "w")[, atT])
     } else {
       W <- sqrt(get_post(Chain$mcmc, element = "w")[, c( ((atT-1) * K+1) : ((atT) * K))])
@@ -72,11 +72,14 @@ get_irf <- function(Chain, impulse.variable = 1, response.variable = 2,
     if (dist == "Gaussian"){
       H.chol[,,s] <- A_inv %*% diag(sigtemp)
     }
-    if (dist == "Student" || dist == "Skew.Student"){
+    if (dist == "Student" || dist == "Skew.Student" || dist == "dynSkew.Student"){
       wtemp <- W[j]
       H.chol[,,s] <- wtemp * A_inv %*% diag(sigtemp)
     }
-
+    # Remove the effect of w
+    if (dist == "dynSkew.Student"){
+      H.chol[,,s] <- wtemp * A_inv %*% diag(sigtemp)
+    }
     if (dist == "MT"){
       wtemp <- W[j,c(1:K)]
       H.chol[,,s] <- diag(wtemp) %*% A_inv %*% diag(sigtemp)

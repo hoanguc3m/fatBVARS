@@ -313,7 +313,7 @@ BVAR.dynSkew.Student.SV <- function(y, K, p, y0 = NULL, prior = NULL, inits = NU
     Gamma_T <- Gamma_filter$bdraws
     gamma0 <- Gamma_filter$b0draws
 
-    # Draw sigma_G, the covariance of B(t)
+    # Draw sigma_G, the covariance of B(t).
     if (K>1) {
       sse_2 <- apply( (Gamma_T[,1:t_max] - cbind(gamma0,Gamma_T[,1:(t_max-1)]) )^2, MARGIN = 1, FUN = sum)
     } else {

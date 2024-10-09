@@ -56,6 +56,7 @@ sim.VAR.Gaussian.SV <- function(K = 5, p = 2, t_max = 1000,
   t_max = t_max + burn_in
   set.seed(seednum)
   # Sample matrix coefficient B
+  B0 <- cbind(rep(0,K))
   if (p > 0){
     if (length(b0) == 1) {
       for (i in c(1:p)){
